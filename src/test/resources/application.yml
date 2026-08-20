@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: everrest-funeral-arrangements
   profiles:
     active: test
   datasource:
@@ -28,6 +30,7 @@ spring:
 app:
   browser:
     auto-open: false
+    open-h2-console: false
   logging:
     dir: ./build/test-logs
   scheduling:

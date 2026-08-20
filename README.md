@@ -19,8 +19,8 @@ There is no coach role and no sports, lessons, or skill levels.
 1. Sign in.
 2. Choose a funeral home and a **service venue** (chapel, ceremony hall, cremation suite, memorial garden, or reception hall).
 3. Choose ceremony type, package, extras, guests, payment preference, and private details.
-4. Request currently available **dates** (no hold). The quoted amount is exact and does **not** change with the assigned date.
-5. Press **Spin for a date**. The server locks the venue, recomputes free slots, picks a date uniformly, then a compatible time on that date (`SecureRandom`), and stores the reservation in the same transaction.
+4. Confirm the arrangement. The quoted amount is exact and does **not** change with the assigned date.
+5. Confirming opens a full-screen wheel while the server locks the venue, recomputes free slots, picks a date uniformly, then a compatible time on that date (`SecureRandom`), and stores the reservation in the same transaction.
 6. The wheel lands on the **server-returned** date. The client never picks the winner.
 7. Family arrangements are **PENDING** until a manager confirms. Manager and admin spins are **CONFIRMED**.
 
@@ -28,7 +28,7 @@ Saturday is open. Sunday is closed unless `app.scheduling.sunday-enabled` is `tr
 
 ## Resources and occupancy
 
-Each venue is reserved **exclusively** for one ceremony at a time (`[start, end)`). `maxAttendees` only checks guest count. **PENDING** and **CONFIRMED** occupy a slot. **CANCELLED** frees it. `/availability` (also `/occupancy`) is a read-only board. Visitors cannot click a cell to pick a time.
+Each venue is reserved **exclusively** for one ceremony at a time (`[start, end)`). `maxAttendees` only checks guest count. **PENDING** and **CONFIRMED** occupy a slot. **CANCELLED** frees it. `/availability` (also `/occupancy`) is a read-only board for times. Use **Start arrangements** on a venue row to open `/venues/{id}` — the link never carries a date or time.
 
 ## Packages, extras, payment
 
@@ -42,9 +42,9 @@ Extras use **FIXED** or **PER_ATTENDEE** pricing (flowers, memorial cards, obitu
 
 ## Evelyn (no AI)
 
-Evelyn is a deterministic button guide on every page. She follows the same steps as the form and calls the same `ReservationService` preview/spin methods. She is not an LLM.
+Evelyn is a deterministic button guide after sign-in. She follows the same steps as the form and calls the same `ReservationService` preview/spin methods. She is not an LLM.
 
-Open state, position, and non-sensitive ids may be stored in `localStorage`. **Never stored:** deceased name, dates of birth or death, phone, family note, email.
+Open state and non-sensitive ids may be stored in `localStorage` under a per-user key. **Never stored:** deceased name, dates of birth or death, phone, family note, email. Evelyn stays in the **lower bottom-right**. The panel starts **closed** on every page. **Ask Evelyn** opens and closes it; there is no separate Close button. Restart clears only the arrangement draft. The current step is kept when you move between pages. Evelyn is not shown on the sign-in or registration screens.
 
 ## Privacy and logging
 
@@ -60,9 +60,11 @@ Spring Boot, Java 21, Thymeleaf, H2, Spring Security, Gradle.
 .\gradlew.bat bootRun
 ```
 
-H2 console: `/h2-console`  
-JDBC URL: `jdbc:h2:file:./data/everrest`  
+H2 console: `/h2-console` (the console keeps the vendor H2 logo; that servlet UI cannot be rebranded from this app)  
+JDBC URL: `jdbc:h2:file:./data/everrest;LOCK_TIMEOUT=5000`  
 User `sa` / password `everrest`
+
+Firefox opens the EverRest login page and the H2 console on startup (`app.browser.open-h2-console: true`). The console tab is opened through `/h2-launch`, which fills JDBC URL, user, and password from `application.yml` and connects. Set that property to `false` if you do not want the console tab. Seeded users, funeral homes, venues, and extras are already in the database when the console opens.
 
 **Schema:** `spring.jpa.hibernate.ddl-auto` is `create-drop` for this demo (the database is dropped on shutdown). Switch to `update` later if you need to keep data.
 

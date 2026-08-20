@@ -346,7 +346,11 @@ class FuneralArrangementTests {
                 .andExpect(content().string(not(containsString("Spin for a date"))));
         mockMvc.perform(get("/reservations")).andExpect(status().isOk());
         mockMvc.perform(get("/availability")).andExpect(status().isOk())
-                .andExpect(content().string(containsString("Availability")));
+                .andExpect(content().string(containsString("Availability")))
+                .andExpect(content().string(containsString("Start arrangements")))
+                .andExpect(content().string(containsString("occ-arrange")))
+                .andExpect(content().string(containsString("href=\"/venues/")))
+                .andExpect(content().string(not(containsString("occ-arrange\" href=\"/venues/1?date"))));
         mockMvc.perform(get("/occupancy")).andExpect(status().isOk());
         mockMvc.perform(get("/profile")).andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("type=\"file\""))));
@@ -371,34 +375,156 @@ class FuneralArrangementTests {
     }
 
     @Test
+    void loginAndRegisterHideEvelynAndKeepInk() throws Exception {
+        String html = mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(count(html, "id=\"everrest-assistant\"")).isZero();
+        assertThat(count(html, "id=\"ca-launcher\"")).isZero();
+        assertThat(count(html, "id=\"ca-panel\"")).isZero();
+        assertThat(html).doesNotContain("Ask Evelyn");
+        assertThat(html).doesNotContain("id=\"ca-close\"");
+        assertThat(html).contains("class=\"ink-veil\"");
+        assertThat(html).contains("class=\"ink-shapes\"");
+        assertThat(html).contains("class=\"ink-blot");
+        assertThat(count(html, "fragments/assistant")).isZero();
+        String register = mockMvc.perform(get("/register"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(count(register, "id=\"everrest-assistant\"")).isZero();
+        assertThat(register).doesNotContain("Ask Evelyn");
+        assertThat(register).contains("class=\"ink-veil\"");
+        assertThat(register).doesNotContain("id=\"ca-close\"");
+    }
+
+    @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void evelynCloseDoesNotClearDraftAndBindsAfterLoad() throws Exception {
+    void representativePagesContainOneEvelynWidget() throws Exception {
+        ServiceVenue venue = chapel();
+        for (String path : List.of("/", "/reservations", "/availability", "/notifications")) {
+            String html = mockMvc.perform(get(path))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            assertThat(count(html, "id=\"everrest-assistant\"")).as(path).isEqualTo(1);
+            assertThat(count(html, "id=\"ca-launcher\"")).as(path).isEqualTo(1);
+            assertThat(count(html, "id=\"ca-panel\"")).as(path).isEqualTo(1);
+            assertThat(html).as(path).contains("id=\"ca-panel\" hidden");
+            assertThat(html).as(path).contains("aria-expanded=\"false\"");
+            assertThat(html).as(path).doesNotContain("class=\"ca-root is-open\"");
+            assertThat(html).as(path).doesNotContain("id=\"ca-close\"");
+        }
+        String arrange = mockMvc.perform(get("/venues/{id}", venue.getId()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(count(arrange, "id=\"everrest-assistant\"")).isEqualTo(1);
+        assertThat(count(arrange, "id=\"wheel-overlay\"")).isEqualTo(1);
+    }
+
+    @Test
+    void evelynToggleRestartAndClosedDefaultAreInSource() throws Exception {
         String js = Files.readString(Path.of("src/main/resources/static/js/assistant.js"));
-        assertThat(js).contains("closeBtn.addEventListener(\"click\", closePanel)");
-        assertThat(js).contains("closest(\"button,input,select,textarea,a\")");
-        assertThat(js).contains("launcher.setAttribute(\"aria-expanded\", \"false\")");
-        assertThat(js).contains("launcher.focus()");
-        int closeStart = js.indexOf("function closePanel");
-        int closeEnd = js.indexOf("function isInteractive");
-        assertThat(closeStart).isGreaterThan(0);
-        assertThat(closeEnd).isGreaterThan(closeStart);
-        String close = js.substring(closeStart, closeEnd);
-        assertThat(close).doesNotContain("emptyDraft");
-        assertThat(close).doesNotContain("draft =");
+        String css = Files.readString(Path.of("src/main/resources/static/css/app.css"));
+        String widget = Files.readString(Path.of("src/main/resources/templates/fragments/assistant.html"));
+        assertThat(widget).doesNotContain("id=\"ca-close\"");
+        assertThat(widget).contains("id=\"ca-restart\"");
+        assertThat(widget).contains("aria-expanded=\"false\"");
+        assertThat(widget).contains("id=\"ca-panel\" hidden");
+        assertThat(js).doesNotContain("closeBtn");
+        assertThat(js).doesNotContain("getElementById(\"ca-close\")");
+        assertThat(js).contains("var SCHEMA = 3");
+        assertThat(js).contains("everrest-evelyn-v3:");
+        assertThat(js).contains("open: false");
+        assertThat(js).contains("function startClosed");
+        assertThat(js).contains("startClosed();");
+        assertThat(js).doesNotContain("if (loadStore().open === true)");
+        assertThat(js).contains("removeProperty(\"left\")");
+        assertThat(js).contains("removeProperty(\"top\")");
+        assertThat(js).contains("removeProperty(\"transform\")");
+        assertThat(js).contains("currentStep: step");
+        assertThat(js).contains("data-initialized");
+        assertThat(js).contains("window.__everrestEvelynInit");
+        assertThat(js).doesNotContain("root.style.left = stored");
+        assertThat(js).doesNotContain("clientX");
         int persistStart = js.indexOf("function persistSafe");
         int persistEnd = js.indexOf("function restoreSafe");
         String persist = js.substring(persistStart, persistEnd);
+        assertThat(persist).contains("currentStep: step");
         assertThat(persist).contains("open: !panel.hidden");
         assertThat(persist).doesNotContain("deceasedFullName");
-        assertThat(persist).doesNotContain("draft.phone");
-        mockMvc.perform(get("/"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("id=\"ca-close\"")))
-                .andExpect(content().string(containsString("aria-label=\"Close guide\"")))
-                .andExpect(content().string(containsString("Congratulations, but we are very sorry!")))
-                .andExpect(content().string(containsString("id=\"wheel-overlay\"")))
-                .andExpect(content().string(containsString("role=\"dialog\"")))
-                .andExpect(content().string(containsString("aria-modal=\"true\"")));
+        int closeStart = js.indexOf("function closePanel");
+        int closeEnd = js.indexOf("launcher.addEventListener");
+        String close = js.substring(closeStart, closeEnd);
+        assertThat(close).doesNotContain("emptyDraft");
+        assertThat(close).doesNotContain("draft =");
+        int restartStart = js.indexOf("function restart");
+        int restartEnd = js.indexOf("function openPanel");
+        String restart = js.substring(restartStart, restartEnd);
+        assertThat(restart).contains("emptyDraft()");
+        assertThat(restart).doesNotContain("closePanel");
+        assertThat(restart).doesNotContain("location.reload");
+        assertThat(restart).doesNotContain("logout");
+        assertThat(restart).doesNotContain("localStorage.clear");
+        assertThat(css).contains("left: auto !important");
+        assertThat(css).contains("top: auto !important");
+        assertThat(css).contains("right: 1.1rem !important");
+        assertThat(css).contains("bottom: 1.1rem !important");
+        assertThat(css).contains(".ca-panel[hidden]");
+        assertThat(css).contains("display: none !important");
+        assertThat(css).contains(".ink-veil");
+        assertThat(css).contains(".ink-blot");
+        assertThat(css).contains("@keyframes ink-drift");
+        assertThat(css).contains("pointer-events: none");
+        int ink = css.indexOf(".ink-veil {");
+        assertThat(ink).isGreaterThan(0);
+        assertThat(css.substring(ink, ink + 180)).contains("pointer-events: none");
+        assertThat(css).contains("@media (prefers-reduced-motion: reduce)");
+        int reduced = css.lastIndexOf("@media (prefers-reduced-motion: reduce)");
+        assertThat(css.substring(reduced)).contains(".ink-veil::before");
+        assertThat(css.substring(reduced)).contains("animation: none");
+    }
+
+    @Test
+    void historyCardImageThenBodyAndBrandDataAreFuneralThemed() throws Exception {
+        String history = Files.readString(Path.of("src/main/resources/templates/reservations/history.html"));
+        String occupancy = Files.readString(Path.of("src/main/resources/templates/occupancy/index.html"));
+        String yml = Files.readString(Path.of("src/main/resources/application.yml"));
+        String readme = Files.readString(Path.of("README.md"));
+        String seed = Files.readString(Path.of("src/main/java/com/example/hackathoncodaro2026/config/DataInitializer.java"));
+        String launcher = Files.readString(Path.of("src/main/java/com/example/hackathoncodaro2026/config/BrowserLauncher.java"));
+        String mark = Files.readString(Path.of("src/main/resources/static/images/brand/mark.svg"));
+        String css = Files.readString(Path.of("src/main/resources/static/css/app.css"));
+        assertThat(history).contains("history-card-image");
+        assertThat(history).contains("history-card-body");
+        assertThat(history).contains("history-card-actions");
+        assertThat(history.indexOf("history-card-image")).isLessThan(history.indexOf("history-card-body"));
+        assertThat(css).contains("flex-direction: column");
+        assertThat(occupancy).contains("Start arrangements");
+        assertThat(occupancy).contains("@{/venues/{id}(id=${row.venueId})}");
+        assertThat(occupancy).doesNotContain("name=\"startTime\"");
+        assertThat(yml).contains("name: everrest-funeral-arrangements");
+        assertThat(yml).contains("jdbc:h2:file:./data/everrest;LOCK_TIMEOUT=5000");
+        assertThat(yml).doesNotContain("sportsbooking");
+        assertThat(yml).contains("open-h2-console: true");
+        assertThat(launcher).contains("/h2-launch");
+        assertThat(readme).contains("jdbc:h2:file:./data/everrest;LOCK_TIMEOUT=5000");
+        assertThat(readme).contains("vendor H2 logo");
+        assertThat(readme).contains("/h2-launch");
+        assertThat(readme).doesNotContain("sportsbooking");
+        assertThat(seed.toLowerCase()).doesNotContain("tennis");
+        assertThat(seed.toLowerCase()).doesNotContain("basketball");
+        assertThat(seed.toLowerCase()).doesNotContain("coach");
+        assertThat(seed).doesNotContain("sportsbooking");
+        assertThat(mark).contains("M22 18 H46");
+        assertThat(css).contains("wheel-overlay-copy");
+        assertThat(css).contains("text-align: center");
     }
 
     @Test
@@ -681,6 +807,19 @@ class FuneralArrangementTests {
         reservation.setPaymentMethod(PaymentMethod.CASH);
         reservation.setTotalAmount(FuneralPackage.ESSENTIAL.getBasePrice());
         reservationRepository.saveAndFlush(reservation);
+    }
+
+    private int count(String haystack, String needle) {
+        int total = 0;
+        int from = 0;
+        while (true) {
+            int at = haystack.indexOf(needle, from);
+            if (at < 0) {
+                return total;
+            }
+            total++;
+            from = at + needle.length();
+        }
     }
 
     private Long extractJsonId(String body) {

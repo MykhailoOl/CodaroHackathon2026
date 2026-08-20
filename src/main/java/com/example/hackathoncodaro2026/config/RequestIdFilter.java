@@ -68,6 +68,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
                 || path.startsWith("/js/")
                 || path.startsWith("/images/")
                 || path.startsWith("/h2-console")
+                || path.equals("/h2-launch")
                 || path.equals("/favicon.ico")) {
             return false;
         }

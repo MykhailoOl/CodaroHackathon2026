@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>H2 · EverRest</title>
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: #ffffff;
+        }
+        iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body id="h2-launch"
+      th:attr="data-driver=${jdbcDriver},
+               data-url=${jdbcUrl},
+               data-user=${jdbcUser},
+               data-password=${jdbcPassword}">
+<iframe id="h2-frame" title="H2 console" th:src="${consolePath}"></iframe>
+<script>
+    (function () {
+        var root = document.getElementById("h2-launch");
+        var frame = document.getElementById("h2-frame");
+        if (!root || !frame) {
+            return;
+        }
+        var driver = root.getAttribute("data-driver") || "org.h2.Driver";
+        var url = root.getAttribute("data-url") || "";
+        var user = root.getAttribute("data-user") || "sa";
+        var password = root.getAttribute("data-password") || "";
+        var submitted = false;
+        frame.addEventListener("load", function () {
+            if (submitted) {
+                return;
+            }
+            var doc;
+            try {
+                doc = frame.contentDocument;
+            } catch (e) {
+                return;
+            }
+            if (!doc) {
+                return;
+            }
+            var urlInput = doc.querySelector("[name='url']");
+            var passwordInput = doc.querySelector("[name='password']");
+            if (!urlInput || !passwordInput) {
+                return;
+            }
+            var driverInput = doc.querySelector("[name='driver']");
+            var userInput = doc.querySelector("[name='user']");
+            var nameInput = doc.querySelector("[name='name']");
+            if (driverInput) {
+                driverInput.value = driver;
+            }
+            if (nameInput) {
+                nameInput.value = "EverRest";
+            }
+            urlInput.value = url;
+            if (userInput) {
+                userInput.value = user;
+            }
+            passwordInput.value = password;
+            var form = urlInput.form || doc.querySelector("form");
+            if (!form) {
+                return;
+            }
+            submitted = true;
+            form.submit();
+        });
+    })();
+</script>
+</body>
+</html>

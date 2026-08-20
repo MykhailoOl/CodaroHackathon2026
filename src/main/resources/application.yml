@@ -7,7 +7,7 @@ server:
 
 spring:
   application:
-    name: everrest
+    name: everrest-funeral-arrangements
   datasource:
     url: jdbc:h2:file:./data/everrest;LOCK_TIMEOUT=5000
     driver-class-name: org.h2.Driver
@@ -54,6 +54,7 @@ spring:
 app:
   browser:
     auto-open: true
+    open-h2-console: true
     executable: firefox
   logging:
     dir: ${LOG_PATH:./logs}

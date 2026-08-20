@@ -8,7 +8,7 @@
     <div class="section-head">
         <p class="eyebrow">Read-only board</p>
         <h1>Availability</h1>
-        <p>One ceremony occupies a venue at a time. This board is for inspection only — dates are assigned by the arrangement wheel, not by clicking a cell.</p>
+        <p>One ceremony occupies a venue at a time. Cells are for inspection only — dates are assigned by the arrangement wheel. Use <strong>Start arrangements</strong> on a venue to begin booking without choosing a time.</p>
     </div>
     <form id="occupancy-filter" class="occ-filters" method="get" th:action="@{/availability}">
         <div class="field">
@@ -47,6 +47,8 @@
                     <span class="occ-name" th:text="${row.venueName}">Chapel</span>
                     <span class="occ-meta" th:text="${row.funeralHomeName}">Home</span>
                     <span class="occ-meta" th:text="${row.venueType}">Chapel</span>
+                    <a class="btn btn-ghost occ-arrange"
+                       th:href="@{/venues/{id}(id=${row.venueId})}">Start arrangements</a>
                 </th>
                 <td th:each="cell : ${row.cells}">
                     <span class="occ-cell is-locked"

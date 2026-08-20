@@ -22,10 +22,10 @@
     <p class="lede" th:if="${#lists.isEmpty(reservations)}">No arrangements on this date.</p>
     <div class="history-list">
         <article class="history-card" th:each="item : ${reservations}">
-            <img class="history-thumb"
+            <img class="history-card-image"
                  th:src="@{${item.venue.resolvedImagePath}}"
                  th:alt="${item.venue.name}">
-            <div class="history-main">
+            <div class="history-card-body">
                 <p class="eyebrow" th:text="${item.serviceType.label}">Memorial</p>
                 <h3>
                     <span th:text="${item.venue.name}">Venue</span>
@@ -77,7 +77,7 @@
                     <span th:text="${item.formattedTotalAmount}">4200.00 PLN</span>
                 </p>
             </div>
-            <div class="history-aside">
+            <div class="history-card-actions history-aside">
                 <span class="status-badge status-pending" th:if="${item.status.name() == 'PENDING'}">Pending</span>
                 <span class="status-badge status-confirmed" th:if="${item.status.name() == 'CONFIRMED'}">Confirmed</span>
                 <form th:if="${item.status.name() == 'PENDING'}"

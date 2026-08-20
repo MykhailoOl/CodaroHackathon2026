@@ -35,11 +35,10 @@ public class BrowserLauncher implements ApplicationListener<ApplicationReadyEven
         String contextPath = normalizeContextPath(env.getProperty("server.servlet.context-path", ""));
         String loginUrl = "http://localhost:" + port + contextPath + "/login";
         boolean h2Enabled = Boolean.TRUE.equals(env.getProperty("spring.h2.console.enabled", Boolean.class, false));
-        String h2Path = env.getProperty("spring.h2.console.path", "/h2-console");
-        if (!h2Path.startsWith("/")) {
-            h2Path = "/" + h2Path;
+        String h2Url = null;
+        if (h2Enabled && Boolean.TRUE.equals(env.getProperty("app.browser.open-h2-console", Boolean.class, false))) {
+            h2Url = "http://localhost:" + port + contextPath + "/h2-launch";
         }
-        String h2Url = h2Enabled ? "http://localhost:" + port + contextPath + h2Path : null;
         String executable = env.getProperty("app.browser.executable", "firefox");
         System.setProperty(OPENED_FLAG, "true");
         try {

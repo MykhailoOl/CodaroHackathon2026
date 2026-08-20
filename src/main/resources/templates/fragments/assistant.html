@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+<th:block th:fragment="widget">
+    <div id="everrest-assistant"
+         class="ca-root"
+         th:attr="data-authenticated=${currentUser != null},
+                  data-user-id=${currentUser != null ? currentUser.id : 'anon'},
+                  data-username=${currentUser != null ? currentUser.username : ''},
+                  data-role=${currentUser != null ? currentUser.role.name() : ''},
+                  data-phone-required=${currentUser != null and (currentUser.phone == null or #strings.isEmpty(currentUser.phone))},
+                  data-login-url=@{/login},
+                  data-history-url=@{/reservations},
+                  data-occupancy-url=@{/availability},
+                  data-notices-url=@{/notifications}">
+        <button type="button" class="ca-launcher" id="ca-launcher" aria-label="Ask Evelyn" aria-expanded="false" aria-controls="ca-panel">
+            <img th:src="@{/images/brand/mark.svg}" alt="" width="28" height="28">
+            <span class="ca-launcher-label">Ask Evelyn</span>
+        </button>
+        <section class="ca-panel" id="ca-panel" hidden tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="ca-title">
+            <header class="ca-head" id="ca-head">
+                <img class="ca-brand" th:src="@{/images/brand/mark.svg}" alt="" width="28" height="28">
+                <div class="ca-head-copy" id="ca-grip">
+                    <h2 id="ca-title">Evelyn</h2>
+                    <p class="ca-sub">EverRest guide · no AI</p>
+                </div>
+                <p class="ca-progress" id="ca-progress">Step 1</p>
+                <button type="button" class="ca-icon-btn" id="ca-restart">Restart</button>
+            </header>
+            <div class="ca-log" id="ca-log" role="log" aria-live="polite"></div>
+            <div class="ca-controls" id="ca-controls"></div>
+            <p class="ca-hint">Dates stay open for others until a time is assigned.</p>
+        </section>
+    </div>
+    <div id="wheel-overlay" class="wheel-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="wheel-headline" aria-describedby="wheel-overlay-copy">
+        <div class="wheel-overlay-card">
+            <p class="wheel-headline" id="wheel-headline">Congratulations, but we are very sorry!</p>
+            <p class="wheel-overlay-copy" id="wheel-overlay-copy">Your available ceremony date is being assigned.</p>
+            <div class="wheel-stage wheel-stage-lg">
+                <div class="wheel-pointer" aria-hidden="true"></div>
+                <div class="wheel" id="overlay-wheel" role="img" aria-label="Date wheel"></div>
+            </div>
+            <p id="wheel-overlay-status" class="wheel-overlay-status">Finding an available date…</p>
+            <p id="wheel-overlay-result" class="wheel-overlay-result" hidden></p>
+            <div id="wheel-overlay-actions" class="wheel-overlay-actions" hidden>
+                <a class="btn btn-accent" id="wheel-overlay-history" href="/reservations">History</a>
+                <button type="button" class="btn btn-ghost" id="wheel-overlay-close">Close</button>
+                <button type="button" class="btn btn-accent" id="wheel-overlay-retry" hidden>Retry</button>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/js/wheel.js(v=4)}"></script>
+    <script th:src="@{/js/assistant.js(v=4)}"></script>
+</th:block>
+</body>
+</html>

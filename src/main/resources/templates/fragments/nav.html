@@ -42,59 +42,26 @@
     </div>
 </header>
 <th:block th:fragment="footer">
+    <div class="ink-veil" aria-hidden="true">
+        <svg class="ink-shapes" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+            <path class="ink-blot ink-blot-a" d="M186 198c-86-38-148-126-62-168 78-38 168 18 214 88 48 74-18 142-92 164-48 14-86-18-60-84 18-46 74-28 52 18-16 34-78 22-52-18z"/>
+            <path class="ink-blot ink-blot-b" d="M1288 140c72-54 168-22 154 64-12 72-86 118-162 126-92 10-128-64-86-122 28-38 92-18 70 28-16 34-70 18-48-22 18-32 70-8 48 26"/>
+            <path class="ink-blot ink-blot-c" d="M210 720c-70 48-46 148 42 168 78 18 156-42 176-118 18-70-48-112-118-98-52 10-62 64-18 78 32 10 58-28 28-46-24-14-58 8-36 36"/>
+            <path class="ink-blot ink-blot-d" d="M1180 680c86 36 64 154-28 176-80 18-168-48-176-128-8-72 70-108 132-78 46 22 36 78-10 78s-48-52-8-64c28-8 54 24 28 48"/>
+            <path class="ink-blot ink-blot-e" d="M720 80c54-28 118 8 112 66-6 52-62 78-112 70-48-8-64-54-28-78 24-16 58 4 42 28-12 18-42 8-28-12"/>
+            <path class="ink-blot ink-blot-f" d="M980 430c38-22 86 6 78 48-8 40-54 58-90 44-34-14-38-48-8-62 20-10 46 6 32 22-10 12-32 4-20-10"/>
+            <circle class="ink-blot ink-blot-g" cx="430" cy="160" r="18"/>
+            <circle class="ink-blot ink-blot-h" cx="1088" cy="300" r="11"/>
+            <circle class="ink-blot ink-blot-i" cx="340" cy="540" r="14"/>
+            <circle class="ink-blot ink-blot-j" cx="1240" cy="520" r="9"/>
+        </svg>
+    </div>
     <footer class="site-footer">
         <p>EverRest · Track B resource reservation and scheduling · Warsaw demo</p>
-        <div id="everrest-assistant"
-             class="ca-root"
-             th:attr="data-authenticated=${currentUser != null},
-                      data-user-id=${currentUser != null ? currentUser.id : ''},
-                      data-username=${currentUser != null ? currentUser.username : ''},
-                      data-role=${currentUser != null ? currentUser.role.name() : ''},
-                      data-phone-required=${currentUser != null and (currentUser.phone == null or #strings.isEmpty(currentUser.phone))},
-                      data-login-url=@{/login},
-                      data-history-url=@{/reservations},
-                      data-occupancy-url=@{/availability},
-                      data-notices-url=@{/notifications}">
-            <button type="button" class="ca-launcher" id="ca-launcher" aria-label="Open arrangement guide" aria-expanded="false" aria-controls="ca-panel">
-                <img th:src="@{/images/brand/mark.svg}" alt="" width="28" height="28">
-                <span class="ca-launcher-label">Ask Evelyn</span>
-            </button>
-            <section class="ca-panel" id="ca-panel" hidden tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="ca-title">
-                <header class="ca-head" id="ca-head">
-                    <img class="ca-brand" th:src="@{/images/brand/mark.svg}" alt="" width="28" height="28">
-                    <div class="ca-head-copy" id="ca-grip">
-                        <h2 id="ca-title">Evelyn</h2>
-                        <p class="ca-sub">EverRest guide · no AI</p>
-                    </div>
-                    <p class="ca-progress" id="ca-progress">Step 1</p>
-                    <button type="button" class="ca-icon-btn" id="ca-restart">Restart</button>
-                    <button type="button" class="ca-icon-btn" id="ca-close" aria-label="Close guide">Close</button>
-                </header>
-                <div class="ca-log" id="ca-log" role="log" aria-live="polite"></div>
-                <div class="ca-controls" id="ca-controls"></div>
-                <p class="ca-hint">Dates stay open for others until a time is assigned.</p>
-            </section>
-        </div>
     </footer>
-    <div id="wheel-overlay" class="wheel-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="wheel-headline" aria-describedby="wheel-overlay-copy">
-        <div class="wheel-overlay-card">
-            <p class="wheel-headline" id="wheel-headline">Congratulations, but we are very sorry!</p>
-            <p class="lede wheel-overlay-copy" id="wheel-overlay-copy">Your available ceremony date is being assigned.</p>
-            <div class="wheel-stage wheel-stage-lg">
-                <div class="wheel-pointer" aria-hidden="true"></div>
-                <div class="wheel" id="overlay-wheel" role="img" aria-label="Date wheel"></div>
-            </div>
-            <p id="wheel-overlay-status" class="wheel-overlay-status">Finding an available date…</p>
-            <p id="wheel-overlay-result" class="wheel-overlay-result" hidden></p>
-            <div id="wheel-overlay-actions" class="wheel-overlay-actions" hidden>
-                <a class="btn btn-accent" id="wheel-overlay-history" href="/reservations">History</a>
-                <button type="button" class="btn btn-ghost" id="wheel-overlay-close">Close</button>
-                <button type="button" class="btn btn-accent" id="wheel-overlay-retry" hidden>Retry</button>
-            </div>
-        </div>
-    </div>
-    <script th:src="@{/js/wheel.js}"></script>
-    <script th:src="@{/js/assistant.js}"></script>
+    <th:block sec:authorize="isAuthenticated()">
+        <th:block th:replace="~{fragments/assistant :: widget}"></th:block>
+    </th:block>
 </th:block>
 </body>
 </html>

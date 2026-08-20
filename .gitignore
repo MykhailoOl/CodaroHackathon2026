@@ -8,6 +8,7 @@ build/
 *.trace.db
 *.lock.db
 *.h2.db
+.h2.server.properties
 .env
 .env.*
 !.env.example

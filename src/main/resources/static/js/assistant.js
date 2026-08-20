@@ -1,25 +1,32 @@
 (function () {
     var root = document.getElementById("everrest-assistant");
-    if (!root) {
+    if (!root || root.getAttribute("data-initialized") === "true" || window.__everrestEvelynInit) {
         return;
     }
+    window.__everrestEvelynInit = true;
+    root.setAttribute("data-initialized", "true");
     var launcher = document.getElementById("ca-launcher");
     var panel = document.getElementById("ca-panel");
     var logEl = document.getElementById("ca-log");
     var controls = document.getElementById("ca-controls");
     var progress = document.getElementById("ca-progress");
-    var closeBtn = document.getElementById("ca-close");
     var restartBtn = document.getElementById("ca-restart");
-    var head = document.getElementById("ca-head");
-    var STORE = "everrest-evelyn";
+    var SCHEMA = 3;
+    var SCHEMA_FLAG = "everrest-evelyn-schema";
+    var LEGACY_STORE = "everrest-evelyn";
     var TOKEN_KEY = "everrest-evelyn-submit";
     var STEPS = ["home", "venue", "service", "pack", "deceased", "attendees", "phone", "extras", "payment", "note", "review", "success"];
+    var SENSITIVE_STEPS = { deceased: true, phone: true, note: true };
     var authenticated = root.getAttribute("data-authenticated") === "true";
     var phoneRequired = root.getAttribute("data-phone-required") === "true";
     var loginUrl = root.getAttribute("data-login-url") || "/login";
     var historyUrl = root.getAttribute("data-history-url") || "/reservations";
     var noticesUrl = root.getAttribute("data-notices-url") || "/notifications";
-    var userId = root.getAttribute("data-user-id") || "";
+    var userMeta = document.querySelector('meta[name="everrest-user-id"]');
+    var userId = root.getAttribute("data-user-id") || (userMeta ? userMeta.getAttribute("content") : "") || "anon";
+    if (!userId) {
+        userId = "anon";
+    }
     var draft = emptyDraft();
     var catalog = { homes: [], venues: [], venue: null, extras: [], preview: null, created: null };
     var assigning = false;
@@ -52,9 +59,17 @@
         return headers;
     }
 
+    function identity() {
+        return String(userId || "anon");
+    }
+
+    function storeKey() {
+        return "everrest-evelyn-v3:" + identity();
+    }
+
     function loadStore() {
         try {
-            return JSON.parse(localStorage.getItem(STORE) || "{}");
+            return JSON.parse(localStorage.getItem(storeKey()) || "{}");
         } catch (e) {
             return {};
         }
@@ -65,15 +80,101 @@
         Object.keys(patch).forEach(function (key) {
             current[key] = patch[key];
         });
-        localStorage.setItem(STORE, JSON.stringify(current));
+        delete current.x;
+        delete current.y;
+        delete current.left;
+        delete current.top;
+        delete current.right;
+        current.schema = SCHEMA;
+        localStorage.setItem(storeKey(), JSON.stringify(current));
+    }
+
+    function clearPlacement() {
+        [root, panel, launcher].forEach(function (el) {
+            if (!el || !el.style) {
+                return;
+            }
+            el.style.removeProperty("left");
+            el.style.removeProperty("top");
+            el.style.removeProperty("right");
+            el.style.removeProperty("bottom");
+            el.style.removeProperty("transform");
+        });
+    }
+
+    function forgetLegacyKeys() {
+        var remove = [LEGACY_STORE, "everrest-evelyn-v2:" + identity()];
+        for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            if (key && key.indexOf("everrest-evelyn-v2:") === 0) {
+                remove.push(key);
+            }
+        }
+        remove.forEach(function (key) {
+            localStorage.removeItem(key);
+        });
+    }
+
+    function draftFromLegacy(source) {
+        var step = source.currentStep || source.step || "home";
+        if (step === "wheel") {
+            step = "review";
+        }
+        return {
+            schema: SCHEMA,
+            open: false,
+            homeId: source.homeId || null,
+            venueId: source.venueId || null,
+            serviceType: source.serviceType || "",
+            funeralPackage: source.funeralPackage || "",
+            extraIds: source.extraIds || [],
+            paymentMethod: source.paymentMethod || "CASH",
+            attendees: source.attendees || 1,
+            currentStep: step
+        };
+    }
+
+    function migrateOnce() {
+        clearPlacement();
+        if (localStorage.getItem(SCHEMA_FLAG) === "3") {
+            var existing = loadStore();
+            delete existing.x;
+            delete existing.y;
+            delete existing.left;
+            delete existing.top;
+            delete existing.right;
+            localStorage.setItem(storeKey(), JSON.stringify(existing));
+            return;
+        }
+        try {
+            var v2 = JSON.parse(localStorage.getItem("everrest-evelyn-v2:" + identity()) || "null");
+            var legacy = JSON.parse(localStorage.getItem(LEGACY_STORE) || "null");
+            var source = null;
+            if (v2 && typeof v2 === "object") {
+                source = v2;
+            } else if (legacy && String(legacy.userId || "anon") === identity()) {
+                source = legacy;
+            }
+            if (source) {
+                localStorage.setItem(storeKey(), JSON.stringify(draftFromLegacy(source)));
+            } else {
+                localStorage.setItem(storeKey(), JSON.stringify({ schema: SCHEMA, open: false }));
+            }
+        } catch (e) {
+            localStorage.setItem(storeKey(), JSON.stringify({ schema: SCHEMA, open: false }));
+        }
+        forgetLegacyKeys();
+        localStorage.setItem(SCHEMA_FLAG, "3");
+        clearPlacement();
     }
 
     function persistSafe() {
+        var step = draft.step;
+        if (STEPS.indexOf(step) < 0) {
+            step = "home";
+        }
         saveStore({
             open: !panel.hidden,
-            x: root.style.left || "",
-            y: root.style.top || "",
-            userId: userId,
             homeId: draft.homeId,
             venueId: draft.venueId,
             serviceType: draft.serviceType,
@@ -81,21 +182,18 @@
             extraIds: draft.extraIds,
             paymentMethod: draft.paymentMethod,
             attendees: draft.attendees,
-            step: draft.step === "deceased" || draft.step === "phone" || draft.step === "note" ? "home" : draft.step
+            currentStep: step,
+            createdId: catalog.created ? catalog.created.id : null,
+            createdStatus: catalog.created ? catalog.created.status : null,
+            createdAmount: catalog.created ? catalog.created.amount : null,
+            createdFormattedAmount: catalog.created ? catalog.created.formattedAmount : null,
+            createdStartAt: catalog.created ? catalog.created.startAt : null
         });
     }
 
     function restoreSafe() {
+        migrateOnce();
         var stored = loadStore();
-        if (stored.x && stored.y) {
-            root.style.left = stored.x;
-            root.style.top = stored.y;
-            root.style.right = "auto";
-            root.style.bottom = "auto";
-        }
-        if (String(stored.userId || "") !== String(userId)) {
-            return;
-        }
         draft.homeId = stored.homeId || null;
         draft.venueId = stored.venueId || null;
         draft.serviceType = stored.serviceType || "";
@@ -103,13 +201,27 @@
         draft.extraIds = stored.extraIds || [];
         draft.paymentMethod = stored.paymentMethod || "CASH";
         draft.attendees = stored.attendees || 1;
-        if (stored.step && STEPS.indexOf(stored.step) >= 0 && stored.step !== "deceased" && stored.step !== "phone" && stored.step !== "note" && stored.step !== "success" && stored.step !== "wheel") {
-            draft.step = stored.step;
+        var step = stored.currentStep || stored.step || "home";
+        if (step === "wheel") {
+            step = "review";
         }
+        if (STEPS.indexOf(step) >= 0) {
+            draft.step = step;
+        }
+        if (stored.createdId && stored.createdStartAt) {
+            catalog.created = {
+                id: stored.createdId,
+                status: stored.createdStatus,
+                amount: stored.createdAmount,
+                formattedAmount: stored.createdFormattedAmount,
+                startAt: stored.createdStartAt
+            };
+        }
+        clearPlacement();
     }
 
     function inspectStorage() {
-        var raw = localStorage.getItem(STORE) || "";
+        var raw = localStorage.getItem(storeKey()) || "";
         return raw;
     }
     window.__everrestAssistantStorage = inspectStorage;
@@ -261,6 +373,125 @@
         draft.step = step;
         persistSafe();
         progress.textContent = "Step " + (STEPS.indexOf(step) + 1);
+        render();
+    }
+
+    function idsMatch(left, right) {
+        return String(left) === String(right);
+    }
+
+    function rehydrateThenRender() {
+        if (!authenticated) {
+            render();
+            return;
+        }
+        var step = draft.step;
+        if (!draft.homeId || step === "home") {
+            render();
+            return;
+        }
+        api("/homes").then(function (homes) {
+            catalog.homes = homes || [];
+            var homeOk = catalog.homes.some(function (home) {
+                return idsMatch(home.id, draft.homeId);
+            });
+            if (!homeOk) {
+                draft.homeId = null;
+                draft.venueId = null;
+                draft.serviceType = "";
+                draft.funeralPackage = "";
+                draft.extraIds = [];
+                draft.step = "home";
+                persistSafe();
+                render();
+                return null;
+            }
+            return api("/homes/" + draft.homeId + "/venues");
+        }).then(function (venues) {
+            if (venues == null) {
+                return null;
+            }
+            catalog.venues = venues || [];
+            if (!draft.venueId) {
+                if (step !== "venue") {
+                    draft.step = "venue";
+                    persistSafe();
+                }
+                render();
+                return null;
+            }
+            var venueOk = catalog.venues.some(function (venue) {
+                return idsMatch(venue.id, draft.venueId);
+            });
+            if (!venueOk) {
+                draft.venueId = null;
+                draft.serviceType = "";
+                draft.funeralPackage = "";
+                draft.extraIds = [];
+                draft.step = "venue";
+                persistSafe();
+                render();
+                return null;
+            }
+            return api("/venues/" + draft.venueId);
+        }).then(function (venue) {
+            if (venue == null) {
+                return;
+            }
+            catalog.venue = venue;
+            var types = (venue.serviceTypes || []).map(function (type) {
+                return type.code;
+            });
+            if (draft.serviceType && types.indexOf(draft.serviceType) < 0) {
+                draft.serviceType = "";
+                draft.funeralPackage = "";
+                draft.extraIds = [];
+                draft.step = "service";
+                persistSafe();
+                render();
+                return;
+            }
+            var packs = (venue.packages || []).map(function (pack) {
+                return pack.code;
+            });
+            if (draft.funeralPackage && packs.indexOf(draft.funeralPackage) < 0) {
+                draft.funeralPackage = "";
+                draft.step = "pack";
+                persistSafe();
+                render();
+                return;
+            }
+            if (draft.serviceType && draft.extraIds && draft.extraIds.length) {
+                return api("/venues/" + draft.venueId + "/extras?serviceType=" + encodeURIComponent(draft.serviceType)).then(function (extras) {
+                    catalog.extras = extras || [];
+                    var allowed = {};
+                    catalog.extras.forEach(function (extra) {
+                        allowed[String(extra.id)] = true;
+                    });
+                    var kept = draft.extraIds.filter(function (id) {
+                        return allowed[String(id)];
+                    });
+                    if (kept.length !== draft.extraIds.length) {
+                        draft.extraIds = kept;
+                        if (STEPS.indexOf(draft.step) > STEPS.indexOf("extras")) {
+                            draft.step = "extras";
+                        }
+                        persistSafe();
+                    }
+                    finishRehydrate();
+                });
+            }
+            finishRehydrate();
+        }).catch(function (error) {
+            addBot(error.message);
+            render();
+        });
+    }
+
+    function finishRehydrate() {
+        if (SENSITIVE_STEPS[draft.step]) {
+            addBot("Please re-enter this private detail. It is not kept in the browser after you leave the page.");
+        }
         render();
     }
 
@@ -618,6 +849,7 @@
         logEl.innerHTML = "";
         resetToken();
         persistSafe();
+        addBot("Hi, I am Evelyn from EverRest. I walk you through an arrangement with buttons — no free typing, and no AI.");
         go("home");
     }
 
@@ -625,11 +857,12 @@
         panel.hidden = false;
         panel.setAttribute("aria-hidden", "false");
         launcher.setAttribute("aria-expanded", "true");
+        root.classList.add("is-open");
         persistSafe();
         panel.focus();
         if (!logEl.childElementCount) {
             addBot("Hi, I am Evelyn from EverRest. I walk you through an arrangement with buttons — no free typing, and no AI.");
-            render();
+            rehydrateThenRender();
         }
     }
 
@@ -637,16 +870,9 @@
         panel.hidden = true;
         panel.setAttribute("aria-hidden", "true");
         launcher.setAttribute("aria-expanded", "false");
+        root.classList.remove("is-open");
         persistSafe();
         launcher.focus();
-    }
-
-    function isInteractive(target) {
-        return !!(target && target.closest && target.closest("button,input,select,textarea,a"));
-    }
-
-    function allowDrag() {
-        return window.matchMedia("(min-width: 721px)").matches;
     }
 
     launcher.addEventListener("click", function () {
@@ -656,14 +882,7 @@
             closePanel();
         }
     });
-    closeBtn.addEventListener("click", closePanel);
-    closeBtn.addEventListener("pointerdown", function (event) {
-        event.stopPropagation();
-    });
     restartBtn.addEventListener("click", restart);
-    restartBtn.addEventListener("pointerdown", function (event) {
-        event.stopPropagation();
-    });
     document.addEventListener("keydown", function (event) {
         if (event.key !== "Escape") {
             return;
@@ -678,41 +897,15 @@
             closePanel();
         }
     });
+    window.addEventListener("pagehide", persistSafe);
 
-    (function drag() {
-        var dragging = false;
-        var dx = 0;
-        var dy = 0;
-        head.addEventListener("pointerdown", function (event) {
-            if (!allowDrag() || isInteractive(event.target)) {
-                return;
-            }
-            dragging = true;
-            var rect = root.getBoundingClientRect();
-            dx = event.clientX - rect.left;
-            dy = event.clientY - rect.top;
-            head.setPointerCapture(event.pointerId);
-        });
-        head.addEventListener("pointermove", function (event) {
-            if (!dragging) {
-                return;
-            }
-            root.style.left = (event.clientX - dx) + "px";
-            root.style.top = (event.clientY - dy) + "px";
-            root.style.right = "auto";
-            root.style.bottom = "auto";
-        });
-        head.addEventListener("pointerup", function () {
-            if (!dragging) {
-                return;
-            }
-            dragging = false;
-            persistSafe();
-        });
-    })();
+    function startClosed() {
+        panel.hidden = true;
+        panel.setAttribute("aria-hidden", "true");
+        launcher.setAttribute("aria-expanded", "false");
+        root.classList.remove("is-open");
+    }
 
     restoreSafe();
-    if (loadStore().open) {
-        openPanel();
-    }
+    startClosed();
 })();
