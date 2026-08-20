@@ -150,7 +150,76 @@ class FuneralArrangementTests {
         PriceQuote quote = reservationService.quote(user, request);
         Reservation saved = reservationService.create(user, request);
         assertThat(quote.getAmount()).isEqualByComparingTo(saved.getTotalAmount());
+        assertThat(quote.getFormattedAmount()).isEqualTo(saved.getFormattedTotalAmount());
         assertThat(saved.getTotalAmount()).isEqualByComparingTo(new BigDecimal("2910.00"));
+    }
+
+    @Test
+    void venueAndAssistantQuotesAndArrangementAuditWork() throws Exception {
+        User user = family("quote_channels");
+        ServiceVenue venue = chapel();
+        ArrangementExtra floral = extra("Floral arrangement");
+        ArrangementRequest request = validRequest(venue, user);
+        request.setAttendees(5);
+        request.setExtraIds(List.of(floral.getId()));
+        PriceQuote expected = reservationService.quote(user, request);
+        mockMvc.perform(post("/venues/{id}/quote", venue.getId())
+                        .param("venueId", String.valueOf(venue.getId()))
+                        .param("serviceType", request.getServiceType().name())
+                        .param("funeralPackage", request.getFuneralPackage().name())
+                        .param("deceasedFullName", request.getDeceasedFullName())
+                        .param("dateOfDeath", "2024-03-03")
+                        .param("attendees", "5")
+                        .param("paymentMethod", PaymentMethod.CASH.name())
+                        .param("extraIds", String.valueOf(floral.getId()))
+                        .with(csrf())
+                        .with(user(user.getUsername()).roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("PLN"))
+                .andExpect(jsonPath("$.formattedAmount").value(expected.getFormattedAmount()));
+        mockMvc.perform(get("/api/reservation-assistant/venues/{id}/extras", venue.getId())
+                        .param("serviceType", ServiceType.MEMORIAL_SERVICE.name())
+                        .with(user(user.getUsername()).roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Floral arrangement')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.name=='Urn selection')]").isEmpty());
+        String quoteJson = "{"
+                + "\"venueId\":" + venue.getId() + ","
+                + "\"serviceType\":\"" + request.getServiceType().name() + "\","
+                + "\"funeralPackage\":\"ESSENTIAL\","
+                + "\"deceasedFullName\":\"Remembered Person\","
+                + "\"dateOfDeath\":\"2024-03-03\","
+                + "\"attendees\":5,"
+                + "\"paymentMethod\":\"CASH\","
+                + "\"extraIds\":[" + floral.getId() + "]"
+                + "}";
+        mockMvc.perform(post("/api/reservation-assistant/quote")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(quoteJson)
+                        .with(csrf())
+                        .with(user(user.getUsername()).roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.formattedAmount").value(expected.getFormattedAmount()));
+        Logger logger = (Logger) LoggerFactory.getLogger(AuditLogService.LOGGER_NAME);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            mockMvc.perform(post("/api/reservation-assistant/arrangements")
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(quoteJson)
+                            .with(csrf())
+                            .with(user(user.getUsername()).roles("USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.formattedAmount").value(expected.getFormattedAmount()));
+            String joined = appender.list.stream().map(ILoggingEvent::getFormattedMessage).collect(Collectors.joining(" "));
+            assertThat(joined).contains("ASSISTANT_RESERVATION_SUCCESS");
+            assertThat(joined).contains("source=CHAT_ASSISTANT");
+            assertThat(joined).doesNotContain("Remembered Person");
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
     }
 
     @Test
@@ -477,6 +546,12 @@ class FuneralArrangementTests {
         assertThat(css).contains("right: 1.1rem !important");
         assertThat(css).contains("bottom: 1.1rem !important");
         assertThat(css).contains(".ca-panel[hidden]");
+        assertThat(css).contains("flex: 1 1 0");
+        assertThat(css).contains("min-height: 0");
+        assertThat(css).contains("max-height: 64%");
+        assertThat(css).doesNotContain("max-height: 14rem");
+        assertThat(js).contains("er-text-area");
+        assertThat(js).contains("placeholder = \"Private family note\"");
         assertThat(css).contains("display: none !important");
         assertThat(css).contains(".ink-veil");
         assertThat(css).contains(".ink-blot");
@@ -559,8 +634,60 @@ class FuneralArrangementTests {
         assertThat(html).contains("Confirm arrangements");
         assertThat(html).contains("type=\"date\"");
         assertThat(html).contains("data-max-today");
+        assertThat(html).contains("type=\"text\"");
+        assertThat(html).contains("holds up to");
+        assertThat(html).doesNotContain("id=\"attendees\" th:field=\"*{attendees}\" type=\"number\"");
         assertThat(html).doesNotContain("id=\"spin-btn\"");
         assertThat(html).doesNotContain("id=\"preview-btn\"");
+        String fieldsJs = Files.readString(Path.of("src/main/resources/static/js/fields.js"));
+        assertThat(fieldsJs).contains("EverRestFields");
+        assertThat(fieldsJs).contains("er-text-guests");
+        assertThat(fieldsJs).contains("replace(/[^0-9]/g, \"\")");
+        assertThat(nav).contains("/js/fields.js");
+        assertThat(arrangeJs).contains("parseGuests");
+        assertThat(assistantJs).contains("data-guest-field");
+        assertThat(assistantJs).contains("holds up to");
+        assertThat(assistantJs).contains("EverRestFields");
+        String css = Files.readString(Path.of("src/main/resources/static/css/app.css"));
+        assertThat(css).contains(".er-text");
+        assertThat(css).contains(".ca-controls .er-text");
+        assertThat(css).contains("#c4a574");
+        assertThat(css).contains("textarea.er-text");
+        assertThat(assistantJs).contains("er-text-area");
+        assertThat(arrangeJs).contains("data-quote-url");
+        assertThat(arrangeJs).contains("refreshQuote");
+        assertThat(arrangeJs).contains("showQuotedTotal");
+        assertThat(html).contains("data-quote-url");
+        assertThat(html).contains("quote-amount");
+        assertThat(assistantJs).contains("ca-selected-extras");
+        assertThat(assistantJs).contains("fillExtras");
+        assertThat(assistantJs).contains("api(\"/quote\"");
+        assertThat(assistantJs).contains("Quoted total");
+        assertThat(assistantJs).doesNotContain("draft.extraIds.splice");
+        assertThat(css).contains(".ca-selected-extras");
+        String editHtml = Files.readString(Path.of("src/main/resources/templates/reservations/edit.html"));
+        assertThat(editHtml).contains("holds up to");
+        assertThat(editHtml).contains("er-text-area");
+        assertThat(editHtml).doesNotContain("id=\"attendees\" th:field=\"*{attendees}\" type=\"number\"");
+        assertThat(html).contains("er-text-area");
+    }
+
+    @Test
+    void venuesHaveDistinctGuestCapacitiesAndAttendeesRoundTrip() {
+        List<ServiceVenue> venues = serviceVenueRepository.findByEnabledTrueOrderByNameAsc();
+        assertThat(venues).hasSizeGreaterThan(3);
+        assertThat(venues.stream().map(ServiceVenue::getMaxAttendees).collect(Collectors.toSet()))
+                .hasSizeGreaterThan(3);
+        ServiceVenue venue = chapel();
+        User user = family("guest_roundtrip");
+        ArrangementRequest request = validRequest(venue, user);
+        request.setAttendees(Math.min(12, venue.getMaxAttendees()));
+        Reservation saved = reservationService.create(user, request);
+        Reservation loaded = reservationRepository.findWithDetailsById(saved.getId()).orElseThrow();
+        assertThat(loaded.getAttendees()).isEqualTo(request.getAttendees());
+        assertThat(loaded.getDeceasedFullName()).isEqualTo("Remembered Person");
+        assertThat(loaded.getStartAt()).isNotNull();
+        assertThat(reservationService.findForUser(user)).extracting(Reservation::getId).contains(saved.getId());
     }
 
     @Test

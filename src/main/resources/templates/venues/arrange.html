@@ -13,7 +13,8 @@
     </div>
     <div class="arrange-layout">
         <form id="arrange-form" class="auth-form arrange-form" th:object="${arrangementRequest}" novalidate
-              th:attr="data-preview-url=@{/venues/{id}/preview(id=${venue.id})},
+              th:attr="                       data-preview-url=@{/venues/{id}/preview(id=${venue.id})},
+                       data-quote-url=@{/venues/{id}/quote(id=${venue.id})},
                        data-spin-url=@{/venues/{id}/spin(id=${venue.id})},
                        data-history-url=@{/reservations},
                        data-notices-url=@{/notifications},
@@ -65,8 +66,8 @@
                 <legend>Gathering</legend>
                 <div class="field">
                     <label for="attendees">Guests</label>
-                    <input id="attendees" th:field="*{attendees}" type="number" min="1" th:max="${venue.maxAttendees}" required>
-                    <p class="meta-label" th:text="${'Capacity ' + venue.maxAttendees}">Capacity</p>
+                    <input id="attendees" th:field="*{attendees}" type="text" inputmode="numeric" autocomplete="off" required maxlength="4" th:attr="data-max-attendees=${venue.maxAttendees}">
+                    <p class="meta-label" th:text="${venue.name + ' holds up to ' + venue.maxAttendees + ' guests'}">Capacity</p>
                     <p class="field-error" data-error-for="attendees" hidden></p>
                 </div>
                 <div class="field" th:if="${phoneRequired}">
@@ -100,7 +101,7 @@
                 </div>
                 <div class="field">
                     <label for="note">Private family note <span class="optional">(optional)</span></label>
-                    <textarea id="note" th:field="*{note}" maxlength="1000" rows="3"></textarea>
+                    <textarea id="note" class="er-text er-text-area" th:field="*{note}" maxlength="1000" rows="5"></textarea>
                     <p class="field-error" data-error-for="note" hidden></p>
                 </div>
             </fieldset>
@@ -114,6 +115,6 @@
 </main>
 <footer th:replace="~{fragments/nav :: footer}"></footer>
 <script th:src="@{/js/app.js}"></script>
-<script th:src="@{/js/arrange.js(v=3)}"></script>
+<script th:src="@{/js/arrange.js(v=5)}"></script>
 </body>
 </html>

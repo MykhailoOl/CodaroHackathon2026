@@ -130,6 +130,7 @@
                 }
             }
         });
+        refreshQuote();
     }
 
     function formBody() {
@@ -145,7 +146,10 @@
             data.set("dateOfBirth", form.dateOfBirth.value);
         }
         data.set("dateOfDeath", form.dateOfDeath.value);
-        data.set("attendees", form.attendees.value);
+        var guests = parseGuests(form.attendees.value);
+        if (guests) {
+            data.set("attendees", String(guests));
+        }
         if (form.phone && form.phone.value) {
             data.set("phone", form.phone.value.trim());
         }
@@ -162,6 +166,57 @@
         data.set("bookingSource", "FORM");
         data.set("submissionToken", submissionToken());
         return data;
+    }
+
+    function parseGuests(value) {
+        var digits = String(value || "").replace(/[^0-9]/g, "");
+        if (!digits) {
+            return NaN;
+        }
+        return Number(digits);
+    }
+
+    function formatMoney(amount, currency) {
+        var n = Number(amount);
+        if (amount == null || amount === "" || isNaN(n)) {
+            return "—";
+        }
+        return n.toFixed(2) + " " + (currency || "PLN");
+    }
+
+    function showQuotedTotal(data) {
+        if (!quoteEl || !data) {
+            return;
+        }
+        quoteEl.textContent = data.formattedAmount || formatMoney(data.amount, data.currency);
+    }
+
+    function canQuote() {
+        var fields = ["serviceType", "funeralPackage", "deceasedFullName", "dateOfDeath", "attendees", "paymentMethod"];
+        var i;
+        for (i = 0; i < fields.length; i++) {
+            if (fieldIssue(fields[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function refreshQuote() {
+        if (!quoteEl) {
+            return;
+        }
+        if (!canQuote()) {
+            return;
+        }
+        var quoteUrl = form.getAttribute("data-quote-url");
+        if (!quoteUrl) {
+            return;
+        }
+        post(quoteUrl, formBody()).then(function (data) {
+            showQuotedTotal(data);
+        }).catch(function () {
+        });
     }
 
     function todayIso() {
@@ -213,10 +268,10 @@
             }
         }
         if (name === "attendees") {
-            var attendees = Number(form.attendees.value);
-            var max = Number(form.getAttribute("data-max-attendees") || "1");
+            var attendees = parseGuests(form.attendees.value);
+            var max = Number(form.getAttribute("data-max-attendees") || form.attendees.getAttribute("data-max-attendees") || "1");
             if (!attendees || attendees < 1 || attendees > max) {
-                return "Guest count must be between 1 and " + max;
+                return "Enter a guest count between 1 and " + max;
             }
         }
         if (name === "phone" && form.phone) {
@@ -309,9 +364,7 @@
         spinning = false;
         confirmBtn.disabled = true;
         sessionStorage.setItem(doneKey, String(data.id));
-        if (quoteEl && data.formattedAmount) {
-            quoteEl.textContent = data.formattedAmount;
-        }
+        showQuotedTotal(data);
         if (doneEl) {
             doneEl.hidden = false;
             doneEl.textContent = "Arrangement #" + data.id + " · " + data.status + " · " + data.formattedAmount;
@@ -334,9 +387,7 @@
         var previewUrl = form.getAttribute("data-preview-url");
         var previewPromise = previewUrl ? post(previewUrl, body) : Promise.resolve({});
         previewPromise.then(function (preview) {
-            if (preview && preview.amount != null) {
-                quoteEl.textContent = preview.amount + " " + (preview.currency || "PLN");
-            }
+            showQuotedTotal(preview);
             window.EverRestWheel.open({
                 copy: "Your available ceremony date is being assigned.",
                 historyUrl: form.getAttribute("data-history-url"),
@@ -398,6 +449,9 @@
                 validateField("dateOfBirth", false);
                 validateField("dateOfDeath", false);
             }
+            if (event.target.name === "extraIds" || event.target.name === "funeralPackage" || event.target.name === "attendees" || event.target.name === "serviceType" || event.target.name === "paymentMethod") {
+                refreshQuote();
+            }
         }
     });
     form.addEventListener("change", function (event) {
@@ -406,6 +460,9 @@
             if (event.target.name === "dateOfBirth" || event.target.name === "dateOfDeath") {
                 validateField("dateOfBirth", false);
                 validateField("dateOfDeath", false);
+            }
+            if (event.target.name === "extraIds" || event.target.name === "funeralPackage" || event.target.name === "attendees" || event.target.name === "serviceType" || event.target.name === "paymentMethod") {
+                refreshQuote();
             }
         }
     });
@@ -417,4 +474,5 @@
     if (sessionStorage.getItem(doneKey)) {
         confirmBtn.disabled = true;
     }
+    refreshQuote();
 })();

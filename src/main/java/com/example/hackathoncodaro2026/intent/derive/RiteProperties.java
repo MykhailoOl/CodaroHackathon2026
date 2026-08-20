@@ -7,25 +7,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * How long after a death each observance expects the service to take place, plus the
- * statutory outer limit that overrides custom.
- *
- * <p>Defaults are baked in so the feature works with no yml at all; a {@code rites:}
- * block in {@code application.yml} overrides them. This mirrors
- * {@link com.example.hackathoncodaro2026.config.DomainProperties} and deliberately
- * keys off the <em>rite</em> rather than {@code ResourceType}, so retargeting the
- * service catalogue and tuning the scheduling rules stay independent edits.
- *
- * @param rules               observance key -> rule
- * @param statutoryDays       legal outer limit measured from the date of death
- *                            (Poland: burial within 96 hours), applied to every
- *                            non-deferrable rite even when custom allows longer
- * @param certificateLeadDays typical wait for a death certificate after a natural death
- * @param coronerLeadDays     typical wait when a coroner or prosecutor must release the body
- * @param holdDecisionHour    hour of the day by which the family must answer for the
- *                            venue to hold the slot overnight
- */
 @ConfigurationProperties(prefix = "rites")
 public record RiteProperties(
         Map<String, RiteRule> rules,
@@ -60,7 +41,6 @@ public record RiteProperties(
         return Map.copyOf(normalized);
     }
 
-    /** The rule for a rite key, or null when the rite is unknown or unstated. */
     public RiteRule rule(String riteKey) {
         if (riteKey == null || riteKey.isBlank()) {
             return null;
@@ -68,11 +48,6 @@ public record RiteProperties(
         return rules.get(riteKey.trim().toUpperCase(Locale.ROOT));
     }
 
-    /**
-     * Every configured phrase paired with the rite it identifies, longest phrase first
-     * so that "roman catholic" wins over a bare "catholic" and "greek orthodox" over
-     * "orthodox".
-     */
     public List<String[]> phrasePairs() {
         return rules.entrySet().stream()
                 .flatMap(entry -> entry.getValue().phrases().stream()
@@ -81,14 +56,6 @@ public record RiteProperties(
                 .toList();
     }
 
-    /**
-     * @param label      one sentence naming the custom, shown to the family verbatim
-     * @param latestDays days after the death by which the observance expects the service
-     * @param deferrable true when the observance permits deferral — typically because
-     *                   cremation or mortuary refrigeration is arranged — in which case
-     *                   the statutory limit does not bind
-     * @param phrases    words a family might use for this observance
-     */
     public record RiteRule(
             String label,
             Integer latestDays,

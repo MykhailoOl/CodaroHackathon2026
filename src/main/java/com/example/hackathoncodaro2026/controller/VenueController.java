@@ -3,6 +3,7 @@ package com.example.hackathoncodaro2026.controller;
 import com.example.hackathoncodaro2026.dto.ArrangementCreateResponse;
 import com.example.hackathoncodaro2026.dto.ArrangementPreview;
 import com.example.hackathoncodaro2026.dto.ArrangementRequest;
+import com.example.hackathoncodaro2026.dto.PriceQuote;
 import com.example.hackathoncodaro2026.exception.ReservationException;
 import com.example.hackathoncodaro2026.model.ServiceVenue;
 import com.example.hackathoncodaro2026.model.User;
@@ -52,12 +53,23 @@ public class VenueController {
         if (!model.containsAttribute("arrangementRequest")) {
             ArrangementRequest request = new ArrangementRequest();
             request.setVenueId(id);
-            request.setAttendees(1);
             request.setPaymentMethod(PaymentMethod.CASH);
             model.addAttribute("arrangementRequest", request);
         }
         populate(model, venue, user);
         return "venues/arrange";
+    }
+
+    @PostMapping(path = "/venues/{id}/quote", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public PriceQuote quote(
+            @PathVariable Long id,
+            @Valid @ModelAttribute ArrangementRequest arrangementRequest,
+            Authentication authentication
+    ) {
+        arrangementRequest.setVenueId(id);
+        arrangementRequest.setBookingSource("FORM");
+        return reservationService.quote(requireUser(authentication), arrangementRequest);
     }
 
     @PostMapping(path = "/venues/{id}/preview", produces = MediaType.APPLICATION_JSON_VALUE)

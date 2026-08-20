@@ -1,5 +1,8 @@
 package com.example.hackathoncodaro2026.config;
 
+import com.example.hackathoncodaro2026.security.TelegramBearerFilter;
+import com.example.hackathoncodaro2026.service.TelegramTokenService;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,12 +10,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @Configuration
@@ -30,11 +35,27 @@ public class SecurityConfig {
     }
 
     @Bean
+    public TelegramBearerFilter telegramBearerFilter(
+            TelegramTokenService telegramTokenService,
+            UserDetailsService userDetailsService
+    ) {
+        return new TelegramBearerFilter(telegramTokenService, userDetailsService);
+    }
+
+    @Bean
+    public FilterRegistrationBean<TelegramBearerFilter> telegramBearerFilterRegistration(TelegramBearerFilter telegramBearerFilter) {
+        FilterRegistrationBean<TelegramBearerFilter> registration = new FilterRegistrationBean<>(telegramBearerFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             AuditAuthenticationSuccessHandler auditAuthenticationSuccessHandler,
             AuditAuthenticationFailureHandler auditAuthenticationFailureHandler,
-            AuditLogoutSuccessHandler auditLogoutSuccessHandler
+            AuditLogoutSuccessHandler auditLogoutSuccessHandler,
+            TelegramBearerFilter telegramBearerFilter
     ) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
@@ -47,7 +68,8 @@ public class SecurityConfig {
                                 "/login",
                                 "/h2-console/**",
                                 "/h2-launch",
-                                "/error"
+                                "/error",
+                                "/api/telegram/token"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/manager/**").hasAnyRole("ADMIN", "MANAGER")
@@ -67,11 +89,12 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**", "/api/telegram/**"))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(assistantEntryPoint()))
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
-                );
+                )
+                .addFilterBefore(telegramBearerFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -83,11 +106,10 @@ public class SecurityConfig {
                     "{\"code\":\"UNAUTHENTICATED\",\"message\":\"Sign in to arrange a ceremony.\"}"
             );
         };
+        PathPatternRequestMatcher.Builder matcher = PathPatternRequestMatcher.withDefaults();
         return DelegatingAuthenticationEntryPoint.builder()
-                .addEntryPointFor(
-                        json,
-                        PathPatternRequestMatcher.withDefaults().matcher("/api/reservation-assistant/**")
-                )
+                .addEntryPointFor(json, matcher.matcher("/api/reservation-assistant/**"))
+                .addEntryPointFor(json, matcher.matcher("/api/telegram/**"))
                 .defaultEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
                 .build();
     }

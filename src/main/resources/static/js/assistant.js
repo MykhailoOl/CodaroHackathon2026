@@ -41,7 +41,7 @@
             deceasedFullName: "",
             dateOfBirth: "",
             dateOfDeath: "",
-            attendees: 1,
+            attendees: "",
             phone: "",
             extraIds: [],
             paymentMethod: "CASH",
@@ -129,7 +129,7 @@
             funeralPackage: source.funeralPackage || "",
             extraIds: source.extraIds || [],
             paymentMethod: source.paymentMethod || "CASH",
-            attendees: source.attendees || 1,
+            attendees: source.attendees || "",
             currentStep: step
         };
     }
@@ -200,7 +200,7 @@
         draft.funeralPackage = stored.funeralPackage || "";
         draft.extraIds = stored.extraIds || [];
         draft.paymentMethod = stored.paymentMethod || "CASH";
-        draft.attendees = stored.attendees || 1;
+        draft.attendees = stored.attendees || "";
         var step = stored.currentStep || stored.step || "home";
         if (step === "wheel") {
             step = "review";
@@ -318,14 +318,26 @@
             deceasedFullName: draft.deceasedFullName,
             dateOfBirth: draft.dateOfBirth || null,
             dateOfDeath: draft.dateOfDeath,
-            attendees: Number(draft.attendees),
+            attendees: parseGuests(draft.attendees) || null,
             phone: draft.phone || null,
-            extraIds: draft.extraIds,
+            extraIds: draft.extraIds.map(function (id) {
+                return Number(id);
+            }).filter(function (id) {
+                return id;
+            }),
             paymentMethod: draft.paymentMethod,
             note: draft.note || null,
             bookingSource: "CHAT_ASSISTANT",
             submissionToken: submissionToken()
         };
+    }
+
+    function parseGuests(value) {
+        var digits = String(value || "").replace(/[^0-9]/g, "");
+        if (!digits) {
+            return NaN;
+        }
+        return Number(digits);
     }
 
     function todayIso() {
@@ -359,9 +371,10 @@
             return { step: "deceased", message: "Date of death cannot be earlier than date of birth." };
         }
         var max = catalog.venue ? catalog.venue.maxAttendees : 40;
-        var attendees = Number(draft.attendees);
+        var attendees = parseGuests(draft.attendees);
         if (!attendees || attendees < 1 || attendees > max) {
-            return { step: "attendees", message: "Guest count must be between 1 and " + max + "." };
+            var place = catalog.venue && catalog.venue.name ? catalog.venue.name : "this venue";
+            return { step: "attendees", message: "Enter a guest count between 1 and " + max + " for " + place + "." };
         }
         if (phoneRequired && (!draft.phone || !String(draft.phone).trim())) {
             return { step: "phone", message: "A contact phone is required to complete this arrangement." };
@@ -545,6 +558,9 @@
         } else if (step === "success") {
             renderSuccess();
         }
+        if (window.EverRestFields) {
+            window.EverRestFields.enhanceAll(controls);
+        }
     }
 
     function renderHomes() {
@@ -713,24 +729,28 @@
 
     function renderAttendees() {
         var max = catalog.venue ? catalog.venue.maxAttendees : 40;
-        addBot("How many guests will attend? Capacity is " + max + ".");
+        var place = catalog.venue && catalog.venue.name ? catalog.venue.name : "this venue";
+        addBot("How many guests will attend? " + place + " holds up to " + max + ".");
         var input = document.createElement("input");
-        input.type = "number";
-        input.min = "1";
-        input.max = String(max);
-        input.value = String(draft.attendees || 1);
+        input.type = "text";
+        input.setAttribute("data-guest-field", "true");
+        input.setAttribute("inputmode", "numeric");
+        input.maxLength = 4;
+        input.autocomplete = "off";
+        input.placeholder = "Guest count";
+        input.value = draft.attendees ? String(draft.attendees) : "";
         var hint = document.createElement("p");
         hint.className = "ca-inline-error";
         hint.hidden = true;
         function liveGuests() {
-            var value = Number(input.value);
-            if (!input.value) {
+            var value = parseGuests(input.value);
+            if (!String(input.value || "").trim()) {
                 hint.hidden = true;
                 return false;
             }
             if (!value || value < 1 || value > max) {
                 hint.hidden = false;
-                hint.textContent = "Guest count must be between 1 and " + max + ".";
+                hint.textContent = "Enter a guest count between 1 and " + max + ".";
                 return false;
             }
             hint.hidden = true;
@@ -744,10 +764,14 @@
         next.textContent = "Continue";
         next.addEventListener("click", function () {
             if (!liveGuests()) {
+                if (!String(input.value || "").trim()) {
+                    hint.hidden = false;
+                    hint.textContent = "Enter a guest count between 1 and " + max + ".";
+                }
                 input.focus();
                 return;
             }
-            draft.attendees = Number(input.value);
+            draft.attendees = parseGuests(input.value);
             addUser(String(draft.attendees) + " guests");
             go(phoneRequired ? "phone" : "extras");
         });
@@ -816,26 +840,81 @@
         input.focus();
     }
 
+    function extraKey(value) {
+        return String(value == null ? "" : value);
+    }
+
+    function hasExtra(id) {
+        var key = extraKey(id);
+        return draft.extraIds.some(function (item) {
+            return extraKey(item) === key;
+        });
+    }
+
+    function extraLabel(extra) {
+        return extra.name + " · " + extra.amount + " PLN" + (extra.pricingMode === "PER_ATTENDEE" ? " / guest" : "");
+    }
+
+    function formatMoney(amount, currency) {
+        var n = Number(amount);
+        if (amount == null || amount === "" || isNaN(n)) {
+            return "—";
+        }
+        return n.toFixed(2) + " " + (currency || "PLN");
+    }
+
     function renderExtras() {
-        addBot("Add extras if you wish. Urn selection appears only for cremation.");
+        fillExtras(true);
+    }
+
+    function fillExtras(announce) {
         api("/venues/" + draft.venueId + "/extras?serviceType=" + encodeURIComponent(draft.serviceType)).then(function (extras) {
-            catalog.extras = extras;
-            extras.forEach(function (extra) {
-                var selected = draft.extraIds.indexOf(extra.id) >= 0;
-                controls.appendChild(button(extra.name + " · " + extra.amount + " PLN" + (extra.pricingMode === "PER_ATTENDEE" ? " / guest" : ""), selected, function () {
-                    var idx = draft.extraIds.indexOf(extra.id);
-                    if (idx >= 0) {
-                        draft.extraIds.splice(idx, 1);
-                    } else {
+            catalog.extras = extras || [];
+            var remaining = [];
+            var chosen = [];
+            catalog.extras.forEach(function (extra) {
+                if (hasExtra(extra.id)) {
+                    chosen.push(extra);
+                } else {
+                    remaining.push(extra);
+                }
+            });
+            if (announce) {
+                addBot("Add extras if you wish. Urn selection appears only for cremation.");
+            }
+            if (chosen.length) {
+                var list = document.createElement("div");
+                list.className = "ca-selected-extras";
+                var title = document.createElement("p");
+                title.className = "ca-selected-label";
+                title.textContent = "Selected extras";
+                list.appendChild(title);
+                chosen.forEach(function (extra) {
+                    var row = document.createElement("p");
+                    row.className = "ca-selected-item";
+                    row.textContent = extraLabel(extra);
+                    list.appendChild(row);
+                });
+                controls.appendChild(list);
+            }
+            remaining.forEach(function (extra) {
+                controls.appendChild(button(extraLabel(extra), false, function () {
+                    if (!hasExtra(extra.id)) {
                         draft.extraIds.push(extra.id);
                     }
                     persistSafe();
+                    addUser(extraLabel(extra));
                     clearControls();
-                    renderExtras();
+                    fillExtras(false);
                 }));
             });
+            if (!remaining.length && catalog.extras.length) {
+                addBot("Every extra that fits this ceremony is already selected.");
+            }
             controls.appendChild(button("Continue", false, function () {
-                addUser(draft.extraIds.length ? "Extras selected" : "No extras");
+                if (!chosen.length) {
+                    addUser("No extras");
+                }
                 go("payment");
             }));
             focusFirstControl();
@@ -859,8 +938,12 @@
     function renderNote() {
         addBot("Optional private family note. Skip if you prefer.");
         var area = document.createElement("textarea");
+        area.className = "er-text er-text-area";
+        area.setAttribute("data-er-text", "true");
         area.maxLength = 1000;
-        area.rows = 3;
+        area.rows = 5;
+        area.placeholder = "Private family note";
+        area.value = draft.note || "";
         var skip = button("Skip", false, function () {
             draft.note = "";
             addUser("No note");
@@ -884,11 +967,35 @@
             return;
         }
         addBot("Confirm to assign a currently available date. The quoted amount will not change.");
+        var price = document.createElement("p");
+        price.className = "ca-price";
+        price.textContent = "Quoted total …";
         var confirm = button("Confirm arrangements", false, function () {
             startAssignment();
         });
+        confirm.disabled = true;
+        controls.appendChild(price);
         controls.appendChild(confirm);
-        confirm.focus();
+        api("/quote", { method: "POST", body: JSON.stringify(requestBody()) }).then(function (quote) {
+            if (draft.step !== "review") {
+                return;
+            }
+            var label = quote.formattedAmount || formatMoney(quote.amount, quote.currency);
+            price.textContent = "Quoted total " + label;
+            addBot("Quoted total " + label + ".");
+            confirm.disabled = false;
+            confirm.focus();
+        }).catch(function (error) {
+            if (draft.step !== "review") {
+                return;
+            }
+            price.textContent = "Quoted total will appear after assignment.";
+            confirm.disabled = false;
+            confirm.focus();
+            if (error && error.message) {
+                addBot(error.message);
+            }
+        });
     }
 
     function startAssignment() {

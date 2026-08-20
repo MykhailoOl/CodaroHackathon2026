@@ -49,6 +49,11 @@ public class CatalogServiceImpl implements CatalogService {
     }
 
     @Override
+    public List<ServiceVenue> venues() {
+        return serviceVenueRepository.findEnabledWithHomeAll();
+    }
+
+    @Override
     public Optional<ServiceVenue> venue(Long id) {
         return serviceVenueRepository.findEnabledWithHome(id);
     }

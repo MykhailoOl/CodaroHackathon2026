@@ -10,24 +10,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Pulls facts about the deceased out of what a family types.
- *
- * <p>Deliberately separate from {@link com.example.hackathoncodaro2026.intent.parse.IntentParser}
- * and applied to the raw text alongside it, for two reasons. The intent parsers are
- * domain-agnostic by contract and must stay that way. And these facts are the input to
- * a legal deadline, so extraction has to be deterministic and work identically whether
- * or not an LLM is reachable — a window that changes when a model is down is worse than
- * no window.
- *
- * <p>The dates here run <em>backwards</em>: a death is in the past, where every date in
- * a booking request is in the future. That inversion is why this cannot reuse the day
- * parsing in {@code RuleIntentParser}.
- */
 @Component
 public class ArrangementFactsParser {
 
-    /** How far past a death phrase to look for the date that belongs to it. */
     private static final int DEATH_CLAUSE_CHARS = 80;
 
     private static final int FAMILY_ONLY_MOURNERS = 8;
@@ -85,13 +70,6 @@ public class ArrangementFactsParser {
         );
     }
 
-    // ------------------------------------------------------------ date of death
-
-    /**
-     * Only dates tied to a death phrase count. "Dad died Tuesday, can we do it Saturday"
-     * has two dates in it and reading the wrong one would derive a window from the
-     * family's preference — exactly the confusion the product exists to remove.
-     */
     private LocalDate parseDateOfDeath(String lower, LocalDate today) {
         Matcher phrase = DEATH_PHRASE.matcher(lower);
         if (!phrase.find()) {
@@ -104,7 +82,6 @@ public class ArrangementFactsParser {
         if (fromClause != null) {
             return fromClause;
         }
-        // Nothing beside the phrase: accept only markers that cannot mean a future booking.
         return pastDateIn(lower, today, false);
     }
 
@@ -141,7 +118,6 @@ public class ArrangementFactsParser {
         return null;
     }
 
-    /** The named calendar date, resolved to the most recent occurrence that is not in the future. */
     private LocalDate explicitDate(String segment, LocalDate today) {
         Matcher dm = DAY_MONTH.matcher(segment);
         if (dm.find()) {
@@ -198,8 +174,6 @@ public class ArrangementFactsParser {
         return d;
     }
 
-    // ------------------------------------------------------------------- rite
-
     private String parseRite(String lower) {
         for (String[] pair : rites.phrasePairs()) {
             if (Pattern.compile("(?<![a-z])" + Pattern.quote(pair[0]) + "(?![a-z])").matcher(lower).find()) {
@@ -208,8 +182,6 @@ public class ArrangementFactsParser {
         }
         return null;
     }
-
-    // ------------------------------------------------------------ certificate
 
     private LocalDate parseCertificateDate(String lower, LocalDate today, LocalDate dateOfDeath) {
         if (CERTIFICATE_READY.matcher(lower).find()) {
@@ -225,7 +197,6 @@ public class ArrangementFactsParser {
         return null;
     }
 
-    /** A certificate is always still to come, so weekday names resolve forwards here. */
     private LocalDate futureDay(String word, LocalDate today) {
         if ("today".equals(word)) {
             return today;
@@ -240,8 +211,6 @@ public class ArrangementFactsParser {
         }
         return d;
     }
-
-    // -------------------------------------------------------------- mourners
 
     private Integer parseMourners(String lower) {
         if (lower.contains("family only") || lower.contains("just family")

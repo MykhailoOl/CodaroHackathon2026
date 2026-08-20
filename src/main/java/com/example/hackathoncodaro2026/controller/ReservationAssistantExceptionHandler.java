@@ -13,17 +13,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@RestControllerAdvice(assignableTypes = {ReservationAssistantController.class, VenueController.class})
+@RestControllerAdvice(assignableTypes = {ReservationAssistantController.class, VenueController.class, TelegramController.class})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class ReservationAssistantExceptionHandler {
 
@@ -50,9 +53,14 @@ public class ReservationAssistantExceptionHandler {
         log.warn("Assistant reservation rejected requestId={}", requestId());
         String code = exception.getCode() == null || exception.getCode().isBlank() ? "VALIDATION" : exception.getCode();
         String field = exception.getField();
-        HttpStatus status = "NO_SLOTS".equals(code) || "STALE_SLOT".equals(code) || "LOCK_TIMEOUT".equals(code)
-                ? HttpStatus.CONFLICT
-                : HttpStatus.BAD_REQUEST;
+        HttpStatus status;
+        if ("UNAUTHENTICATED".equals(code)) {
+            status = HttpStatus.UNAUTHORIZED;
+        } else if ("NO_SLOTS".equals(code) || "STALE_SLOT".equals(code) || "LOCK_TIMEOUT".equals(code)) {
+            status = HttpStatus.CONFLICT;
+        } else {
+            status = HttpStatus.BAD_REQUEST;
+        }
         return ResponseEntity.status(status)
                 .body(new AssistantErrorResponse(code, exception.getMessage(), field, ArrangementFieldMapper.stepFor(field)));
     }
@@ -88,10 +96,34 @@ public class ReservationAssistantExceptionHandler {
                 .body(new AssistantErrorResponse("VALIDATION", message, field, ArrangementFieldMapper.stepFor(field)));
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<AssistantErrorResponse> handleConstraint(ConstraintViolationException exception) {
+        log.warn("Assistant bad request requestId={}", requestId());
+        String message = "Please check the booking details.";
+        String field = null;
+        for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
+            if (violation.getMessage() != null && !violation.getMessage().isBlank()) {
+                message = violation.getMessage();
+            }
+            if (violation.getPropertyPath() != null) {
+                field = violation.getPropertyPath().toString();
+            }
+            break;
+        }
+        return ResponseEntity.badRequest()
+                .body(new AssistantErrorResponse("VALIDATION", message, field, ArrangementFieldMapper.stepFor(field)));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<AssistantErrorResponse> handleDenied() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new AssistantErrorResponse("UNAUTHENTICATED", "Sign in to reserve."));
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<AssistantErrorResponse> handleBadCredentials() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new AssistantErrorResponse("UNAUTHENTICATED", "Those credentials do not match our records."));
     }
 
     @ExceptionHandler(Exception.class)

@@ -45,7 +45,8 @@
         </div>
         <div class="field">
             <label for="attendees">Guests</label>
-            <input id="attendees" th:field="*{attendees}" type="number" min="1" th:max="${venue.maxAttendees}" required>
+            <input id="attendees" th:field="*{attendees}" type="text" inputmode="numeric" autocomplete="off" required maxlength="4" th:attr="data-max-attendees=${venue.maxAttendees}">
+            <p class="meta-label" th:text="${venue.name + ' holds up to ' + venue.maxAttendees + ' guests'}">Capacity</p>
             <p class="field-error" th:if="${#fields.hasErrors('attendees')}" th:errors="*{attendees}"></p>
         </div>
         <div class="field" th:if="${phoneRequired}">
@@ -69,7 +70,7 @@
         </div>
         <div class="field">
             <label for="note">Private family note</label>
-            <textarea id="note" th:field="*{note}" maxlength="1000" rows="3"></textarea>
+            <textarea id="note" class="er-text er-text-area" th:field="*{note}" maxlength="1000" rows="5"></textarea>
         </div>
         <p class="field-error" th:if="${#fields.hasGlobalErrors()}" th:errors="*{global}"></p>
         <button class="btn btn-accent" type="submit">Save changes</button>

@@ -16,6 +16,8 @@ public interface CatalogService {
 
     List<ServiceVenue> venues(Long homeId);
 
+    List<ServiceVenue> venues();
+
     Optional<ServiceVenue> venue(Long id);
 
     List<ArrangementExtra> extras();

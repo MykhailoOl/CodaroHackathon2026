@@ -456,6 +456,16 @@ public class ReservationServiceImpl implements ReservationService {
             assistant.put("startAt", saved.getStartAt());
             auditLogService.record(actor, "ASSISTANT_RESERVATION_SUCCESS", "RESERVATION", saved.getId(), "SUCCESS", assistant);
         }
+        if ("TELEGRAM".equals(request.getBookingSource())) {
+            Map<String, Object> telegram = new LinkedHashMap<>();
+            telegram.put("source", "TELEGRAM");
+            telegram.put("venueId", saved.getVenue().getId());
+            telegram.put("status", saved.getStatus());
+            telegram.put("totalPln", saved.getTotalAmount());
+            telegram.put("startAt", saved.getStartAt());
+            telegram.put("attendees", saved.getAttendees());
+            auditLogService.record(actor, "TELEGRAM_RESERVATION_SUCCESS", "RESERVATION", saved.getId(), "SUCCESS", telegram);
+        }
     }
 
     private void notify(Reservation reservation, NotificationType type, String title, String message) {

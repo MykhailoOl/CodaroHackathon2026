@@ -23,6 +23,14 @@ public interface ServiceVenueRepository extends JpaRepository<ServiceVenue, Long
             """)
     Optional<ServiceVenue> findEnabledWithHome(@Param("id") Long id);
 
+    @Query("""
+            SELECT v FROM ServiceVenue v
+            JOIN FETCH v.funeralHome
+            WHERE v.enabled = true AND v.funeralHome.enabled = true
+            ORDER BY v.funeralHome.name ASC, v.name ASC
+            """)
+    List<ServiceVenue> findEnabledWithHomeAll();
+
     List<ServiceVenue> findByEnabledTrueOrderByNameAsc();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

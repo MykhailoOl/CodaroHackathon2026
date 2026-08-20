@@ -155,7 +155,8 @@ public class ReservationAssistantServiceImpl implements ReservationAssistantServ
             return new AssistantQuoteDto(
                     quote.getAmount(),
                     quote.getCurrency(),
-                    staff ? ReservationStatus.CONFIRMED.name() : ReservationStatus.PENDING.name()
+                    staff ? ReservationStatus.CONFIRMED.name() : ReservationStatus.PENDING.name(),
+                    quote.getFormattedAmount()
             );
         } catch (ReservationException ex) {
             throw map(user, ex);

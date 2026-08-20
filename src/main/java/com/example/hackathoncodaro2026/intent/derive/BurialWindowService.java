@@ -11,24 +11,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-/**
- * Derives the dates a service may fall between, from facts about the deceased.
- *
- * <p>This is the whole inversion in one class. Nothing here picks a slot — the existing
- * ranker still does that, unchanged — but where a sports booking got its
- * {@code dayFrom}/{@code dayTo} from whatever the customer typed, a funeral gets them
- * from the certificate release, the observance, and the statute. The family is then
- * shown the reasoning and asked to approve, not to choose.
- */
 @Service
 public class BurialWindowService {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH);
-
-    /** A stated preference is a narrow ask ("Saturday", "this weekend"), not a default span. */
     private static final int PREFERENCE_MAX_SPAN_DAYS = 2;
-
-    /** Days of search space kept when no feasible window exists, so ranking still has candidates. */
     private static final int INFEASIBLE_GRACE_DAYS = 3;
 
     private final RiteProperties rites;
@@ -37,11 +24,6 @@ public class BurialWindowService {
         this.rites = rites;
     }
 
-    /**
-     * @return the derived window, or empty when the family has not yet said when the
-     *         death occurred — without that date nothing can be derived and the caller
-     *         should fall back to ordinary parsed dates.
-     */
     public Optional<ServiceWindow> derive(ArrangementFacts facts, LocalDateTime now) {
         if (facts == null || !facts.schedulable()) {
             return Optional.empty();
@@ -111,10 +93,6 @@ public class BurialWindowService {
         return latest;
     }
 
-    /**
-     * When the family must answer for the venue to keep holding the slot: the evening
-     * before the last feasible date, but never less than two hours from now.
-     */
     private LocalDateTime decisionDeadline(LocalDateTime now, LocalDate latest) {
         LocalDateTime candidate = latest.minusDays(1).atTime(rites.holdDecisionHour(), 0);
         LocalDateTime floor = now.plusHours(2);
@@ -129,15 +107,6 @@ public class BurialWindowService {
         return days == 1 ? "one-day" : days + "-day";
     }
 
-    /**
-     * Reconciles the window with any dates the family actually asked for.
-     *
-     * <p>A preference never widens the window — it can only narrow the search inside it,
-     * and when it falls outside entirely the full window is searched so the family is
-     * offered the nearest possible alternative rather than nothing. Only a narrow ask
-     * counts as a preference; the parser emits a wide default span when the text names
-     * no day at all, and that must not be mistaken for an intention.
-     */
     public EffectiveRange applyPreference(
             ServiceWindow window,
             LocalDate dateOfDeath,
@@ -151,9 +120,6 @@ public class BurialWindowService {
                 || preferredFrom.plusDays(PREFERENCE_MAX_SPAN_DAYS).isBefore(preferredTo)) {
             return new EffectiveRange(window.earliest(), window.latest(), null);
         }
-        // "Mum died today" contains a day name, and the domain-agnostic parser has no way
-        // to know it describes the death rather than the service. A service can never fall
-        // on or before the death, so a range that does is an echo of the death phrase.
         if (dateOfDeath != null && !preferredTo.isAfter(dateOfDeath)) {
             return new EffectiveRange(window.earliest(), window.latest(), null);
         }
@@ -175,10 +141,6 @@ public class BurialWindowService {
         return from.equals(to) ? DAY.format(from) : DAY.format(from) + " – " + DAY.format(to);
     }
 
-    /**
-     * The dates actually searched, plus a note explaining any gap between what the
-     * family asked for and what the window permits.
-     */
     public record EffectiveRange(LocalDate from, LocalDate to, String note) {
     }
 }
