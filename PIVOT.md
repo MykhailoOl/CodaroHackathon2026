@@ -52,10 +52,13 @@ Then run `./gradlew test` — the intent-parser tests must stay green
   (`ZoneId.of("Europe/Warsaw")`) — include `reservation`, `occupancy`,
   `intent`, `notification`, schedulers. Sweep via grep if the niche needs a
   different tz.
-- **Web demo fixtures** (`web/lib/fixtures.ts`): demo-only response shapes
-  shown when the backend is down. Rewrite the suggestion content per niche.
-  `NEXT_PUBLIC_DEMO_INTENT` in `web/.env.example` drives the composer
-  placeholder.
+- **Web app** (`web/`): the Next.js app talks to the `reservation-assistant`
+  API (`/api/reservation-assistant/**`) proxied same-origin via
+  `next.config.mjs`, which also rewrites `/login` and `/logout` so Spring's
+  session cookie and CSRF token need no CORS. `web/.env.example` only sets
+  `API_ORIGIN` (the Spring Boot origin). The composer (`web/app/composer/`)
+  is a form (deceased, date of death, attendees, service, home/space) → preview
+  → confirm flow; the UI copy there is per-niche content.
 - **Telegram bot** (`telegram_bot.py`): rebuilt for the funeral pivot as an
   approval channel rather than a slot picker (see "Derived scheduling" below).
   Vocabulary reads from env — `BOT_BRAND_NAME`, `BOT_SERVICE_WORDS`,
