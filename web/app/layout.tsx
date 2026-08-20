@@ -14,8 +14,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Intent Booking",
-  description: "Describe a booking in plain language and pick from ranked suggestions.",
+  title: "EverRest",
+  description:
+    "Tell us the circumstances. We work out when the service can be held, and you approve it.",
 };
 
 export default function RootLayout({
@@ -26,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-slate-50 text-slate-900 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-stone-50 text-stone-900 antialiased`}
       >
         {children}
       </body>

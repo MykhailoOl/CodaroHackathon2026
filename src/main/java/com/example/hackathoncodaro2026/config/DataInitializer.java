@@ -16,6 +16,8 @@ import com.example.hackathoncodaro2026.repository.ReservationRepository;
 import com.example.hackathoncodaro2026.repository.SportResourceRepository;
 import com.example.hackathoncodaro2026.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,11 @@ import java.util.List;
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class DataInitializer implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
+
+    private static final String DEMO_USERNAME = "everrest_demo";
+    private static final String DEMO_PHONE = "+48 22 621 00 03";
 
     private static final LocalTime OPEN = LocalTime.of(7, 0);
     private static final LocalTime CLOSE = LocalTime.of(22, 0);
@@ -90,6 +97,7 @@ public class DataInitializer implements CommandLineRunner {
             manager.setEnabled(true);
             userRepository.save(manager);
         }
+        seedDemoFamily();
         if (facilityRepository.count() == 0) {
             seedNetwork();
         }
@@ -101,6 +109,35 @@ public class DataInitializer implements CommandLineRunner {
         backfillLessonPrices();
         seedInventory();
         backfillReservationFields();
+    }
+
+    /**
+     * The account the Telegram bot and the walkthrough sign in as. Registration leaves
+     * the phone optional, but a reservation cannot be completed without one, so a demo
+     * account registered by hand books fine on the web (the form asks for a phone) and
+     * fails from the bot, which has no field to ask with. Seeding the phone closes that.
+     */
+    private void seedDemoFamily() {
+        userRepository.findByUsernameIgnoreCase(DEMO_USERNAME).ifPresentOrElse(demo -> {
+            if (demo.getPhone() == null || demo.getPhone().isBlank()) {
+                demo.setPhone(DEMO_PHONE);
+                userRepository.save(demo);
+                log.info("Backfilled the booking phone on the {} account", DEMO_USERNAME);
+            } else {
+                log.info("{} already has a booking phone ({})", DEMO_USERNAME, demo.getPhone());
+            }
+        }, () -> {
+            User demo = new User();
+            demo.setUsername(DEMO_USERNAME);
+            demo.setEmail("demo@everrest.local");
+            demo.setPassword(passwordEncoder.encode("Demo123!"));
+            demo.setFullName("Anna Kowalska");
+            demo.setRole(Role.USER);
+            demo.setPhone(DEMO_PHONE);
+            demo.setEnabled(true);
+            userRepository.save(demo);
+            log.info("Seeded the {} account with a booking phone", DEMO_USERNAME);
+        });
     }
 
     private void seedNetwork() {
@@ -183,7 +220,7 @@ public class DataInitializer implements CommandLineRunner {
                 if (!resources.isEmpty()) {
                     facility.setImagePath(resources.getFirst().getType().getImagePath());
                 } else {
-                    facility.setImagePath(ResourceType.TENNIS.getImagePath());
+                    facility.setImagePath(ResourceType.CHAPEL.getImagePath());
                 }
                 facilityRepository.save(facility);
             }
@@ -211,7 +248,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private void backfillSwimCapacities() {
         for (SportResource resource : sportResourceRepository.findAll()) {
-            if (resource.getType() != ResourceType.SWIMMING || resource.getCapacity() > 1) {
+            if (resource.getType() != ResourceType.VIEWING || resource.getCapacity() > 1) {
                 continue;
             }
             String name = resource.getName() == null ? "" : resource.getName();

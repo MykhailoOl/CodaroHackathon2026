@@ -13,8 +13,8 @@
         <img th:src="@{${resource.imagePath != null ? resource.imagePath : resource.type.imagePath}}"
              th:alt="${resource.type.displayName}">
         <div class="sport-banner-copy">
-            <p class="eyebrow" th:text="${resource.type.displayName}">Tennis</p>
-            <h1 th:text="${resource.name}">Court</h1>
+            <p class="eyebrow" th:text="${resource.type.displayName}">Chapel ceremony</p>
+            <h1 th:text="${resource.name}">Chapel</h1>
             <p class="lede" th:text="${facility.name}">Facility</p>
             <p class="address-line" th:text="${resource.address.toDisplayString()}">Address</p>
             <p class="meta-label">
@@ -28,10 +28,10 @@
     <section class="auth-panel booking-panel">
         <p class="eyebrow">Pending booking</p>
         <h2>Change this reservation</h2>
-        <p class="lede">Only pending reservations can be changed. The court and booking type stay the same.</p>
+        <p class="lede">Only pending reservations can be changed. The service and booking type stay the same.</p>
         <div class="readonly-box">
             <p class="meta-label">Facility <span th:text="${facility.name}">Venue</span></p>
-            <p class="meta-label">Court <span th:text="${resource.name}">Court</span></p>
+            <p class="meta-label">Chapel <span th:text="${resource.name}">Chapel</span></p>
             <p class="meta-label">Type <span th:text="${bookingKind.label}">Individual</span></p>
             <p class="meta-label">Current amount <span th:text="${reservation.formattedTotalAmount}">80.00 PLN</span></p>
         </div>
@@ -98,8 +98,8 @@
                 </label>
             </fieldset>
             <fieldset class="coach-picker" th:if="${allowCoach}">
-                <legend>Add a coach</legend>
-                <p class="lede">Optional. Choose your level for this sport to see coaches who teach it. Their hourly price is added to the total.</p>
+                <legend>Add a celebrant</legend>
+                <p class="lede">Optional. Choose your level for this service to see celebrants who teach it. Their hourly price is added to the total.</p>
                 <div class="field">
                     <label for="skillLevel" th:text="${levelGroupLabel}">Level</label>
                     <select id="skillLevel" name="skillLevel">
@@ -111,7 +111,7 @@
                     </select>
                     <p class="field-error" data-error-for="skillLevel" hidden></p>
                 </div>
-                <p class="lede" id="coach-level-hint">Select a level first to see matching coaches.</p>
+                <p class="lede" id="coach-level-hint">Select a level first to see matching celebrants.</p>
                 <p class="field-error" data-error-for="coachId" hidden></p>
                 <div class="coach-option-list" id="coach-option-list" hidden>
                     <label class="coach-option is-none">
@@ -119,7 +119,7 @@
                                th:checked="${reservationRequest.coachId == null}">
                         <span class="coach-avatar coach-avatar-fallback" aria-hidden="true">—</span>
                         <span class="coach-option-copy">
-                            <span class="coach-option-name">No coach</span>
+                            <span class="coach-option-name">No celebrant</span>
                             <span class="coach-option-meta">Book the space only</span>
                         </span>
                     </label>
@@ -130,14 +130,14 @@
                                th:checked="${reservationRequest.coachId != null and reservationRequest.coachId == card.id}">
                         <img class="coach-avatar" th:src="@{/avatars/{id}(id=${card.id})}" th:alt="${card.fullName}">
                         <span class="coach-option-copy">
-                            <span class="coach-option-name" th:text="${card.fullName}">Coach</span>
+                            <span class="coach-option-name" th:text="${card.fullName}">Celebrant</span>
                             <span class="coach-option-meta"
-                                  th:text="${card.pricePerHour + ' PLN / h · ' + card.ratingLabel}">80.00 PLN / h · New coach</span>
+                                  th:text="${card.pricePerHour + ' PLN / h · ' + card.ratingLabel}">80.00 PLN / h · New celebrant</span>
                             <span class="coach-option-meta" th:text="${card.levelsLabel}">NTRP 3.0</span>
                         </span>
                     </label>
                 </div>
-                <p class="lede coach-empty" id="coach-empty" hidden>No coaches available at this level yet. You can still book without a coach.</p>
+                <p class="lede coach-empty" id="coach-empty" hidden>No celebrants available at this level yet. You can still book without a celebrant.</p>
             </fieldset>
             <fieldset class="payment-options">
                 <legend>Payment</legend>

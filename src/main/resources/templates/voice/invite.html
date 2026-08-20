@@ -9,7 +9,7 @@
         <p class="eyebrow">Phone booking</p>
         <h1>Add this booking to your calendar</h1>
         <p class="lede" th:if="${reservation != null}">
-            <span th:text="${reservation.resource.name}">Court</span>
+            <span th:text="${reservation.resource.name}">Chapel</span>
             on
             <span th:text="${#temporals.format(reservation.startAt, 'EEE d MMM HH:mm')}">time</span>.
         </p>

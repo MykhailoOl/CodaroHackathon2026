@@ -165,17 +165,17 @@ class AuthProfileAndSecurityTests {
         form.setFullName(player.getFullName());
         form.setEmail(player.getEmail());
         form.setPhone(player.getPhone());
-        form.getSportLevels().put(ResourceType.TENNIS.name(), "3.0");
-        form.getSportLevels().put(ResourceType.GYM.name(), "BEGINNER");
-        form.getSportLevels().put(ResourceType.SQUASH.name(), "BEGINNER");
+        form.getSportLevels().put(ResourceType.CHAPEL.name(), "CATHOLIC");
+        form.getSportLevels().put(ResourceType.TRANSPORT.name(), "DRIVER");
+        form.getSportLevels().put(ResourceType.REPATRIATION.name(), "CATHOLIC");
         userService.updateProfile(player, form);
-        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.TENNIS)
+        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.CHAPEL)
                 .orElseThrow()
-                .getSkillLevel()).isEqualTo("3.0");
-        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.GYM)
+                .getSkillLevel()).isEqualTo("CATHOLIC");
+        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.TRANSPORT)
                 .orElseThrow()
-                .getSkillLevel()).isEqualTo("BEGINNER");
-        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.SQUASH)).isEmpty();
+                .getSkillLevel()).isEqualTo("DRIVER");
+        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.REPATRIATION)).isEmpty();
     }
 
     @Test

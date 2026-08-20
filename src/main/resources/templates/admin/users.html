@@ -8,7 +8,7 @@
     <section class="auth-panel profile-panel">
         <p class="eyebrow">Admin</p>
         <h1>Create a staff account</h1>
-        <p class="lede">Add a manager, player, or coach. Role cannot be changed later from this form.</p>
+        <p class="lede">Add a manager, family member, or celebrant. Role cannot be changed later from this form.</p>
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
         <form id="register-form" class="auth-form" th:action="@{/admin/users}" th:object="${adminUserCreateRequest}" method="post" novalidate>

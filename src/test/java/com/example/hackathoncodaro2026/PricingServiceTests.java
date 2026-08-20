@@ -18,38 +18,41 @@ class PricingServiceTests {
     private final PricingService pricingService = new PricingServiceImpl();
 
     @Test
-    void weekendEveningTennisCostsMoreThanWeekdayMorning() {
-        SportResource tennis = tennis();
-        BigDecimal weekdayMorning = pricingService.quote(tennis, LocalDate.of(2026, 8, 17), LocalTime.of(10, 0), 1);
-        BigDecimal weekendEvening = pricingService.quote(tennis, LocalDate.of(2026, 8, 22), LocalTime.of(18, 0), 1);
-        assertThat(weekdayMorning).isEqualByComparingTo("80.00");
-        assertThat(weekendEvening).isEqualByComparingTo("135.00");
+    void weekendEveningChapelCostsMoreThanWeekdayMorning() {
+        SportResource chapel = chapel();
+        BigDecimal weekdayMorning = pricingService.quote(chapel, LocalDate.of(2026, 8, 17), LocalTime.of(10, 0), 1);
+        BigDecimal weekendEvening = pricingService.quote(chapel, LocalDate.of(2026, 8, 22), LocalTime.of(18, 0), 1);
+        // Rates are asserted against the enum's base so a repricing of the catalogue
+        // does not look like a regression in the multiplier logic under test.
+        BigDecimal base = ResourceType.CHAPEL.getBaseHourlyPrice();
+        assertThat(weekdayMorning).isEqualByComparingTo(base);
+        assertThat(weekendEvening).isEqualByComparingTo(scale(base, "1.6875"));
         assertThat(weekendEvening).isGreaterThan(weekdayMorning);
     }
 
     @Test
     void twoHourQuoteSumsDaytimeAndEveningHours() {
-        SportResource tennis = tennis();
+        SportResource tennis = chapel();
         LocalDate monday = LocalDate.of(2026, 8, 17);
         BigDecimal daytime = pricingService.hourlyRate(tennis, monday, LocalTime.of(16, 0));
         BigDecimal evening = pricingService.hourlyRate(tennis, monday, LocalTime.of(17, 0));
         BigDecimal twoHours = pricingService.quote(tennis, monday, LocalTime.of(16, 0), 2);
-        assertThat(daytime).isEqualByComparingTo("80.00");
-        assertThat(evening).isEqualByComparingTo("108.00");
+        BigDecimal base = ResourceType.CHAPEL.getBaseHourlyPrice();
+        assertThat(daytime).isEqualByComparingTo(base);
+        assertThat(evening).isEqualByComparingTo(scale(base, "1.35"));
         assertThat(twoHours).isEqualByComparingTo(daytime.add(evening));
-        assertThat(twoHours).isEqualByComparingTo("188.00");
     }
 
     @Test
     void partySizeLabelUsesPlusOnLastGroupOption() {
-        SportResource tennis = tennis();
+        SportResource tennis = chapel();
         tennis.setMinPartySize(2);
         tennis.setMaxPartySize(4);
         assertThat(tennis.partySizeLabel(2)).isEqualTo("2");
         assertThat(tennis.partySizeLabel(3)).isEqualTo("3");
         assertThat(tennis.partySizeLabel(4)).isEqualTo("4+");
         SportResource gym = new SportResource();
-        gym.setType(ResourceType.GYM);
+        gym.setType(ResourceType.TRANSPORT);
         gym.setMinPartySize(1);
         gym.setMaxPartySize(1);
         gym.setLessonMinPartySize(2);
@@ -73,31 +76,37 @@ class PricingServiceTests {
 
     @Test
     void eveningAndWeekendMultipliersStackWithHalfUpScale() {
-        SportResource football = resource(ResourceType.FOOTBALL);
+        SportResource reception = resource(ResourceType.RECEPTION);
         LocalDate monday = LocalDate.of(2026, 8, 17);
         LocalDate saturday = LocalDate.of(2026, 8, 22);
-        assertThat(pricingService.hourlyRate(football, monday, LocalTime.of(10, 0))).isEqualByComparingTo("160.00");
-        assertThat(pricingService.hourlyRate(football, monday, LocalTime.of(17, 0))).isEqualByComparingTo("216.00");
-        assertThat(pricingService.hourlyRate(football, saturday, LocalTime.of(10, 0))).isEqualByComparingTo("200.00");
-        assertThat(pricingService.hourlyRate(football, saturday, LocalTime.of(18, 0))).isEqualByComparingTo("270.00");
+        BigDecimal base = ResourceType.RECEPTION.getBaseHourlyPrice();
+        assertThat(pricingService.hourlyRate(reception, monday, LocalTime.of(10, 0))).isEqualByComparingTo(base);
+        assertThat(pricingService.hourlyRate(reception, monday, LocalTime.of(17, 0))).isEqualByComparingTo(scale(base, "1.35"));
+        assertThat(pricingService.hourlyRate(reception, saturday, LocalTime.of(10, 0))).isEqualByComparingTo(scale(base, "1.25"));
+        assertThat(pricingService.hourlyRate(reception, saturday, LocalTime.of(18, 0))).isEqualByComparingTo(scale(base, "1.6875"));
     }
 
     @Test
-    void gymLessonUsesFixedLessonBaseThenMultipliers() {
-        SportResource gym = resource(ResourceType.GYM);
+    void officiatedTransportUsesFixedLessonBaseThenMultipliers() {
+        SportResource gym = resource(ResourceType.TRANSPORT);
         gym.setLessonHourlyPrice(new BigDecimal("90.00"));
         LocalDate monday = LocalDate.of(2026, 8, 17);
         LocalDate saturday = LocalDate.of(2026, 8, 22);
         assertThat(pricingService.hourlyRate(gym, monday, LocalTime.of(10, 0), ReservationKind.INDIVIDUAL))
-                .isEqualByComparingTo("30.00");
+                .isEqualByComparingTo(ResourceType.TRANSPORT.getBaseHourlyPrice());
         assertThat(pricingService.hourlyRate(gym, monday, LocalTime.of(10, 0), ReservationKind.LESSON))
                 .isEqualByComparingTo("90.00");
         assertThat(pricingService.hourlyRate(gym, saturday, LocalTime.of(18, 0), ReservationKind.LESSON))
                 .isEqualByComparingTo("151.88");
     }
 
-    private SportResource tennis() {
-        return resource(ResourceType.TENNIS);
+    private SportResource chapel() {
+        return resource(ResourceType.CHAPEL);
+    }
+
+    /** base x multiplier, rounded the way PricingService rounds. */
+    private static BigDecimal scale(BigDecimal base, String multiplier) {
+        return base.multiply(new BigDecimal(multiplier)).setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
     private SportResource resource(ResourceType type) {

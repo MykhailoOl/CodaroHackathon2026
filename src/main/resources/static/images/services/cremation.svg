@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="cremation">
+  <rect width="120" height="120" fill="#f4f2ef"/>
+  <g fill="none" stroke="#5b5750" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 20 c10 16 20 24 20 40 a20 20 0 0 1 -40 0 c0 -12 8 -18 12 -26 c2 6 6 8 8 12 c2 -10 0 -18 0 -26 Z" /><path d="M34 100 H86" />
+  </g>
+</svg>

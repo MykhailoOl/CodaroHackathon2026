@@ -21,9 +21,9 @@
                  th:src="@{${item.resource.imagePath != null ? item.resource.imagePath : item.resource.type.imagePath}}"
                  th:alt="${item.resource.type.displayName}">
             <div class="history-main">
-                <p class="eyebrow" th:text="${item.resource.type.displayName}">Tennis</p>
+                <p class="eyebrow" th:text="${item.resource.type.displayName}">Chapel ceremony</p>
                 <h3>
-                    <span th:text="${item.resource.name}">Court</span>
+                    <span th:text="${item.resource.name}">Chapel</span>
                     <span class="muted"> · </span>
                     <span th:text="${item.resource.facility.name}">Venue</span>
                 </h3>
@@ -49,7 +49,7 @@
                     <span th:text="${item.extrasSummary}">Racket ×2</span>
                 </p>
                 <p class="meta-label" th:if="${coachRatings[item.id] != null}">
-                    Coach rating
+                    Celebrant rating
                     <span th:text="${'★ ' + coachRatings[item.id].stars}">★ 5</span>
                 </p>
                 <p class="lede" th:if="${coachRatings[item.id] != null and coachRatings[item.id].review != null and !#strings.isEmpty(coachRatings[item.id].review)}"
@@ -66,7 +66,7 @@
                    th:if="${item.status.name() == 'CANCELLED' and item.cancellationReason != null and !#strings.isEmpty(item.cancellationReason)}"
                    th:text="${'Reason: ' + item.cancellationReason}">Reason</p>
                 <p class="meta-label" th:if="${adminView}">
-                    Booked by <span th:text="${item.user.fullName}">Player</span>
+                    Booked by <span th:text="${item.user.fullName}">Family member</span>
                     (<span th:text="${item.user.username}">user</span>)
                 </p>
             </div>
@@ -88,11 +88,11 @@
                 <button type="button"
                         class="btn btn-accent js-open-rating"
                         th:if="${rateableIds.contains(item.id)}"
-                        th:attr="data-action=@{/reservations/{id}/coach-rating(id=${item.id})}">Rate coach</button>
+                        th:attr="data-action=@{/reservations/{id}/coach-rating(id=${item.id})}">Rate celebrant</button>
             </div>
         </article>
     </div>
-    <p class="auth-switch"><a th:href="@{/facilities}">Book another court</a></p>
+    <p class="auth-switch"><a th:href="@{/facilities}">Arrange another service</a></p>
 </main>
 <dialog id="cancel-dialog" class="cancel-dialog">
     <form id="cancel-dialog-form" class="cancel-dialog-form" method="post" th:action="@{/reservations}">
@@ -119,8 +119,8 @@
 </dialog>
 <dialog id="rating-dialog" class="cancel-dialog">
     <form id="rating-dialog-form" class="cancel-dialog-form" method="post" th:action="@{/reservations}">
-        <p class="eyebrow">Coach rating</p>
-        <h2>How was your coach?</h2>
+        <p class="eyebrow">Celebrant rating</p>
+        <h2>How was your celebrant?</h2>
         <p class="lede">One rating per completed session. Review is optional.</p>
         <fieldset class="cancel-options">
             <legend>Stars</legend>

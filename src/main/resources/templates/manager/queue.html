@@ -26,9 +26,9 @@
                  th:src="@{${item.resource.imagePath != null ? item.resource.imagePath : item.resource.type.imagePath}}"
                  th:alt="${item.resource.type.displayName}">
             <div class="history-main">
-                <p class="eyebrow" th:text="${item.resource.type.displayName}">Tennis</p>
+                <p class="eyebrow" th:text="${item.resource.type.displayName}">Chapel ceremony</p>
                 <h3>
-                    <span th:text="${item.resource.name}">Court</span>
+                    <span th:text="${item.resource.name}">Chapel</span>
                     <span class="muted"> · </span>
                     <span th:text="${item.resource.facility.name}">Venue</span>
                 </h3>
@@ -42,12 +42,12 @@
                 </p>
                 <p class="lede" th:if="${item.note != null}" th:text="${item.note}">Note</p>
                 <p class="meta-label">
-                    Booked by <span th:text="${item.user.fullName}">Player</span>
+                    Booked by <span th:text="${item.user.fullName}">Family member</span>
                     (<span th:text="${item.user.username}">user</span>)
                 </p>
                 <p class="meta-label">
                     Email
-                    <span th:text="${item.user.email}">player@club.com</span>
+                    <span th:text="${item.user.email}">family member@club.com</span>
                 </p>
                 <p class="meta-label">
                     Phone

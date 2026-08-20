@@ -9,7 +9,7 @@
             </span>
             <span class="brand-copy">
                 <span class="brand-name" th:text="${brand.name}">Courtly</span>
-                <span class="brand-tag" th:text="${brand.tagline}">Sports Facility Booking</span>
+                <span class="brand-tag" th:text="${brand.tagline}">Services Facility Booking</span>
             </span>
         </a>
         <nav class="main-nav" aria-label="Primary">
@@ -23,14 +23,14 @@
                           th:text="${unreadNotificationCount}">1</span>
                 </a>
                 <a class="nav-link" th:href="@{/occupancy}">Occupancy</a>
-                <a class="nav-link" sec:authorize="hasRole('COACH')" th:href="@{/coach/offerings}">Offerings</a>
-                <a class="nav-link" sec:authorize="hasRole('COACH')" th:href="@{/coach/sessions}">Sessions</a>
+                <a class="nav-link" sec:authorize="hasRole('COACH')" th:href="@{/celebrant/offerings}">Offerings</a>
+                <a class="nav-link" sec:authorize="hasRole('COACH')" th:href="@{/celebrant/sessions}">Sessions</a>
                 <a class="nav-link" sec:authorize="hasAnyRole('ADMIN','MANAGER')" th:href="@{/manager/reservations}">Queue</a>
                 <a class="nav-link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}">Staff</a>
                 <span class="nav-user" th:if="${currentUser != null}">
                     <a class="nav-user-name"
                        th:href="@{/profile}"
-                       th:text="${currentUser.fullName != null and !#strings.isEmpty(currentUser.fullName) ? currentUser.fullName : currentUser.username}">Athlete</a>
+                       th:text="${currentUser.fullName != null and !#strings.isEmpty(currentUser.fullName) ? currentUser.fullName : currentUser.username}">Name</a>
                 </span>
                 <form class="logout-form" th:action="@{/logout}" method="post">
                     <button class="btn btn-ghost" type="submit">Log out</button>

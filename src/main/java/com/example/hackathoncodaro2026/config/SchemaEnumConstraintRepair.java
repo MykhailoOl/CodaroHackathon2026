@@ -30,7 +30,7 @@ public class SchemaEnumConstraintRepair implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         List<String> resourceTypes = List.of(
-                "TENNIS", "FOOTBALL", "BASKETBALL", "VOLLEYBALL", "SWIMMING", "GYM", "SQUASH"
+                "CHAPEL", "RECEPTION", "CREMATION", "BURIAL", "VIEWING", "TRANSPORT", "REPATRIATION"
         );
         dropMatchingChecks("APP_USERS", "ROLE", List.of("ADMIN", "USER", "MANAGER", "COACH"));
         dropMatchingChecks("RESERVATIONS", "STATUS", List.of("CONFIRMED", "CANCELLED", "PENDING"));

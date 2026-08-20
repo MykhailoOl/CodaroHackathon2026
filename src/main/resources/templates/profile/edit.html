@@ -66,15 +66,15 @@
                 </div>
             </div>
             <p class="eyebrow">Skill levels</p>
-            <p class="lede">Set the level you play at for each sport. Matching coaches appear when you book a court or individual session.</p>
-            <div class="field" th:each="sport : ${sports}">
-                <label th:for="${'level-' + sport.name()}" th:text="${sport.displayName}">Tennis</label>
-                <select th:id="${'level-' + sport.name()}" th:name="${'sportLevels[' + sport.name() + ']'}">
+            <p class="lede">Set the level you play at for each service. Matching celebrants appear when you book a service or individual session.</p>
+            <div class="field" th:each="service : ${sports}">
+                <label th:for="${'level-' + service.name()}" th:text="${service.displayName}">Chapel ceremony</label>
+                <select th:id="${'level-' + service.name()}" th:name="${'sportLevels[' + service.name() + ']'}">
                     <option value="">Not set</option>
-                    <option th:each="level : ${sportLevelOptions.get(sport.name())}"
+                    <option th:each="level : ${sportLevelOptions.get(service.name())}"
                             th:value="${level.code}"
                             th:text="${level.label}"
-                            th:selected="${profileUpdateRequest.sportLevels.get(sport.name()) == level.code}">NTRP 3.0</option>
+                            th:selected="${profileUpdateRequest.sportLevels.get(service.name()) == level.code}">NTRP 3.0</option>
                 </select>
             </div>
             <button class="btn btn-accent btn-block" type="submit">Save profile</button>

@@ -13,15 +13,19 @@ public record DomainProperties(
 ) {
 
     private static final Map<String, List<String>> DEFAULT_SYNONYMS = Map.of(
-            "FOOTBALL", List.of("football", "soccer"),
-            "GYM", List.of("gym", "workout"),
-            "SWIMMING", List.of("pool", "swimming", "swim")
+            "CHAPEL", List.of("chapel", "ceremony", "service", "funeral"),
+            "CREMATION", List.of("cremation", "crematorium"),
+            "BURIAL", List.of("burial", "grave", "plot", "interment"),
+            "TRANSPORT", List.of("hearse", "cortege"),
+            "RECEPTION", List.of("wake", "reception"),
+            "VIEWING", List.of("viewing", "repose", "visitation"),
+            "REPATRIATION", List.of("repatriation")
     );
 
     public DomainProperties {
         brand = brand == null ? Brand.defaults() : brand;
         llmDomainDescription = llmDomainDescription == null || llmDomainDescription.isBlank()
-                ? "sports-facility"
+                ? "funeral-services"
                 : llmDomainDescription.trim();
         resourceSynonyms = (resourceSynonyms == null || resourceSynonyms.isEmpty())
                 ? DEFAULT_SYNONYMS
@@ -29,7 +33,7 @@ public record DomainProperties(
     }
 
     public static DomainProperties defaults() {
-        return new DomainProperties(Brand.defaults(), "sports-facility", Map.of());
+        return new DomainProperties(Brand.defaults(), "funeral-services", Map.of());
     }
 
     public List<String[]> synonymPairs() {
@@ -43,12 +47,12 @@ public record DomainProperties(
     public record Brand(String name, String tagline) {
 
         public Brand {
-            name = name == null || name.isBlank() ? "Courtly" : name.trim();
-            tagline = tagline == null || tagline.isBlank() ? "Sports Facility Booking" : tagline.trim();
+            name = name == null || name.isBlank() ? "EverRest" : name.trim();
+            tagline = tagline == null || tagline.isBlank() ? "Arrangements, within the time you have" : tagline.trim();
         }
 
         public static Brand defaults() {
-            return new Brand("Courtly", "Sports Facility Booking");
+            return new Brand("EverRest", "Arrangements, within the time you have");
         }
     }
 }

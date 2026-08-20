@@ -8,7 +8,7 @@
     <section class="auth-panel">
         <p class="eyebrow">Welcome back</p>
         <h1 th:text="'Sign in to ' + ${brand.name}">Sign in to Courtly</h1>
-        <p class="lede">Reserve courts, manage occupancy, and keep your facility moving.</p>
+        <p class="lede">Reserve services, manage occupancy, and keep your facility moving.</p>
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${param.error}">Those credentials do not match our records.</div>
         <div class="alert alert-info" th:if="${param.logout}">You have been signed out.</div>
@@ -31,7 +31,7 @@
     <aside class="auth-aside">
         <h2>Book the space. Own the hour.</h2>
         <ul class="feature-list">
-            <li>Courts, pitches, pools, and studios in one grid</li>
+            <li>Services, pitches, pools, and studios in one grid</li>
             <li>Confirmations and cancellations that stay in sync</li>
             <li>Live occupancy so you never overbook a lane</li>
         </ul>

@@ -8,20 +8,20 @@
     <div class="section-head">
         <p class="eyebrow">Warsaw network</p>
         <h1>Facilities</h1>
-        <p>Ten venues across the city. Every bookable court and hall has its own street address.</p>
+        <p>Ten venues across the city. Every bookable service and hall has its own street address.</p>
     </div>
     <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
     <div class="venue-grid">
         <a class="venue-card" th:each="facility : ${facilities}" th:href="@{/facilities/{id}(id=${facility.id})}">
             <img class="venue-thumb"
-                 th:src="@{${facility.imagePath != null ? facility.imagePath : '/images/sports/tennis.jpg'}}"
+                 th:src="@{${facility.imagePath != null ? facility.imagePath : '/images/services/chapel.svg'}}"
                  th:alt="${facility.name}">
             <div class="venue-card-body">
                 <p class="eyebrow" th:text="${facility.address.district}">Śródmieście</p>
                 <h2 th:text="${facility.name}">COS Torwar</h2>
                 <p class="lede" th:text="${facility.description}">Description</p>
                 <p class="address-line" th:text="${facility.address.toDisplayString()}">Address</p>
-                <span class="chip">View courts</span>
+                <span class="chip">View services</span>
             </div>
         </a>
     </div>

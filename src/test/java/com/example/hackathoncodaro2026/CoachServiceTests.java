@@ -128,22 +128,22 @@ class CoachServiceTests {
     void coachOfferingStoresSportLevelsAndPrice() {
         User coach = createCoach("price_coach", "price.coach@example.com");
         CoachOfferingRequest request = new CoachOfferingRequest();
-        request.setSportType(ResourceType.TENNIS);
-        request.setLevels(Set.of("3.0", "3.5"));
+        request.setSportType(ResourceType.CHAPEL);
+        request.setLevels(Set.of("CATHOLIC", "ORTHODOX"));
         request.setPricePerHour(new BigDecimal("80.00"));
         CoachOffering saved = coachOfferingService.save(coach, request);
-        assertThat(saved.getSportType()).isEqualTo(ResourceType.TENNIS);
-        assertThat(saved.getLevels()).containsExactlyInAnyOrder("3.0", "3.5");
+        assertThat(saved.getSportType()).isEqualTo(ResourceType.CHAPEL);
+        assertThat(saved.getLevels()).containsExactlyInAnyOrder("CATHOLIC", "ORTHODOX");
         assertThat(saved.getPricePerHour()).isEqualByComparingTo("80.00");
-        assertThat(coachOfferingRepository.findByCoach_IdAndSportType(coach.getId(), ResourceType.TENNIS)).isPresent();
+        assertThat(coachOfferingRepository.findByCoach_IdAndSportType(coach.getId(), ResourceType.CHAPEL)).isPresent();
     }
 
     @Test
     void offeringRejectsLevelsThatDoNotBelongToSport() {
         User coach = createCoach("mismatch_levels", "mismatch.levels@example.com");
         CoachOfferingRequest request = new CoachOfferingRequest();
-        request.setSportType(ResourceType.TENNIS);
-        request.setLevels(Set.of("BEGINNER"));
+        request.setSportType(ResourceType.CHAPEL);
+        request.setLevels(Set.of("DRIVER"));
         request.setPricePerHour(new BigDecimal("80.00"));
         assertThatThrownBy(() -> coachOfferingService.save(coach, request))
                 .isInstanceOf(ReservationException.class)
@@ -154,9 +154,9 @@ class CoachServiceTests {
     void catalogHidesCoachWhoDoesNotCoverSelectedLevel() {
         User beginnerCoach = createCoach("ntrp_low", "ntrp.low@example.com");
         User advancedCoach = createCoach("ntrp_high", "ntrp.high@example.com");
-        saveOffering(beginnerCoach, ResourceType.TENNIS, Set.of("2.0", "2.5"), "70.00");
-        saveOffering(advancedCoach, ResourceType.TENNIS, Set.of("6.0", "7.0"), "120.00");
-        List<CoachOffering> matches = coachOfferingService.findPublished(ResourceType.TENNIS, "2.5");
+        saveOffering(beginnerCoach, ResourceType.CHAPEL, Set.of("CATHOLIC", "ORTHODOX"), "70.00");
+        saveOffering(advancedCoach, ResourceType.CHAPEL, Set.of("JEWISH", "MUSLIM"), "120.00");
+        List<CoachOffering> matches = coachOfferingService.findPublished(ResourceType.CHAPEL, "ORTHODOX");
         assertThat(matches).extracting(item -> item.getCoach().getUsername())
                 .contains("ntrp_low")
                 .doesNotContain("ntrp_high");
@@ -165,14 +165,14 @@ class CoachServiceTests {
     @Test
     void lessonCannotAttachCoach() {
         User coach = createCoach("lesson_coach", "lesson.coach@example.com");
-        saveOffering(coach, ResourceType.GYM, Set.of("BEGINNER"), "90.00");
+        saveOffering(coach, ResourceType.TRANSPORT, Set.of("DRIVER"), "90.00");
         User player = player("lesson_player", "lesson.player@example.com");
         SportResource gym = gym();
         ReservationRequest booking = request(gym, LocalDate.now(WARSAW).plusDays(12), gym.getOpeningTime(), 1);
         booking.setKind(ReservationKind.LESSON);
         booking.setPartySize(4);
         booking.setCoachId(coach.getId());
-        booking.setSkillLevel("BEGINNER");
+        booking.setSkillLevel("DRIVER");
         assertThatThrownBy(() -> reservationService.create(player, booking))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("group lesson");
@@ -181,19 +181,19 @@ class CoachServiceTests {
     @Test
     void courtBookingAttachesMatchingCoachAsExtra() {
         User coach = createCoach("court_coach", "court.coach@example.com");
-        saveOffering(coach, ResourceType.TENNIS, Set.of("3.0", "3.5"), "80.00");
+        saveOffering(coach, ResourceType.CHAPEL, Set.of("CATHOLIC", "ORTHODOX"), "80.00");
         User player = player("court_hire", "court.hire@example.com");
         SportResource tennis = tennisCourt();
         LocalDate date = nextWeekday(LocalDate.now(WARSAW).plusDays(13));
         LocalTime start = LocalTime.of(10, 0);
         ReservationRequest booking = request(tennis, date, start, 2);
         booking.setCoachId(coach.getId());
-        booking.setSkillLevel("3.0");
+        booking.setSkillLevel("CATHOLIC");
         BigDecimal court = pricingService.quote(tennis, date, start, 2, ReservationKind.STANDARD, List.of(), tennis.getMinPartySize());
         Reservation reservation = reservationService.create(player, booking);
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.PENDING);
         assertThat(reservation.getCoach().getId()).isEqualTo(coach.getId());
-        assertThat(reservation.getSkillLevel()).isEqualTo("3.0");
+        assertThat(reservation.getSkillLevel()).isEqualTo("CATHOLIC");
         assertThat(reservation.getExtrasSummary()).contains("Coach " + coach.getFullName());
         assertThat(reservation.getExtras().stream()
                 .filter(extra -> extra.getDescription() != null && extra.getDescription().startsWith("Coach "))
@@ -202,22 +202,22 @@ class CoachServiceTests {
         List<Reservation> queue = reservationService.findManagerQueue(date);
         assertThat(queue.stream().anyMatch(item -> item.getId().equals(reservation.getId())
                 && item.getExtrasSummary().contains("Coach " + coach.getFullName()))).isTrue();
-        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.TENNIS)
+        assertThat(userSportLevelRepository.findByUser_IdAndSportType(player.getId(), ResourceType.CHAPEL)
                 .orElseThrow()
-                .getSkillLevel()).isEqualTo("3.0");
+                .getSkillLevel()).isEqualTo("CATHOLIC");
     }
 
     @Test
     void individualGymBookingAttachesMatchingCoach() {
         User coach = createCoach("gym_coach", "gym.coach@example.com");
-        saveOffering(coach, ResourceType.GYM, Set.of("INTERMEDIATE"), "90.00");
+        saveOffering(coach, ResourceType.TRANSPORT, Set.of("BEARER"), "90.00");
         User player = player("gym_hire", "gym.hire@example.com");
         SportResource gym = gym();
         LocalDate date = nextWeekday(LocalDate.now(WARSAW).plusDays(14));
         ReservationRequest booking = request(gym, date, gym.getOpeningTime(), 1);
         booking.setKind(ReservationKind.INDIVIDUAL);
         booking.setCoachId(coach.getId());
-        booking.setSkillLevel("INTERMEDIATE");
+        booking.setSkillLevel("BEARER");
         Reservation reservation = reservationService.create(player, booking);
         assertThat(reservation.getKind()).isEqualTo(ReservationKind.INDIVIDUAL);
         assertThat(reservation.getCoach().getId()).isEqualTo(coach.getId());
@@ -227,12 +227,12 @@ class CoachServiceTests {
     @Test
     void coachWrongLevelCannotBeAttached() {
         User coach = createCoach("strict_coach", "strict.coach@example.com");
-        saveOffering(coach, ResourceType.TENNIS, Set.of("3.0"), "80.00");
+        saveOffering(coach, ResourceType.CHAPEL, Set.of("CATHOLIC"), "80.00");
         User player = player("mismatch_player", "mismatch.player@example.com");
         SportResource tennis = tennisCourt();
         ReservationRequest booking = request(tennis, LocalDate.now(WARSAW).plusDays(15), tennis.getOpeningTime(), 1);
         booking.setCoachId(coach.getId());
-        booking.setSkillLevel("7.0");
+        booking.setSkillLevel("MUSLIM");
         assertThatThrownBy(() -> reservationService.create(player, booking))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("level");
@@ -241,7 +241,7 @@ class CoachServiceTests {
     @Test
     void overlappingCoachAssignmentFails() {
         User coach = createCoach("busy_coach", "busy.coach@example.com");
-        saveOffering(coach, ResourceType.GYM, Set.of("INTERMEDIATE"), "90.00");
+        saveOffering(coach, ResourceType.TRANSPORT, Set.of("BEARER"), "90.00");
         User first = player("hire_one", "hire.one@example.com");
         User second = player("hire_two", "hire.two@example.com");
         SportResource gym = gym();
@@ -250,51 +250,52 @@ class CoachServiceTests {
         ReservationRequest one = request(gym, date, start, 2);
         one.setKind(ReservationKind.INDIVIDUAL);
         one.setCoachId(coach.getId());
-        one.setSkillLevel("INTERMEDIATE");
+        one.setSkillLevel("BEARER");
         reservationService.create(first, one);
         ReservationRequest two = request(gym, date, start.plusHours(1), 1);
         two.setKind(ReservationKind.INDIVIDUAL);
         two.setCoachId(coach.getId());
-        two.setSkillLevel("INTERMEDIATE");
+        two.setSkillLevel("BEARER");
         assertThatThrownBy(() -> reservationService.create(second, two))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("no longer available");
     }
 
     @Test
-    void tennisLevelsAreNtrpAndGymIsFitnessLadder() {
-        List<String> tennis = sportSkillLevelCatalog.levelsFor(ResourceType.TENNIS).stream()
+    void chapelLevelsAreDenominationsAndTransportIsBearerRoles() {
+        List<String> chapel = sportSkillLevelCatalog.levelsFor(ResourceType.CHAPEL).stream()
                 .map(level -> level.getCode())
                 .toList();
-        assertThat(tennis).contains("1.0", "1.5", "7.0").doesNotContain("BEGINNER", "INTERMEDIATE", "ADVANCED");
-        assertThat(tennis.getFirst()).isEqualTo("1.0");
-        assertThat(tennis.getLast()).isEqualTo("7.0");
-        List<String> gym = sportSkillLevelCatalog.levelsFor(ResourceType.GYM).stream()
+        assertThat(chapel).contains("CATHOLIC", "ORTHODOX", "MUSLIM")
+                .doesNotContain("DRIVER", "BEARER", "CONDUCTOR");
+        assertThat(chapel.getFirst()).isEqualTo("CATHOLIC");
+        assertThat(chapel.getLast()).isEqualTo("CIVIL");
+        List<String> transport = sportSkillLevelCatalog.levelsFor(ResourceType.TRANSPORT).stream()
                 .map(level -> level.getCode())
                 .toList();
-        assertThat(gym).containsExactly("BEGINNER", "INTERMEDIATE", "ADVANCED");
-        assertThat(gym).doesNotContain("1.0", "7.0");
+        assertThat(transport).containsExactly("DRIVER", "BEARER", "CONDUCTOR");
+        assertThat(transport).doesNotContain("CATHOLIC", "MUSLIM");
     }
 
     @Test
-    void tennisNtrpThreeListsOnlyCoachesCoveringThatLevel() throws Exception {
+    void catholicRiteListsOnlyCelebrantsCoveringIt() throws Exception {
         User match = createCoach("ntrp_three", "ntrp.three@example.com");
         User hidden = createCoach("ntrp_four", "ntrp.four@example.com");
-        saveOffering(match, ResourceType.TENNIS, Set.of("3.0", "3.5"), "80.00");
-        saveOffering(hidden, ResourceType.TENNIS, Set.of("4.0", "4.5"), "110.00");
-        List<CoachOffering> matches = coachOfferingService.findPublished(ResourceType.TENNIS, "3.0");
+        saveOffering(match, ResourceType.CHAPEL, Set.of("CATHOLIC", "ORTHODOX"), "80.00");
+        saveOffering(hidden, ResourceType.CHAPEL, Set.of("JEWISH", "MUSLIM"), "110.00");
+        List<CoachOffering> matches = coachOfferingService.findPublished(ResourceType.CHAPEL, "CATHOLIC");
         assertThat(matches).extracting(item -> item.getCoach().getUsername())
                 .contains("ntrp_three")
                 .doesNotContain("ntrp_four");
-        List<CoachPickerCard> cards = coachOfferingService.pickerCards(ResourceType.TENNIS);
-        assertThat(cards.stream().filter(card -> card.getLevels().contains("3.0")).map(CoachPickerCard::getFullName))
+        List<CoachPickerCard> cards = coachOfferingService.pickerCards(ResourceType.CHAPEL);
+        assertThat(cards.stream().filter(card -> card.getLevels().contains("CATHOLIC")).map(CoachPickerCard::getFullName))
                 .contains(match.getFullName())
                 .doesNotContain(hidden.getFullName());
         User player = player("ntrp_filter", "ntrp.filter@example.com");
         SportResource tennis = tennisCourt();
         ReservationRequest booking = request(tennis, LocalDate.now(WARSAW).plusDays(17), tennis.getOpeningTime(), 1);
         booking.setCoachId(hidden.getId());
-        booking.setSkillLevel("3.0");
+        booking.setSkillLevel("CATHOLIC");
         assertThatThrownBy(() -> reservationService.create(player, booking))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("level");
@@ -304,13 +305,13 @@ class CoachServiceTests {
                 .andExpect(content().string(containsString("Coach ntrp_three")))
                 .andExpect(content().string(containsString("Coach ntrp_four")))
                 .andExpect(content().string(containsString("New coach")))
-                .andExpect(content().string(containsString("No coach")));
+                .andExpect(content().string(containsString("No celebrant")));
     }
 
     @Test
     void ratingBeforeEndIsRejectedAndPastConfirmedIsAcceptedOnce() {
         User coach = createCoach("rated_coach", "rated.coach@example.com");
-        saveOffering(coach, ResourceType.TENNIS, Set.of("3.0"), "80.00");
+        saveOffering(coach, ResourceType.CHAPEL, Set.of("CATHOLIC"), "80.00");
         User owner = player("rater_one", "rater.one@example.com");
         User other = player("rater_two", "rater.two@example.com");
         User admin = userRepository.findByUsernameIgnoreCase("admin").orElseThrow();
@@ -347,8 +348,8 @@ class CoachServiceTests {
     void pickerShowsAverageRatingAndNewCoachLabel() {
         User fresh = createCoach("new_badge", "new.badge@example.com");
         User ranked = createCoach("ranked_badge", "ranked.badge@example.com");
-        saveOffering(fresh, ResourceType.TENNIS, Set.of("3.0"), "70.00");
-        saveOffering(ranked, ResourceType.TENNIS, Set.of("3.0"), "90.00");
+        saveOffering(fresh, ResourceType.CHAPEL, Set.of("CATHOLIC"), "70.00");
+        saveOffering(ranked, ResourceType.CHAPEL, Set.of("CATHOLIC"), "90.00");
         User first = player("avg_one", "avg.one@example.com");
         User second = player("avg_two", "avg.two@example.com");
         SportResource tennis = tennisCourt();
@@ -362,7 +363,7 @@ class CoachServiceTests {
         assertThat(summary.getAverage()).isEqualTo(4.5);
         assertThat(summary.getDisplayLabel()).isEqualTo("★ 4.5 (2)");
         assertThat(coachRatingService.summaryFor(fresh.getId()).getDisplayLabel()).isEqualTo("New coach");
-        List<CoachPickerCard> cards = coachOfferingService.pickerCards(ResourceType.TENNIS);
+        List<CoachPickerCard> cards = coachOfferingService.pickerCards(ResourceType.CHAPEL);
         CoachPickerCard rankedCard = cards.stream()
                 .filter(card -> ranked.getId().equals(card.getId()))
                 .findFirst()
@@ -412,14 +413,14 @@ class CoachServiceTests {
 
     private SportResource tennisCourt() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.TENNIS && resource.isEnabled() && resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.CHAPEL && resource.isEnabled() && resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
 
     private SportResource gym() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.GYM && resource.isEnabled() && !resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.TRANSPORT && resource.isEnabled() && !resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
@@ -456,7 +457,7 @@ class CoachServiceTests {
         reservation.setUser(user);
         reservation.setResource(court);
         reservation.setCoach(coach);
-        reservation.setSkillLevel("3.0");
+        reservation.setSkillLevel("CATHOLIC");
         reservation.setStartAt(startAt);
         reservation.setEndAt(endAt);
         reservation.setStatus(status);

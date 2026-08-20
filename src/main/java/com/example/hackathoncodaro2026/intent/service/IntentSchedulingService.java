@@ -1,6 +1,11 @@
 package com.example.hackathoncodaro2026.intent.service;
 
 import com.example.hackathoncodaro2026.intent.config.IntentProperties;
+import com.example.hackathoncodaro2026.intent.derive.ArrangementFacts;
+import com.example.hackathoncodaro2026.intent.derive.ArrangementFactsParser;
+import com.example.hackathoncodaro2026.intent.derive.BurialWindowService;
+import com.example.hackathoncodaro2026.intent.derive.BurialWindowService.EffectiveRange;
+import com.example.hackathoncodaro2026.intent.derive.ServiceWindow;
 import com.example.hackathoncodaro2026.intent.engine.SlotRanker;
 import com.example.hackathoncodaro2026.intent.model.IntentSpec;
 import com.example.hackathoncodaro2026.intent.model.RankResult;
@@ -42,6 +47,8 @@ public class IntentSchedulingService {
     private final SlotRanker slotRanker;
     private final IntentParser intentParser;
     private final PricingService pricingService;
+    private final ArrangementFactsParser factsParser;
+    private final BurialWindowService burialWindowService;
 
     public IntentSchedulingService(
             SportResourceRepository sportResourceRepository,
@@ -49,7 +56,9 @@ public class IntentSchedulingService {
             IntentProperties intentProperties,
             SlotRanker slotRanker,
             IntentParser intentParser,
-            PricingService pricingService
+            PricingService pricingService,
+            ArrangementFactsParser factsParser,
+            BurialWindowService burialWindowService
     ) {
         this.sportResourceRepository = sportResourceRepository;
         this.reservationRepository = reservationRepository;
@@ -57,15 +66,29 @@ public class IntentSchedulingService {
         this.slotRanker = slotRanker;
         this.intentParser = intentParser;
         this.pricingService = pricingService;
+        this.factsParser = factsParser;
+        this.burialWindowService = burialWindowService;
     }
 
     @Transactional(readOnly = true)
     public SuggestOutcome suggest(String text, Integer partySize, long requestingUserId) {
         LocalDateTime now = LocalDateTime.now(WARSAW);
-        int resolvedPartySize = (partySize == null || partySize < 1) ? 1 : partySize;
+        ArrangementFacts facts = factsParser.parse(text, now.toLocalDate());
+        int resolvedPartySize = resolvePartySize(partySize, facts);
 
         IntentParser.ParseResult parsed = intentParser.parse(text, now.toLocalDate(), resolvedPartySize);
         IntentSpec spec = parsed.spec();
+
+        // The family does not choose the date: when they have told us when the death
+        // occurred, the legal and religious window replaces whatever dates the text
+        // implied, and any day they asked for is honoured only inside that window.
+        ServiceWindow window = burialWindowService.derive(facts, now).orElse(null);
+        String rangeNote = null;
+        if (window != null) {
+            EffectiveRange range = burialWindowService.applyPreference(window, facts.dateOfDeath(), spec.dayFrom(), spec.dayTo());
+            rangeNote = range.note();
+            spec = withDays(spec, range.from(), range.to());
+        }
 
         LocalDate dayFrom = spec.dayFrom() == null ? now.toLocalDate() : spec.dayFrom();
         LocalDate dayTo = spec.dayTo() == null ? dayFrom : spec.dayTo();
@@ -101,7 +124,34 @@ public class IntentSchedulingService {
                 .map(suggestion -> new PricedSuggestion(suggestion, priceFor(resourceById.get(suggestion.resourceId()), suggestion)))
                 .toList();
 
-        return new SuggestOutcome(spec, parsed.parserUsed(), priced, rankResult.relaxationTrail());
+        return new SuggestOutcome(spec, parsed.parserUsed(), priced, rankResult.relaxationTrail(), facts, window, rangeNote);
+    }
+
+    /**
+     * An explicit party size from the caller always wins; otherwise a mourner count
+     * stated in the text is a better default than one person.
+     */
+    private int resolvePartySize(Integer requested, ArrangementFacts facts) {
+        if (requested != null && requested >= 1) {
+            return requested;
+        }
+        if (facts.mourners() != null && facts.mourners() >= 1) {
+            return facts.mourners();
+        }
+        return 1;
+    }
+
+    private IntentSpec withDays(IntentSpec spec, LocalDate from, LocalDate to) {
+        return new IntentSpec(
+                spec.durationMin(),
+                from,
+                to,
+                spec.timeOfDay(),
+                spec.hardConstraints(),
+                spec.softConstraints(),
+                spec.resourceType(),
+                spec.partySize()
+        );
     }
 
     private String priceFor(SportResource resource, Suggestion suggestion) {
@@ -157,11 +207,20 @@ public class IntentSchedulingService {
     public record PricedSuggestion(Suggestion suggestion, String price) {
     }
 
+    /**
+     * @param facts       what the text said about the deceased; empty when nothing was stated
+     * @param window      the derived feasible window, or null when no date of death was given
+     *                    and the request therefore behaves as an ordinary booking
+     * @param rangeNote   how a date the family asked for was reconciled with the window
+     */
     public record SuggestOutcome(
             IntentSpec spec,
             String parserUsed,
             List<PricedSuggestion> suggestions,
-            List<RelaxStep> relaxationTrail
+            List<RelaxStep> relaxationTrail,
+            ArrangementFacts facts,
+            ServiceWindow window,
+            String rangeNote
     ) {
     }
 }

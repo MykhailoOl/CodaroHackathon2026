@@ -1,4 +1,11 @@
-# PIVOT.md — retargeting Courtly to a new niche
+# PIVOT.md — retargeting the product to a new niche
+
+> **Status: executed.** The sports build was pivoted to **EverRest**, a Warsaw
+> funeral-arrangements product, on 2026-08-20. `ResourceType`, `seed.yml`, the
+> `domain:` and `intent:` config, the templates, the Next.js app and the Telegram
+> bot all speak the funeral domain now. What follows is still the map of the
+> seams — read it before the next pivot, and to understand why things sit where
+> they do.
 
 Courtly is a generic resource-reservation + scheduling product wearing a
 sports-facility skin. The intent engine, API contract, reservation/pricing
@@ -49,9 +56,14 @@ Then run `./gradlew test` — the intent-parser tests must stay green
   shown when the backend is down. Rewrite the suggestion content per niche.
   `NEXT_PUBLIC_DEMO_INTENT` in `web/.env.example` drives the composer
   placeholder.
-- **Telegram bot** (`telegram_bot.py`): sports vocabulary now reads from env
-  — `BOT_RESOURCE_WORDS`, `BOT_PARTY_RANGES`, `BOT_EXAMPLE_INTENT`. Bot copy
-  strings mentioning "court"/"sport" also deserve a sweep.
+- **Telegram bot** (`telegram_bot.py`): rebuilt for the funeral pivot as an
+  approval channel rather than a slot picker (see "Derived scheduling" below).
+  Vocabulary reads from env — `BOT_BRAND_NAME`, `BOT_SERVICE_WORDS`,
+  `BOT_SERVICE_OPTIONS`, `BOT_RITE_OPTIONS`, `BOT_EXAMPLE_INTENT`. The
+  `*_OPTIONS` vars are `Label=phrase` pairs separated by `|`; the phrase is
+  appended to the user's text for the backend's own parser to resolve, so the
+  bot never needs to know `ResourceType`. Set `BOT_BRAND_NAME` to whatever
+  `domain.brand.name` becomes.
 
 ## What to verify after a pivot
 
@@ -61,8 +73,9 @@ Then run `./gradlew test` — the intent-parser tests must stay green
   facility list/detail/occupancy pages render the new seed data; the intent
   composer parses new-niche phrasings (rule parser + LLM prompt both use the
   new vocabulary).
-- Telegram bot: `python3 -m py_compile telegram_bot.py`, then a quick
-  /start + free-text booking with the new env vars set.
+- Telegram bot: `python3 -m pytest test_telegram_bot.py`, then a quick
+  /start + free-text intake with the new env vars set.
+- Derived scheduling: `./gradlew test --tests '*derive*'`.
 
 ## Notes / known trade-offs
 
@@ -74,3 +87,30 @@ Then run `./gradlew test` — the intent-parser tests must stay green
   not config — sweep it by hand per niche.
 - `data/` (H2 database files) may hold old-domain rows; delete it if a pivot
   should start from a clean slate.
+
+## Derived scheduling (added by the funeral pivot)
+
+The one piece of genuinely new logic, and the product's thesis: the family does
+not choose the date. `intent/derive/` turns facts about the deceased into the
+window the service must fall inside, and the existing ranker then picks a slot
+inside it — the engine was never touched.
+
+- `ArrangementFactsParser` — pulls date of death, observance, certificate
+  availability and mourner count out of the raw text. Deliberately separate from
+  `IntentParser` (which stays domain-agnostic) and deterministic, so a legal
+  deadline never depends on an LLM being reachable. Its dates run *backwards*;
+  a death is in the past where every booking date is in the future.
+- `BurialWindowService` — earliest comes from the certificate release, latest
+  from the observance capped by the statutory limit, plus a plain-language
+  derivation the family is shown. Also reconciles any date they asked for
+  against the window.
+- `RiteProperties` — per-observance rules, defaults baked into Java so the
+  feature works with no yml; the `rites:` block in `application.yml` holds the
+  per-jurisdiction knobs.
+
+Keyed off the *rite*, never `ResourceType`, so retargeting the catalogue and
+tuning the scheduling rules stay independent edits.
+
+`/api/intent/suggest` gained two **additive** response fields, `window` and
+`facts`. Nothing was renamed or removed; both are null for a request that states
+no date of death, and the pre-pivot web composer keeps working untouched.

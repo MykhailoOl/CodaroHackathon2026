@@ -225,7 +225,7 @@ class ReservationEditServiceTests {
         BigDecimal expected = pricingService.quote(tennis, date, start, 1, ReservationKind.STANDARD, List.of(racket), 3);
         assertThat(result.reservation().getPartySize()).isEqualTo(3);
         assertThat(result.reservation().getTotalAmount()).isEqualByComparingTo(expected);
-        assertThat(result.reservation().getExtrasSummary()).contains("Racket ×3");
+        assertThat(result.reservation().getExtrasSummary()).contains("Floral tribute ×3");
         assertThat(result.amountChanged()).isTrue();
     }
 
@@ -234,14 +234,14 @@ class ReservationEditServiceTests {
         User owner = player("edit_drop_owner", "edit.drop.owner@example.com");
         User other = player("edit_drop_other", "edit.drop.other@example.com");
         User coach = createCoach("edit_drop_coach", "edit.drop.coach@example.com");
-        saveOffering(coach, ResourceType.GYM, Set.of("INTERMEDIATE"), "90.00");
+        saveOffering(coach, ResourceType.TRANSPORT, Set.of("BEARER"), "90.00");
         SportResource gym = gym();
         LocalDate date = LocalDate.now(WARSAW).plusDays(47);
         LocalTime start = gym.getOpeningTime();
         ReservationRequest create = request(gym, date, start, 1);
         create.setKind(ReservationKind.INDIVIDUAL);
         create.setCoachId(coach.getId());
-        create.setSkillLevel("INTERMEDIATE");
+        create.setSkillLevel("BEARER");
         Reservation created = reservationService.create(owner, create);
         BigDecimal withCoach = created.getTotalAmount();
         ReservationRequest change = request(gym, date, start, 1);
@@ -262,13 +262,13 @@ class ReservationEditServiceTests {
         ReservationRequest reuse = request(gym, date, start.plusHours(2), 1);
         reuse.setKind(ReservationKind.INDIVIDUAL);
         reuse.setCoachId(coach.getId());
-        reuse.setSkillLevel("INTERMEDIATE");
+        reuse.setSkillLevel("BEARER");
         Reservation second = reservationService.create(other, reuse);
         assertThat(second.getCoach().getId()).isEqualTo(coach.getId());
         ReservationRequest sameSlot = request(gym, date, start, 1);
         sameSlot.setKind(ReservationKind.INDIVIDUAL);
         sameSlot.setCoachId(coach.getId());
-        sameSlot.setSkillLevel("INTERMEDIATE");
+        sameSlot.setSkillLevel("BEARER");
         Reservation reusedSlot = reservationService.create(other, sameSlot);
         assertThat(reusedSlot.getCoach().getId()).isEqualTo(coach.getId());
         assertThat(reusedSlot.getStartAt()).isEqualTo(date.atTime(start));
@@ -279,20 +279,20 @@ class ReservationEditServiceTests {
         User owner = player("edit_swap_owner", "edit.swap.owner@example.com");
         User oldCoach = createCoach("edit_swap_old", "edit.swap.old@example.com");
         User newCoach = createCoach("edit_swap_new", "edit.swap.new@example.com");
-        saveOffering(oldCoach, ResourceType.GYM, Set.of("INTERMEDIATE"), "90.00");
-        saveOffering(newCoach, ResourceType.GYM, Set.of("INTERMEDIATE"), "120.00");
+        saveOffering(oldCoach, ResourceType.TRANSPORT, Set.of("BEARER"), "90.00");
+        saveOffering(newCoach, ResourceType.TRANSPORT, Set.of("BEARER"), "120.00");
         SportResource gym = gym();
         LocalDate date = LocalDate.now(WARSAW).plusDays(48);
         LocalTime start = gym.getOpeningTime();
         ReservationRequest create = request(gym, date, start, 1);
         create.setKind(ReservationKind.INDIVIDUAL);
         create.setCoachId(oldCoach.getId());
-        create.setSkillLevel("INTERMEDIATE");
+        create.setSkillLevel("BEARER");
         Reservation created = reservationService.create(owner, create);
         ReservationRequest change = request(gym, date, start, 1);
         change.setKind(ReservationKind.INDIVIDUAL);
         change.setCoachId(newCoach.getId());
-        change.setSkillLevel("INTERMEDIATE");
+        change.setSkillLevel("BEARER");
         ReservationUpdateResult result = reservationService.update(owner, created.getId(), change);
         assertThat(result.reservation().getCoach().getId()).isEqualTo(newCoach.getId());
         BigDecimal expected = pricingService.quote(
@@ -317,25 +317,25 @@ class ReservationEditServiceTests {
         User owner = player("edit_move_owner", "edit.move.owner@example.com");
         User other = player("edit_move_other", "edit.move.other@example.com");
         User coach = createCoach("edit_move_coach", "edit.move.coach@example.com");
-        saveOffering(coach, ResourceType.GYM, Set.of("INTERMEDIATE"), "90.00");
+        saveOffering(coach, ResourceType.TRANSPORT, Set.of("BEARER"), "90.00");
         SportResource gym = gym();
         LocalDate date = LocalDate.now(WARSAW).plusDays(49);
         LocalTime start = gym.getOpeningTime();
         ReservationRequest blocking = request(gym, date, start.plusHours(3), 1);
         blocking.setKind(ReservationKind.INDIVIDUAL);
         blocking.setCoachId(coach.getId());
-        blocking.setSkillLevel("INTERMEDIATE");
+        blocking.setSkillLevel("BEARER");
         reservationService.create(other, blocking);
         ReservationRequest create = request(gym, date, start, 1);
         create.setKind(ReservationKind.INDIVIDUAL);
         create.setCoachId(coach.getId());
-        create.setSkillLevel("INTERMEDIATE");
+        create.setSkillLevel("BEARER");
         Reservation created = reservationService.create(owner, create);
         LocalDateTime originalStart = created.getStartAt();
         ReservationRequest overlap = request(gym, date, start.plusHours(3), 1);
         overlap.setKind(ReservationKind.INDIVIDUAL);
         overlap.setCoachId(coach.getId());
-        overlap.setSkillLevel("INTERMEDIATE");
+        overlap.setSkillLevel("BEARER");
         assertThatThrownBy(() -> reservationService.update(owner, created.getId(), overlap))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("no longer available");
@@ -345,7 +345,7 @@ class ReservationEditServiceTests {
         ReservationRequest moved = request(gym, date, start.plusHours(1), 1);
         moved.setKind(ReservationKind.INDIVIDUAL);
         moved.setCoachId(coach.getId());
-        moved.setSkillLevel("INTERMEDIATE");
+        moved.setSkillLevel("BEARER");
         ReservationUpdateResult result = reservationService.update(owner, created.getId(), moved);
         assertThat(result.reservation().getCoach().getId()).isEqualTo(coach.getId());
         assertThat(result.reservation().getStartAt()).isEqualTo(date.atTime(start.plusHours(1)));
@@ -376,7 +376,7 @@ class ReservationEditServiceTests {
     void lessonEditKeepsFullCapacityAndForbidsCoach() {
         User player = player("edit_lesson_owner", "edit.lesson.owner@example.com");
         User coach = createCoach("edit_lesson_coach", "edit.lesson.coach@example.com");
-        saveOffering(coach, ResourceType.GYM, Set.of("BEGINNER"), "90.00");
+        saveOffering(coach, ResourceType.TRANSPORT, Set.of("DRIVER"), "90.00");
         SportResource gym = gym();
         LocalDate date = LocalDate.now(WARSAW).plusDays(51);
         ReservationRequest create = request(gym, date, gym.getOpeningTime(), 1);
@@ -388,7 +388,7 @@ class ReservationEditServiceTests {
         withCoach.setKind(ReservationKind.LESSON);
         withCoach.setPartySize(5);
         withCoach.setCoachId(coach.getId());
-        withCoach.setSkillLevel("BEGINNER");
+        withCoach.setSkillLevel("DRIVER");
         assertThatThrownBy(() -> reservationService.update(player, created.getId(), withCoach))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("group lesson");
@@ -507,21 +507,21 @@ class ReservationEditServiceTests {
 
     private SportResource tennisCourt() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.TENNIS && resource.isEnabled() && resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.CHAPEL && resource.isEnabled() && resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
 
     private SportResource gym() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.GYM && resource.isEnabled() && !resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.TRANSPORT && resource.isEnabled() && !resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
 
     private InventoryItem racket() {
-        return inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.TENNIS).stream()
-                .filter(item -> item.getName().equalsIgnoreCase("Racket"))
+        return inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.CHAPEL).stream()
+                .filter(item -> item.getName().equalsIgnoreCase("Floral tribute"))
                 .findFirst()
                 .orElseThrow();
     }

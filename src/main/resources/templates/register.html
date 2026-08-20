@@ -8,7 +8,7 @@
     <section class="auth-panel">
         <p class="eyebrow">Join the roster</p>
         <h1 th:text="'Create your ' + ${brand.name} + ' account'">Create your Courtly account</h1>
-        <p class="lede">Players and staff use the same door. Admins unlock facility tools later.</p>
+        <p class="lede">Mourners and staff use the same door. Admins unlock facility tools later.</p>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
         <form id="register-form" class="auth-form" th:action="@{/register}" th:object="${registrationRequest}" method="post" novalidate>
             <div class="field-grid">
