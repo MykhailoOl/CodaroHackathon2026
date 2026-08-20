@@ -1,5 +1,6 @@
 package com.example.hackathoncodaro2026.intent.parse;
 
+import com.example.hackathoncodaro2026.config.DomainProperties;
 import com.example.hackathoncodaro2026.intent.config.IntentProperties;
 import com.example.hackathoncodaro2026.intent.model.IntentSpec;
 import com.example.hackathoncodaro2026.intent.model.TimeOfDay;
@@ -36,6 +37,7 @@ public class CodaroIntentParser implements IntentParser {
     private final String apiKey;
     private final String model;
     private final IntentProperties config;
+    private final DomainProperties domain;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
@@ -43,12 +45,14 @@ public class CodaroIntentParser implements IntentParser {
             @Value("${intent.llm.base-url:}") String baseUrl,
             @Value("${intent.llm.api-key:}") String apiKey,
             @Value("${intent.llm.model:}") String model,
-            IntentProperties config
+            IntentProperties config,
+            DomainProperties domain
     ) {
         this.baseUrl = baseUrl == null ? "" : baseUrl.trim();
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null ? "" : model.trim();
         this.config = config;
+        this.domain = domain;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
                 .build();
@@ -90,16 +94,18 @@ public class CodaroIntentParser implements IntentParser {
         }
 
         String system = """
-                You convert a natural-language sports-facility booking request into structured fields.
+                You convert a natural-language %s booking request into structured fields.
                 Today's date is %s (ISO-8601). The default party size if unstated is %d.
-                Valid resourceType values (choose exactly one, or null if no sport is mentioned): %s
+                Valid resourceType values (choose exactly one, or null if no %s is mentioned): %s
                 Valid hard constraint keys (only use these, never invent a key): %s
                 Valid soft constraint keys (only use these, never invent a key): %s
                 Only put a key in hardConstraints or softConstraints if the text clearly implies it.
                 day_from and day_to must be ISO-8601 dates (YYYY-MM-DD), with day_from <= day_to.
                 timeOfDay must be one of ANY, MORNING, AFTERNOON, EVENING.
                 Call the %s tool with your answer.
-                """.formatted(today, partySize, resourceTypes, hardKeys, softKeys, TOOL_NAME);
+                """.formatted(
+                domain.llmDomainDescription(), today, partySize, domain.llmDomainDescription(),
+                resourceTypes, hardKeys, softKeys, TOOL_NAME);
 
         ObjectNode root = objectMapper.createObjectNode();
         root.put("model", model);

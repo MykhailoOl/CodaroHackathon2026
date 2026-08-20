@@ -1,5 +1,6 @@
 package com.example.hackathoncodaro2026.intent.parse;
 
+import com.example.hackathoncodaro2026.config.DomainProperties;
 import com.example.hackathoncodaro2026.intent.config.IntentProperties;
 import com.example.hackathoncodaro2026.intent.model.IntentSpec;
 import com.example.hackathoncodaro2026.intent.model.TimeOfDay;
@@ -19,7 +20,7 @@ class RuleIntentParserTest {
     private static final LocalDate TODAY = LocalDate.of(2024, 6, 3);
 
     private final IntentProperties config = testConfig();
-    private final RuleIntentParser parser = new RuleIntentParser(config);
+    private final RuleIntentParser parser = new RuleIntentParser(config, DomainProperties.defaults());
 
     static IntentProperties testConfig() {
         List<IntentProperties.ConstraintRule> constraints = List.of(

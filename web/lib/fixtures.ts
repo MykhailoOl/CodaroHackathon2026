@@ -1,4 +1,3 @@
-
 import type { BookResponse, IntentSuggestResponse, TokenResponse } from "./types";
 
 export const FIXTURE_TOKEN_RESPONSE: TokenResponse = {
