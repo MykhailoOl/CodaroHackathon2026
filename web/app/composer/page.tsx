@@ -1,70 +1,168 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, suggestIntent } from "@/lib/api";
-import { clearAuth, loadAuth } from "@/lib/auth";
-import { MournersControl } from "@/components/PartySizeControl";
-import { SuggestionCard } from "@/components/SuggestionCard";
-import { RelaxationNotice } from "@/components/RelaxationNotice";
-import { ServiceWindowPanel } from "@/components/ServiceWindowPanel";
-import { DataSourceBadge } from "@/components/DataSourceBadge";
-import { DevFixtureToggle } from "@/components/DevFixtureToggle";
-import { relativeToFirst } from "@/lib/format";
-import type { DataSource, IntentSuggestResponse } from "@/lib/types";
+import {
+  ApiError,
+  createArrangement,
+  getHomes,
+  getVenues,
+  logout,
+  previewArrangement,
+  venueFits,
+} from "@/lib/api";
+import { clearSession, loadSession } from "@/lib/auth";
+import type {
+  ArrangementCreated,
+  ArrangementRequest,
+  AssistantHome,
+  AssistantPreview,
+  AssistantVenue,
+} from "@/lib/types";
 
-const DEMO_INTENT_PLACEHOLDER =
-  process.env.NEXT_PUBLIC_DEMO_INTENT ||
-  "my father died yesterday, orthodox service, about 40 mourners";
+const SERVICE_TYPES = [
+  { value: "BURIAL_CEREMONY", label: "Burial ceremony" },
+  { value: "CREMATION_CEREMONY", label: "Cremation" },
+  { value: "MEMORIAL_SERVICE", label: "Memorial service" },
+  { value: "FAREWELL_CEREMONY", label: "Farewell ceremony" },
+];
+
+const PACKAGES = [
+  { value: "ESSENTIAL", label: "Essential" },
+  { value: "CLASSIC", label: "Classic" },
+  { value: "TRIBUTE", label: "Tribute" },
+];
+
+const PAYMENT_METHOD = "ONLINE_TRANSFER";
+
+function formatDate(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : parsed.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : parsed.toLocaleString(undefined, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
 
 export default function ComposerPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [phoneRequired, setPhoneRequired] = useState(false);
 
-  const [text, setText] = useState("");
-  const [mourners, setMourners] = useState(40);
+  const [deceased, setDeceased] = useState("");
+  const [dateOfDeath, setDateOfDeath] = useState("");
+  const [serviceType, setServiceType] = useState(SERVICE_TYPES[0].value);
+  const [funeralPackage, setFuneralPackage] = useState(PACKAGES[1].value);
+  const [attendees, setAttendees] = useState(40);
+  const [phone, setPhone] = useState("");
+
+  const [homes, setHomes] = useState<AssistantHome[]>([]);
+  const [homeId, setHomeId] = useState<number | null>(null);
+  const [venues, setVenues] = useState<AssistantVenue[]>([]);
+  const [venueId, setVenueId] = useState<number | null>(null);
+
+  const [preview, setPreview] = useState<AssistantPreview | null>(null);
+  const [created, setCreated] = useState<ArrangementCreated | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [response, setResponse] = useState<IntentSuggestResponse | null>(null);
-  const [source, setSource] = useState<DataSource | null>(null);
-  // Alternatives stay closed until the family says the held time does not work.
-  // They are not shopping; showing a grid of funerals by default is the wrong offer.
-  const [showAlternatives, setShowAlternatives] = useState(false);
 
   useEffect(() => {
-    const auth = loadAuth();
-    if (!auth) {
+    const session = loadSession();
+    if (!session) {
       router.replace("/");
       return;
     }
-    setDisplayName(auth.displayName || null);
+    setDisplayName(session.username);
+    setPhoneRequired(session.phoneRequired);
+    getHomes()
+      .then((list) => {
+        setHomes(list);
+        if (list.length) setHomeId(list[0].id);
+      })
+      .catch(() => setError("The funeral homes could not be loaded."));
   }, [router]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (homeId === null) return;
+    setVenueId(null);
+    getVenues(homeId)
+      .then(setVenues)
+      .catch(() => setError("That home's spaces could not be loaded."));
+  }, [homeId]);
+
+  // A space is offered only if it holds everyone and hosts this kind of service —
+  // the server refuses the mismatch, so never put it on screen as a choice.
+  const offered = useMemo(
+    () => venues.filter((venue) => venueFits(venue, serviceType, attendees)),
+    [venues, serviceType, attendees],
+  );
+
+  const chosenVenue = offered.find((venue) => venue.id === venueId) ?? null;
+
+  function buildRequest(): ArrangementRequest {
+    return {
+      venueId: venueId as number,
+      serviceType,
+      funeralPackage,
+      deceasedFullName: deceased.trim(),
+      dateOfDeath,
+      attendees,
+      paymentMethod: PAYMENT_METHOD,
+      extraIds: [],
+      ...(phone.trim() ? { phone: phone.trim() } : {}),
+    };
+  }
+
+  async function handlePreview(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!venueId) {
+      setError("Choose a space.");
+      return;
+    }
     setLoading(true);
     setError(null);
-    setShowAlternatives(false);
+    setCreated(null);
     try {
-      const result = await suggestIntent(text.trim(), mourners);
-      setResponse(result.data);
-      setSource(result.source);
+      setPreview(await previewArrangement(buildRequest()));
     } catch (err) {
+      setPreview(null);
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  function handleLogout() {
-    clearAuth();
+  async function handleConfirm() {
+    setLoading(true);
+    setError(null);
+    try {
+      setCreated(await createArrangement(buildRequest()));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Nothing was confirmed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    await logout();
+    clearSession();
     router.push("/");
   }
 
-  const held = response?.suggestions[0] ?? null;
-  const alternatives = response?.suggestions.slice(1) ?? [];
-  const effectiveMourners = response?.spec.partySize || mourners;
+  const field = "mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500";
+  const label = "block text-sm font-medium text-stone-700";
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-4 py-10">
@@ -73,122 +171,170 @@ export default function ComposerPage() {
           <h1 className="text-xl font-bold tracking-tight text-stone-900">EverRest</h1>
           {displayName && <p className="text-sm text-stone-500">Signed in as {displayName}</p>}
         </div>
-        <div className="flex items-center gap-4">
-          <DevFixtureToggle />
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-sm font-medium text-stone-500 hover:text-stone-900"
-          >
-            Sign out
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="text-sm text-stone-500 underline underline-offset-4 hover:text-stone-800"
+        >
+          Sign out
+        </button>
       </header>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4 rounded-xl border border-stone-300 bg-white p-6 shadow-sm"
-      >
+      <form onSubmit={handlePreview} className="space-y-5 rounded-xl border border-stone-300 bg-white p-6 shadow-sm">
         <div>
-          <label htmlFor="intent" className="block text-sm font-medium text-stone-700">
-            Tell us what has happened
-          </label>
-          <p className="mt-1 text-sm text-stone-500">
-            In your own words. You do not need to choose a date — we work out when the
-            service can be held from the certificate, the observance and the law.
-          </p>
-          <textarea
-            id="intent"
-            required
-            rows={3}
-            placeholder={DEMO_INTENT_PLACEHOLDER}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="mt-3 w-full resize-none rounded-lg border border-stone-300 px-3 py-2.5 text-base outline-none focus:border-stone-500"
-          />
+          <label htmlFor="deceased" className={label}>Who died</label>
+          <p className="text-xs text-stone-500">Their full name, as it should appear on the record.</p>
+          <input id="deceased" required value={deceased} onChange={(e) => setDeceased(e.target.value)} className={field} />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <MournersControl value={mourners} onChange={setMourners} />
-          <button
-            type="submit"
-            disabled={loading || !text.trim()}
-            className="rounded-lg bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
-          >
-            {loading ? "Working it out…" : "Propose a time"}
-          </button>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="dateOfDeath" className={label}>Date of death</label>
+            <input
+              id="dateOfDeath"
+              type="date"
+              required
+              max={new Date().toISOString().slice(0, 10)}
+              value={dateOfDeath}
+              onChange={(e) => setDateOfDeath(e.target.value)}
+              className={field}
+            />
+          </div>
+          <div>
+            <label htmlFor="attendees" className={label}>People attending</label>
+            <input
+              id="attendees"
+              type="number"
+              min={1}
+              required
+              value={attendees}
+              onChange={(e) => setAttendees(Number(e.target.value))}
+              className={field}
+            />
+          </div>
         </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="serviceType" className={label}>Service</label>
+            <select id="serviceType" value={serviceType} onChange={(e) => setServiceType(e.target.value)} className={field}>
+              {SERVICE_TYPES.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="funeralPackage" className={label}>Arrangement</label>
+            <select id="funeralPackage" value={funeralPackage} onChange={(e) => setFuneralPackage(e.target.value)} className={field}>
+              {PACKAGES.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="home" className={label}>Funeral home</label>
+            <select
+              id="home"
+              value={homeId ?? ""}
+              onChange={(e) => setHomeId(Number(e.target.value))}
+              className={field}
+            >
+              {homes.map((home) => (
+                <option key={home.id} value={home.id}>{home.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="venue" className={label}>Space</label>
+            <select
+              id="venue"
+              required
+              value={venueId ?? ""}
+              onChange={(e) => setVenueId(Number(e.target.value))}
+              className={field}
+            >
+              <option value="" disabled>Choose a space</option>
+              {offered.map((venue) => (
+                <option key={venue.id} value={venue.id}>
+                  {venue.name} · {venue.venueTypeLabel} · up to {venue.maxAttendees}
+                </option>
+              ))}
+            </select>
+            {!offered.length && (
+              <p className="mt-1 text-xs text-amber-700">
+                No space here holds {attendees} for this service. Try another home.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {phoneRequired && (
+          <div>
+            <label htmlFor="phone" className={label}>Phone</label>
+            <input id="phone" required value={phone} onChange={(e) => setPhone(e.target.value)} className={field} />
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-900">{error}</div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !offered.length}
+          className="w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
+        >
+          {loading ? "Checking…" : "See what can be held"}
+        </button>
       </form>
 
-      {error && (
-        <div className="mt-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-          {error}
-        </div>
+      {preview && !created && (
+        <section className="mt-6 rounded-xl border-2 border-stone-900 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Proposed arrangement</h2>
+          <p className="mt-3 text-lg font-semibold text-stone-900">{deceased}</p>
+          {chosenVenue && (
+            <p className="text-sm text-stone-600">
+              {chosenVenue.name} — {chosenVenue.address}
+            </p>
+          )}
+          {/* The date is assigned on confirmation, not picked: the API takes no date and
+              the day it settles on can fall outside the sample below. Never render these
+              as if they were a menu. */}
+          <p className="mt-4 text-sm text-stone-700">
+            {preview.dates.length
+              ? `Days are open from ${formatDate(preview.dates[0])} onwards. The funeral home settles the exact day and hour when you confirm.`
+              : "The funeral home will settle the day when you confirm."}
+          </p>
+          <p className="mt-3 text-sm text-stone-900">
+            {attendees} attending · {preview.amount} {preview.currency}
+          </p>
+          {preview.notice && <p className="mt-2 text-sm text-stone-600">{preview.notice}</p>}
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={loading}
+            className="mt-5 w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
+          >
+            {loading ? "Confirming…" : "Confirm this arrangement"}
+          </button>
+        </section>
       )}
 
-      {response && (
-        <section className="mt-8 space-y-6">
-          {source && (
-            <div className="flex justify-end">
-              <DataSourceBadge source={source} />
-            </div>
-          )}
-
-          {response.window && <ServiceWindowPanel window={response.window} />}
-
-          <RelaxationNotice entries={response.relaxationTrail} variant="trail" />
-
-          {!held ? (
-            <p className="rounded-lg border border-stone-300 bg-white px-4 py-6 text-center text-sm leading-relaxed text-stone-600">
-              {response.window
-                ? "Nothing is free inside that window. The dates cannot be moved, so this needs a member of staff — please call the funeral home."
-                : "Nothing matched. Try describing the circumstances, including when the death occurred."}
-            </p>
-          ) : (
-            <>
-              <div>
-                <h2 className="mb-3 text-base font-semibold text-stone-900">We are holding</h2>
-                <SuggestionCard
-                  suggestion={held}
-                  mourners={effectiveMourners}
-                  source={source ?? "fixture"}
-                  primary
-                />
-              </div>
-
-              {alternatives.length > 0 && !showAlternatives && (
-                <button
-                  type="button"
-                  onClick={() => setShowAlternatives(true)}
-                  className="w-full rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:bg-stone-100"
-                >
-                  This doesn&rsquo;t work
-                </button>
-              )}
-
-              {alternatives.length > 0 && showAlternatives && (
-                <div>
-                  <h2 className="mb-1 text-base font-semibold text-stone-900">
-                    Other dates the window allows
-                  </h2>
-                  <p className="mb-3 text-sm text-stone-500">
-                    Every one of these is inside the window; none of them can be moved outside it.
-                  </p>
-                  <div className="space-y-4">
-                    {alternatives.map((s) => (
-                      <SuggestionCard
-                        key={s.resourceId + s.start}
-                        suggestion={s}
-                        mourners={effectiveMourners}
-                        source={source ?? "fixture"}
-                        shift={relativeToFirst(held.start, s.start)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+      {created && (
+        <section className="mt-6 rounded-xl border border-emerald-400 bg-emerald-50 p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-800">Confirmed</h2>
+          <p className="mt-3 text-lg font-semibold text-stone-900">{deceased}</p>
+          {chosenVenue && <p className="text-sm text-stone-700">{chosenVenue.name}</p>}
+          <p className="mt-2 text-sm text-stone-900">{formatDateTime(created.startAt)}</p>
+          <p className="mt-1 text-sm text-stone-700">
+            Reference {created.id} · {created.formattedAmount} · {created.status.toLowerCase()}
+          </p>
+          <p className="mt-3 text-sm text-stone-600">
+            The funeral home has been notified and will be in touch about the rest.
+          </p>
         </section>
       )}
     </main>

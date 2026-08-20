@@ -1,96 +1,61 @@
 
-export interface TokenResponse {
-  token: string;
-  expiresAt: string;
-  displayName: string;
+// ---- reservation-assistant API ------------------------------------------
+
+export interface AssistantSession {
+  authenticated: boolean;
+  userId: number;
+  username: string;
+  role: string;
+  phoneRequired: boolean;
+  expectedStatus: string;
+  csrfToken?: string;
 }
 
-export interface IntentSpec {
-  durationMin: number;
-  dayFrom: string;
-  dayTo: string;
-  timeOfDay: string;
-  hardConstraints: string[];
-  softConstraints: string[];
-  resourceType: string;
-  partySize: number;
+export interface AssistantHome {
+  id: number;
+  name: string;
+  description?: string;
+  address?: string;
 }
 
-export interface Term {
-  key: string;
-  label: string;
-  delta: number;
-  satisfied: boolean;
+export interface AssistantVenue {
+  id: number;
+  name: string;
+  venueType: string;
+  venueTypeLabel: string;
+  address: string;
+  openingTime: string;
+  closingTime: string;
+  maxAttendees: number;
+  imagePath?: string;
 }
 
-export interface RelaxationTrailEntry {
-  action: string;
-  detail: string;
-  droppedKeys: string[];
-}
-
-export interface Suggestion {
-  resourceId: number;
-  resourceName: string;
-  facilityName: string;
-  start: string;
-  end: string;
-  score: number;
-  reason: string;
-  price: string;
-  terms: Term[];
-  relaxed: RelaxationTrailEntry[];
-}
-
-/**
- * The dates a service may fall between, derived from the facts about the deceased
- * rather than chosen by anyone. Null when the request stated no date of death, in
- * which case the app behaves as an ordinary booking.
- */
-export interface ServiceWindow {
-  earliest: string;
-  latest: string;
-  rite: string | null;
-  derivation: string[];
-  decisionBy: string;
-  feasible: boolean;
-  note: string | null;
-}
-
-export interface ArrangementFacts {
-  dateOfDeath: string | null;
-  rite: string | null;
-  certificateReadyOn: string | null;
-  mourners: number | null;
-}
-
-export interface IntentSuggestResponse {
-  spec: IntentSpec;
-  parserUsed: string;
-  suggestions: Suggestion[];
-  relaxationTrail: RelaxationTrailEntry[];
-  window: ServiceWindow | null;
-  facts: ArrangementFacts | null;
-}
-
-export interface IntentSuggestRequest {
-  text: string;
-  partySize: number;
-}
-
-export interface BookRequest {
-  resourceId: number;
-  start: string;
-  end: string;
-  partySize: number;
+export interface ArrangementRequest {
+  venueId: number;
+  serviceType: string;
+  funeralPackage: string;
+  deceasedFullName: string;
+  dateOfDeath: string;
+  attendees: number;
   paymentMethod: string;
+  phone?: string;
+  extraIds: number[];
 }
 
-export interface BookResponse {
-  reservationId: number;
+export interface AssistantPreview {
+  dates: string[];
+  amount: number;
+  currency: string;
+  expectedStatus: string;
+  notice?: string;
+}
+
+export interface ArrangementCreated {
+  id: number;
   status: string;
-  totalAmount: string;
-  message: string;
+  amount: number;
+  formattedAmount: string;
+  startAt: string;
+  endAt: string;
+  dates: string[];
 }
-
-export type DataSource = "live" | "fixture" | "fixture-fallback";
