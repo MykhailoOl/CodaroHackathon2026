@@ -52,7 +52,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-                        .requestMatchers("/api/auth/token").permitAll()
+                        .requestMatchers("/api/auth/token", "/api/voice/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
@@ -99,6 +99,8 @@ public class SecurityConfig {
                                 "/register",
                                 "/login",
                                 "/h2-console/**",
+                                "/api/voice/**",
+                                "/voice/invite/**",
                                 "/error"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -120,7 +122,7 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**", "/api/voice/**"))
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
                 );

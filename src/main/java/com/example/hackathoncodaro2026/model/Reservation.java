@@ -125,6 +125,17 @@ public class Reservation {
     @Column(length = 300)
     private String note;
 
+    @Size(max = 40)
+    @Column(name = "invite_token", unique = true, length = 40)
+    private String inviteToken;
+
+    @Size(max = 254)
+    @Column(name = "invite_email", length = 254)
+    private String inviteEmail;
+
+    @Column(name = "invite_sent_at")
+    private Instant inviteSentAt;
+
     @Size(max = 500)
     @Column(name = "cancellation_reason", length = 500)
     private String cancellationReason;
@@ -346,6 +357,30 @@ public class Reservation {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getInviteToken() {
+        return inviteToken;
+    }
+
+    public void setInviteToken(String inviteToken) {
+        this.inviteToken = inviteToken;
+    }
+
+    public String getInviteEmail() {
+        return inviteEmail;
+    }
+
+    public void setInviteEmail(String inviteEmail) {
+        this.inviteEmail = inviteEmail;
+    }
+
+    public Instant getInviteSentAt() {
+        return inviteSentAt;
+    }
+
+    public void setInviteSentAt(Instant inviteSentAt) {
+        this.inviteSentAt = inviteSentAt;
     }
 
     public String getCancellationReason() {

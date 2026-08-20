@@ -28,6 +28,7 @@ Key capabilities:
 - Optional coach extra on a court or individual gym/swim booking (not on group lessons)
 - Pessimistic locking so the last free slot cannot be double-booked
 - Nightly cleanup of reservations that ended more than a month ago
+- Voice receptionist tools (ElevenLabs placeholders) that check availability and book into the **same H2 database**, not Google Calendar
 
 ---
 
@@ -254,6 +255,17 @@ in `src/main/resources/application.yml`, or pass `--app.browser.auto-open=false`
 | `/coach/sessions` | Coach: assigned reservations |
 | `/avatars/{userId}` | Avatar or initials placeholder |
 | `/h2-console` | H2 web console |
+| `GET /api/voice/tools` | Public ElevenLabs tool catalog (placeholders) |
+| `POST /api/voice/tools/check-availability` | Voice tool: same intent suggest as `/api/intent/suggest` |
+| `POST /api/voice/tools/create-booking` | Voice tool: same intent book as `/api/intent/book`, then SMS/invite |
+| `POST /api/voice/provision` | Creates the ElevenLabs agent, later imports SIP. Single plan: [`docs/VOICE.md`](docs/VOICE.md) |
+| `/voice/invite/{token}` | Caller email form, then calendar invitation (.ics) |
+
+---
+
+## Voice receptionist
+
+Phone booking uses the same intent engine as the chatbot. The extra loop is ElevenLabs plus SIP. The **only** wiring plan (ngrok, ElevenLabs key → provision, SIP creds → number import) is [`docs/VOICE.md`](docs/VOICE.md). Coding agents: if `ELEVENLABS_API_KEY` is in `.env` and `ELEVENLABS_AGENT_ID` is empty, execute Phase 2 of that file. If SIP vars are set and `ELEVENLABS_PHONE_NUMBER_ID` is empty, execute Phase 3.
 
 ---
 

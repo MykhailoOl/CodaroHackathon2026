@@ -172,4 +172,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Reservation r WHERE r.endAt < :cutoff")
     int deleteEndedBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("""
+            SELECT r FROM Reservation r
+            JOIN FETCH r.resource res
+            JOIN FETCH res.facility
+            JOIN FETCH r.user
+            WHERE r.inviteToken = :token
+            """)
+    Optional<Reservation> findByInviteToken(@Param("token") String token);
 }
