@@ -1,8 +1,8 @@
-# Courtly phone booking
+# Courtly phone wiring plan
 
-Phone is a second booking channel into the same intent engine as the website chatbot (`POST /api/intent/suggest` and `POST /api/intent/book`). The extra work on this branch is ElevenLabs wiring plus the spare Telnyx SIP DID. No Google Calendar. Bookings write this app’s local H2 file (`./data/sportsbooking`). The database stays on the laptop that runs `./gradlew bootRun`.
+This is the **only** document for phone booking. Humans and coding agents follow it after PR merge. Do not invent a parallel plan. Do not use Codaro Builder. Do not commit `.env`.
 
-ElevenLabs and Telnyx are in the cloud. They cannot see `localhost`. Publish port 8080 with a tunnel and set `PUBLIC_BASE_URL` to that `https://` URL. Keep the laptop awake for the demo.
+Phone is a second channel into the same intent engine as the website chatbot (`POST /api/intent/suggest`, `POST /api/intent/book`). Bookings write this app’s local H2 file (`./data/sportsbooking`) on the laptop that runs `bootRun`. There is no Google Calendar. The call does not collect email. After a booking, Courtly logs an SMS with `/voice/invite/{token}` so the caller can add a calendar invitation later.
 
 ```
 caller → spare Telnyx DID → SIP → ElevenLabs agent
@@ -10,118 +10,129 @@ caller → spare Telnyx DID → SIP → ElevenLabs agent
       → this Java process → local H2
 ```
 
-Do not reuse the AI receptionist DID. Do not commit `.env`.
+ElevenLabs and Telnyx cannot see `localhost`. A public HTTPS tunnel (ngrok is the default) is required. Keep the laptop awake for the demo. Do not reuse the AI receptionist DID.
 
-## Loop
+## Pickup triggers for coding agents
 
-1. Merge this branch. Copy `.env.example` to `.env` on the Courtly laptop.
-2. Tunnel port `8080` (ngrok is fine: `ngrok http 8080`). Put the public `https://` URL in `PUBLIC_BASE_URL`. Not `localhost`. Then:
+Read this whole file, then execute **exactly one** open phase. Do not ask for a new plan. Do not commit. Do not push. Never print secrets.
+
+| Trigger (all must be true) | Your job | Stop when |
+|----------------------------|----------|-----------|
+| `ELEVENLABS_API_KEY` is non-empty in `.env`, `ELEVENLABS_AGENT_ID` is empty, `PUBLIC_BASE_URL` is public `https` | **Phase 2** | `.env` has `ELEVENLABS_AGENT_ID`, provision JSON has `createdRemotely=true` |
+| `SIP_FROM_NUMBER`, `SIP_USERNAME`, `SIP_PASSWORD` are set, `ELEVENLABS_AGENT_ID` is set, `ELEVENLABS_PHONE_NUMBER_ID` is empty | **Phase 3** | `.env` has `ELEVENLABS_PHONE_NUMBER_ID`, provision JSON has `sip.status=ready` |
+| Key empty, or SIP empty, or tunnel not https | **Do not provision.** Print the missing gate and stop | Human fills `.env` / ngrok, then re-run |
+
+Spring does not load `.env`. Always `set -a && source .env && set +a` before `bootRun` or curl. If `bootRun` started before the new vars, restart it.
+
+---
+
+## Phase 1. Laptop, ngrok, app (human or local agent)
+
+1. Copy `.env.example` to `.env` if needed.
+2. Start a tunnel to Courtly’s port `8080`:
+
+```bash
+ngrok http 8080
+```
+
+3. Put the ngrok `https://` forwarding URL into `PUBLIC_BASE_URL`. Not `http://localhost:8080`. Not `127.0.0.1`. Any other HTTPS tunnel is fine if the URL is public.
+4. Set `TOOL_WEBHOOK_SECRET` (default in `.env.example` is acceptable for the demo).
+5. Start the app:
 
 ```bash
 set -a && source .env && set +a
 JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home bash ./gradlew bootRun
 ```
 
-Prove the tunnel:
+6. Prove the tunnel (must use `$PUBLIC_BASE_URL`, not localhost):
 
 ```bash
-curl -sS -X POST "$PUBLIC_BASE_URL/api/voice/tools/check-availability" \
+curl -sS -f -X POST "$PUBLIC_BASE_URL/api/voice/tools/check-availability" \
   -H "Authorization: Bearer $TOOL_WEBHOOK_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"text":"tennis tomorrow evening","partySize":2,"language":"en"}'
 ```
 
-3. Teammate AI: paste **Agent prompt A** below into Cursor in this repo on the same machine that is running `bootRun`. Adding the key does not create the ElevenLabs agent. The prompt writes the key, restarts if needed, and `POST`s `/api/voice/provision`.
-4. Jenya AI: after spare Telnyx SIP creds are in `.env` and that DID points at `sip:sip.rtc.elevenlabs.io:5060;transport=tcp`, paste **Agent prompt B**. That imports the number onto the agent.
-5. Call the spare number. A `PENDING` row should appear in `/manager/reservations`. The call does not collect email. Courtly logs an SMS with `$PUBLIC_BASE_URL/voice/invite/{token}` for a later calendar invitation. Live SMS needs Telnyx messaging keys.
+Gate to Phase 2: that curl returns JSON with `slots`. Gate to ElevenLabs: teammate pastes `ELEVENLABS_API_KEY` into this same `.env` (their ElevenLabs account).
 
-If the tunnel URL changes, create a new agent or update the tool URLs in ElevenLabs. `POST /api/voice/provision` will not recreate the agent when `ELEVENLABS_AGENT_ID` is already set.
+---
 
-## Env
+## Phase 2. Action point: ElevenLabs key is in `.env`
 
-| Variable | When |
-|----------|------|
-| `PUBLIC_BASE_URL` | HTTPS tunnel of the Courtly laptop |
-| `TOOL_WEBHOOK_SECRET` | Bearer the agent tools send |
-| `ELEVENLABS_API_KEY` | Before first provision |
-| `ELEVENLABS_AGENT_ID` | Written after first provision |
-| `ELEVENLABS_PHONE_NUMBER_ID` | Written after SIP provision |
-| `SIP_FROM_NUMBER` / `SIP_USERNAME` / `SIP_PASSWORD` | Spare DID only, second provision |
+**Owner:** teammate coding agent, in this repo, on the same machine that is running `bootRun`.
 
-Spring does not load `.env` by itself. Always `source .env` before `bootRun`.
+**Human just did:** put `ELEVENLABS_API_KEY` in `.env`. That does not create the agent. You must provision.
 
-## ElevenLabs agent
+**Do this now:**
 
-Created by `POST /api/voice/provision` (same bearer as the tools).
+1. Confirm `.env` exists. Load it: `set -a && source .env && set +a`. Never print the key.
+2. Confirm `ELEVENLABS_API_KEY` is non-empty, `PUBLIC_BASE_URL` starts with `https://` and does not contain `localhost` or `127.0.0.1`, and `TOOL_WEBHOOK_SECRET` is set. If any fail, stop and name the missing item.
+3. JDK 21: `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home`. If that path is missing, stop.
+4. If nothing is listening on `8080`, start `bash ./gradlew bootRun` in the background and wait until it is up. If `bootRun` was already running **without** `ELEVENLABS_API_KEY`, stop it and start it again after sourcing `.env`.
+5. Repeat the Phase 1 tunnel curl. If it fails, stop. ElevenLabs cannot reach this laptop.
+6. Provision the remote agent and webhook tools:
+
+```bash
+curl -sS -f -X POST "$PUBLIC_BASE_URL/api/voice/provision" \
+  -H "Authorization: Bearer $TOOL_WEBHOOK_SECRET"
+```
+
+Expect `createdRemotely=true` and a non-empty `agentId`. If `ELEVENLABS_AGENT_ID` was already set, do not create a second agent.
+7. Upsert `ELEVENLABS_AGENT_ID` in `.env` to that `agentId`. Do not write the API key, tool ids, or SIP into git. Mention `checkToolId` / `bookToolId` in chat only if present.
+8. **Stop.** Do not import SIP. Do not commit. Do not push.
+
+What provision created:
 
 - Name: Courtly phone receptionist
 - First message: `Hi, this is Courtly. I can check court availability and book a slot for you.`
 - Timezone: Europe/Warsaw
-- Tools: `check_availability`, `create_booking` (POST, JSON, `Authorization: Bearer $TOOL_WEBHOOK_SECRET`)
-- Prompt: caller words as `text` → `check_availability` (intent suggest) → read `displayLabel` → `create_booking` with `resourceId` / `start` / `end` (or `slotId`), name, `system__caller_id`. Never invent slots.
+- Tools: `check_availability`, `create_booking` (POST, JSON, `Authorization: Bearer $TOOL_WEBHOOK_SECRET`) against `$PUBLIC_BASE_URL/api/voice/tools/*`
+- Same intent path as the chatbot: caller words as `text` → suggestions with `resourceId` / `start` / `end` → book. Never invent slots. If the caller omits party size, phone booking uses 2.
 
-If the caller does not say a party size, phone booking uses 2 so tennis courts can be reserved. The chatbot still sends an explicit `partySize`. The call does not collect email. After booking, the SMS (log-only until Telnyx messaging) carries `/voice/invite/{token}` so the caller can add a calendar invitation later.
+If the ngrok URL later changes, update `PUBLIC_BASE_URL`, restart, and either update tool URLs in ElevenLabs or provision a new agent.
 
-SIP import uses `provider=sip_trunk`, E.164 `SIP_FROM_NUMBER`, digest username/password, outbound address `sip.telnyx.com` TCP. Telnyx must send inbound INVITEs to `sip:+E164@sip.rtc.elevenlabs.io:5060`.
+---
 
-## Agent prompt A: ElevenLabs (teammate)
+## Phase 3. Action point: SIP credentials are in `.env`
 
-Paste this whole block into Cursor in this Courtly checkout, on the laptop that already has the HTTPS tunnel and `bootRun`. Do not commit `.env`. Do not SSH. Do not use Codaro Builder. Do not reuse a receptionist agent or DID.
+**Owner:** Jenya’s coding agent, same repo and same `bootRun` machine.
 
-```
-You are an implementation agent in the Courtly repo. Read docs/VOICE.md first. Execute; do not ask for a plan.
+**Human just did:** spare Telnyx `SIP_FROM_NUMBER`, `SIP_USERNAME`, `SIP_PASSWORD` in `.env`, and pointed **that** DID’s inbound SIP at `sip:sip.rtc.elevenlabs.io:5060;transport=tcp`. Not the receptionist number.
 
-Goal: create the live ElevenLabs Conversational AI agent that books through this app's intent engine into local H2.
-
-Hard stops (print the missing item and stop):
-- .env is missing and .env.example cannot be copied
-- ELEVENLABS_API_KEY is empty after you would need the human to paste it. If it is already in the environment or .env, use that. If it is empty, stop and say "paste ELEVENLABS_API_KEY into .env, then re-run this prompt"
-- PUBLIC_BASE_URL is missing, not https, or contains localhost / 127.0.0.1
-- TOOL_WEBHOOK_SECRET is empty
-- JAVA_HOME for JDK 21 is missing (try /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home)
-
-Do this in order:
-
-1. Work only in this repo. Copy .env.example to .env if .env does not exist.
-2. Load env: `set -a && source .env && set +a`. Never print the API key.
-3. If bootRun is not already serving 8080, start it in the background with JAVA_HOME as above and `bash ./gradlew bootRun`. Wait until it listens on 8080. Spring does not load .env itself; the process must inherit the sourced variables. If bootRun was already running without ELEVENLABS_API_KEY, stop that process and start it again after sourcing .env.
-4. Prove the tunnel (must be PUBLIC_BASE_URL, not localhost):
-   curl -sS -f -X POST "$PUBLIC_BASE_URL/api/voice/tools/check-availability" \
-     -H "Authorization: Bearer $TOOL_WEBHOOK_SECRET" \
-     -H "Content-Type: application/json" \
-     -d '{"text":"tennis tomorrow evening","partySize":2,"language":"en"}'
-   If this fails, stop. ElevenLabs cannot reach the laptop.
-5. Provision:
-   curl -sS -f -X POST "$PUBLIC_BASE_URL/api/voice/provision" \
-     -H "Authorization: Bearer $TOOL_WEBHOOK_SECRET"
-   Expect createdRemotely=true and a non-empty agentId. If ELEVENLABS_AGENT_ID was already set, do not create a second agent.
-6. Upsert ELEVENLABS_AGENT_ID in .env to the returned agentId. Do not write the API key, tool ids, or anything else into git. If checkToolId/bookToolId are in the JSON, mention them in the chat reply only.
-7. Stop. Do not import SIP. Do not commit. Do not push.
-
-Done when .env has ELEVENLABS_AGENT_ID and provision JSON has createdRemotely=true.
-```
-
-## Agent prompt B: SIP (Jenya)
-
-Paste after prompt A succeeded, spare Telnyx SIP creds are in `.env`, and that DID's inbound SIP points at `sip:sip.rtc.elevenlabs.io:5060;transport=tcp`. Same machine as `bootRun`. Do not commit `.env`.
-
-```
-You are an implementation agent in the Courtly repo. Read docs/VOICE.md first. Execute; do not ask for a plan.
-
-Goal: import the spare Telnyx SIP number onto the existing ElevenLabs agent.
-
-Hard stops (print the missing item and stop):
-- ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID, PUBLIC_BASE_URL (https, not localhost), TOOL_WEBHOOK_SECRET, SIP_FROM_NUMBER, SIP_USERNAME, or SIP_PASSWORD is empty
-- SIP_FROM_NUMBER is the AI receptionist DID. Use the spare Courtly DID only.
-
-Do this in order:
+**Do this now:**
 
 1. `set -a && source .env && set +a`. Never print passwords.
-2. If bootRun is running without those SIP vars, restart it so the process inherits them.
-3. curl -sS -f -X POST "$PUBLIC_BASE_URL/api/voice/tools/check-availability" with the tool bearer and {"text":"tennis tomorrow evening","partySize":2,"language":"en"}. If this fails, stop.
-4. curl -sS -f -X POST "$PUBLIC_BASE_URL/api/voice/provision" with the same bearer. This must not create a second agent. It should import the SIP number when ELEVENLABS_PHONE_NUMBER_ID is empty.
-5. Upsert ELEVENLABS_PHONE_NUMBER_ID in .env from sip.phoneNumberId in the JSON. Expect sip.status=ready.
-6. Stop. Do not commit. Do not push.
+2. Confirm `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, public https `PUBLIC_BASE_URL`, `TOOL_WEBHOOK_SECRET`, `SIP_FROM_NUMBER`, `SIP_USERNAME`, and `SIP_PASSWORD` are all set. If `ELEVENLABS_AGENT_ID` is empty, stop and run Phase 2 first.
+3. Restart `bootRun` if it started before the SIP vars existed.
+4. Repeat the Phase 1 tunnel curl. If it fails, stop.
+5. Provision again (must not create a second agent; imports SIP when `ELEVENLABS_PHONE_NUMBER_ID` is empty):
 
-Done when .env has ELEVENLABS_PHONE_NUMBER_ID and provision JSON has sip.status=ready.
+```bash
+curl -sS -f -X POST "$PUBLIC_BASE_URL/api/voice/provision" \
+  -H "Authorization: Bearer $TOOL_WEBHOOK_SECRET"
 ```
+
+SIP import uses `provider=sip_trunk`, E.164 `SIP_FROM_NUMBER`, digest username/password, outbound `sip.telnyx.com` TCP. Telnyx must send INVITEs to `sip:+E164@sip.rtc.elevenlabs.io:5060`.
+6. Upsert `ELEVENLABS_PHONE_NUMBER_ID` in `.env` from `sip.phoneNumberId`. Expect `sip.status=ready`.
+7. **Stop.** Do not commit. Do not push.
+
+---
+
+## Phase 4. Call and booking
+
+Call the spare number. A `PENDING` row should appear in `/manager/reservations`. SMS stays log-only until Telnyx messaging keys are set. The SMS body (logged) contains `$PUBLIC_BASE_URL/voice/invite/{token}`.
+
+---
+
+## Env
+
+| Variable | Who / when |
+|----------|-------------|
+| `PUBLIC_BASE_URL` | Phase 1: ngrok `https://` URL |
+| `TOOL_WEBHOOK_SECRET` | Phase 1: bearer for tools and provision |
+| `ELEVENLABS_API_KEY` | Human, before Phase 2 |
+| `ELEVENLABS_AGENT_ID` | Phase 2 agent writes this |
+| `SIP_FROM_NUMBER` / `SIP_USERNAME` / `SIP_PASSWORD` | Human, spare DID only, before Phase 3 |
+| `ELEVENLABS_PHONE_NUMBER_ID` | Phase 3 agent writes this |
+
+`.env.example` lists the names. Values stay in local `.env` only.

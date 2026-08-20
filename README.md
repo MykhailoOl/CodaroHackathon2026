@@ -258,14 +258,14 @@ in `src/main/resources/application.yml`, or pass `--app.browser.auto-open=false`
 | `GET /api/voice/tools` | Public ElevenLabs tool catalog (placeholders) |
 | `POST /api/voice/tools/check-availability` | Voice tool: same intent suggest as `/api/intent/suggest` |
 | `POST /api/voice/tools/create-booking` | Voice tool: same intent book as `/api/intent/book`, then SMS/invite |
-| `POST /api/voice/provision` | Creates the ElevenLabs agent (and later SIP import). Agents: `docs/VOICE.md` prompts A/B |
+| `POST /api/voice/provision` | Creates the ElevenLabs agent, later imports SIP. Single plan: [`docs/VOICE.md`](docs/VOICE.md) |
 | `/voice/invite/{token}` | Caller email form, then calendar invitation (.ics) |
 
 ---
 
 ## Voice receptionist
 
-Phone booking uses the same intent engine as the chatbot. The extra loop is ElevenLabs plus SIP. Humans and coding agents: follow [`docs/VOICE.md`](docs/VOICE.md). After merge, the teammate agent pastes prompt A (ElevenLabs key + tunnel provision). Jenya's agent pastes prompt B (spare SIP DID).
+Phone booking uses the same intent engine as the chatbot. The extra loop is ElevenLabs plus SIP. The **only** wiring plan (ngrok, ElevenLabs key → provision, SIP creds → number import) is [`docs/VOICE.md`](docs/VOICE.md). Coding agents: if `ELEVENLABS_API_KEY` is in `.env` and `ELEVENLABS_AGENT_ID` is empty, execute Phase 2 of that file. If SIP vars are set and `ELEVENLABS_PHONE_NUMBER_ID` is empty, execute Phase 3.
 
 ---
 
