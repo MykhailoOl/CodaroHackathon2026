@@ -25,7 +25,7 @@ public class ElevenLabsAgentProvisioner {
             spec.put("createdRemotely", false);
             spec.put("agentId", blankToNull(properties.getElevenlabs().getAgentId()));
             spec.put("nextStep", "Add ELEVENLABS_API_KEY and set PUBLIC_BASE_URL to the HTTPS tunnel, then POST /api/voice/provision again.");
-            spec.put("sip", sipStatus(null));
+            spec.put("sip", sipStatus(null, null));
             spec.put("sms", smsStatus());
             return spec;
         }
@@ -34,12 +34,15 @@ public class ElevenLabsAgentProvisioner {
             spec.put("createdRemotely", false);
             spec.put("agentId", blankToNull(properties.getElevenlabs().getAgentId()));
             spec.put("nextStep", "Set PUBLIC_BASE_URL to the HTTPS tunnel. ElevenLabs cannot reach localhost.");
-            spec.put("sip", sipStatus(null));
+            spec.put("sip", sipStatus(null, null));
             spec.put("sms", smsStatus());
             return spec;
         }
 
         String agentId = blankToNull(properties.getElevenlabs().getAgentId());
+        if (agentId == null) {
+            agentId = elevenLabsRemote.findAgentId("Courtly phone receptionist");
+        }
         if (agentId == null) {
             String bearer = properties.getToolWebhookSecret();
             String checkId = elevenLabsRemote.createWebhookTool(new ElevenLabsRemote.WebhookToolRequest(
@@ -82,23 +85,34 @@ public class ElevenLabsAgentProvisioner {
         }
 
         String phoneId = blankToNull(properties.getElevenlabs().getPhoneNumberId());
+        String sipError = null;
         if (properties.getTelephony().sipConfigured() && phoneId == null) {
-            phoneId = elevenLabsRemote.importSipNumber(new ElevenLabsRemote.SipNumberRequest(
-                    properties.getTelephony().getSipFromNumber().trim(),
-                    "Courtly spare DID",
-                    agentId,
-                    properties.getTelephony().getSipUsername(),
-                    properties.getTelephony().getSipPassword()
-            ));
+            try {
+                phoneId = elevenLabsRemote.importSipNumber(new ElevenLabsRemote.SipNumberRequest(
+                        properties.getTelephony().getSipFromNumber().trim(),
+                        "Courtly spare DID",
+                        agentId,
+                        properties.getTelephony().getSipUsername(),
+                        properties.getTelephony().getSipPassword()
+                ));
+            } catch (VoiceToolException ex) {
+                if (ex.getMessage() != null && ex.getMessage().contains("409")) {
+                    sipError = "This DID is already registered in ElevenLabs. Release it there or pick another spare number.";
+                } else {
+                    throw ex;
+                }
+            }
         }
 
         spec.put("status", "ready");
         spec.put("createdRemotely", true);
         spec.put("agentId", agentId);
-        spec.put("nextStep", phoneId == null
-                ? "Put ELEVENLABS_AGENT_ID=" + agentId + " in .env. Add SIP credentials and POST /api/voice/provision again."
-                : "Put ELEVENLABS_AGENT_ID and ELEVENLABS_PHONE_NUMBER_ID in .env. Call the spare number.");
-        spec.put("sip", sipStatus(phoneId));
+        spec.put("nextStep", phoneId != null
+                ? "Put ELEVENLABS_AGENT_ID and ELEVENLABS_PHONE_NUMBER_ID in .env. Call the spare number."
+                : sipError != null
+                ? sipError
+                : "Put ELEVENLABS_AGENT_ID=" + agentId + " in .env. Add SIP credentials and POST /api/voice/provision again.");
+        spec.put("sip", sipStatus(phoneId, sipError));
         spec.put("sms", smsStatus());
         return spec;
     }
@@ -117,7 +131,7 @@ public class ElevenLabsAgentProvisioner {
         return spec;
     }
 
-    private Map<String, Object> sipStatus(String phoneNumberId) {
+    private Map<String, Object> sipStatus(String phoneNumberId, String conflict) {
         VoiceProperties.Telephony tel = properties.getTelephony();
         Map<String, Object> sip = new LinkedHashMap<>();
         boolean ready = tel.sipConfigured() && notBlank(phoneNumberId);
@@ -128,7 +142,9 @@ public class ElevenLabsAgentProvisioner {
         sip.put("usernameConfigured", notBlank(tel.getSipUsername()));
         sip.put("passwordConfigured", notBlank(tel.getSipPassword()));
         sip.put("phoneNumberId", blankToNull(phoneNumberId));
-        sip.put("nextStep", ready
+        sip.put("nextStep", conflict != null
+                ? conflict
+                : ready
                 ? "Inbound SIP is assigned. Point Telnyx at sip.rtc.elevenlabs.io:5060 TCP."
                 : "Add SIP_FROM_NUMBER, SIP_USERNAME, SIP_PASSWORD and POST /api/voice/provision.");
         return sip;

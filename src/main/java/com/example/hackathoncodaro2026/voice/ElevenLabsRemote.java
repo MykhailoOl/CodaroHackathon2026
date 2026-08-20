@@ -37,5 +37,7 @@ public interface ElevenLabsRemote {
 
     String createAgent(AgentRequest request);
 
+    String findAgentId(String name);
+
     String importSipNumber(SipNumberRequest request);
 }

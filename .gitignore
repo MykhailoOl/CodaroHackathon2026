@@ -9,6 +9,7 @@ build/
 .env
 .env.*
 !.env.example
+scripts/local_*.py
 *.log
 logs/
 /logs/

@@ -85,6 +85,24 @@ public class ElevenLabsHttpRemote implements ElevenLabsRemote {
     }
 
     @Override
+    public String findAgentId(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        Object body = get("/v1/convai/agents");
+        for (Map<String, Object> item : asMaps(body, "agents")) {
+            String candidate = stringOf(item.get("name"), item.get("agent_name"));
+            if (name.equals(candidate)) {
+                String id = stringOf(item.get("agent_id"), item.get("id"));
+                if (id != null) {
+                    return id;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
     public String importSipNumber(SipNumberRequest request) {
         Map<String, Object> credentials = new LinkedHashMap<>();
         credentials.put("username", request.username());
@@ -101,7 +119,29 @@ public class ElevenLabsHttpRemote implements ElevenLabsRemote {
         payload.put("label", request.label());
         payload.put("agent_id", request.agentId());
         payload.put("outbound_trunk_config", outbound);
-        return requireId(post("/v1/convai/phone-numbers", payload), "phone_number_id", "id");
+        try {
+            return requireId(post("/v1/convai/phone-numbers", payload), "phone_number_id", "id");
+        } catch (VoiceToolException ex) {
+            if (ex.getMessage() == null || !ex.getMessage().contains("409")) {
+                throw ex;
+            }
+            String existing = findPhoneNumberId(request.e164());
+            if (existing == null) {
+                throw ex;
+            }
+            patch("/v1/convai/phone-numbers/" + existing, Map.of("agent_id", request.agentId()));
+            return existing;
+        }
+    }
+
+    private String findPhoneNumberId(String e164) {
+        Object body = get("/v1/convai/phone-numbers");
+        for (Map<String, Object> item : asMaps(body, "phone_numbers", "data")) {
+            if (e164.equals(stringOf(item.get("phone_number")))) {
+                return stringOf(item.get("phone_number_id"), item.get("id"));
+            }
+        }
+        return null;
     }
 
     private Map<String, Object> post(String path, Object body) {
@@ -117,6 +157,67 @@ public class ElevenLabsHttpRemote implements ElevenLabsRemote {
         } catch (RestClientResponseException ex) {
             throw VoiceToolException.remote("ElevenLabs " + ex.getStatusCode().value() + " " + trimBody(ex.getResponseBodyAsString()));
         }
+    }
+
+    private Object get(String path) {
+        try {
+            return restClient.get()
+                    .uri(path)
+                    .header("xi-api-key", properties.getElevenlabs().getApiKey())
+                    .retrieve()
+                    .body(Object.class);
+        } catch (RestClientResponseException ex) {
+            throw VoiceToolException.remote("ElevenLabs " + ex.getStatusCode().value() + " " + trimBody(ex.getResponseBodyAsString()));
+        }
+    }
+
+    private void patch(String path, Object body) {
+        try {
+            restClient.patch()
+                    .uri(path)
+                    .header("xi-api-key", properties.getElevenlabs().getApiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException ex) {
+            throw VoiceToolException.remote("ElevenLabs " + ex.getStatusCode().value() + " " + trimBody(ex.getResponseBodyAsString()));
+        }
+    }
+
+    private List<Map<String, Object>> asMaps(Object body, String... keys) {
+        if (body instanceof List<?> list) {
+            return maps(list);
+        }
+        if (body instanceof Map<?, ?> map) {
+            for (String key : keys) {
+                Object nested = map.get(key);
+                if (nested instanceof List<?> list) {
+                    return maps(list);
+                }
+            }
+        }
+        return List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> maps(List<?> list) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Object item : list) {
+            if (item instanceof Map<?, ?> map) {
+                out.add((Map<String, Object>) map);
+            }
+        }
+        return out;
+    }
+
+    private String stringOf(Object... values) {
+        for (Object value : values) {
+            if (value != null && !value.toString().isBlank()) {
+                return value.toString();
+            }
+        }
+        return null;
     }
 
     private String requireId(Map<String, Object> body, String... keys) {

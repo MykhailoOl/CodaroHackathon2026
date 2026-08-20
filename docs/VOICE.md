@@ -116,6 +116,8 @@ SIP import uses `provider=sip_trunk`, E.164 `SIP_FROM_NUMBER`, digest username/p
 6. Upsert `ELEVENLABS_PHONE_NUMBER_ID` in `.env` from `sip.phoneNumberId`. Expect `sip.status=ready`.
 7. **Stop.** Do not commit. Do not push.
 
+If provision returns that the DID is already registered in ElevenLabs, that number is claimed on the ElevenLabs side (often another agent/workspace). Release it there or use a different spare DID. Telnyx can still point at `sip.rtc.elevenlabs.io`; ElevenLabs will not import a duplicate.
+
 ---
 
 ## Phase 4. Call and booking
