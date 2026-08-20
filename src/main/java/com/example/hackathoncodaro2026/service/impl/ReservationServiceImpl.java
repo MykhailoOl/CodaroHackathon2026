@@ -136,7 +136,7 @@ public class ReservationServiceImpl implements ReservationService {
             throw fail(user, "LOCK_TIMEOUT", "This time was just assigned, spin again");
         }
         Prepared prepared = prepare(user, request, true, venue);
-        LocalDateTime startAt = dateAssignmentService.chooseStart(venue, prepared.funeralPackage());
+        LocalDateTime startAt = resolveStart(venue, prepared.funeralPackage(), request);
         if (startAt == null) {
             throw fail(user, "NO_SLOTS", "No ceremony times are free in the planning window. Spin again after choosing another venue.");
         }
@@ -182,6 +182,14 @@ public class ReservationServiceImpl implements ReservationService {
             }
             throw new ReservationException("SUBMISSION", "submissionToken", "That confirmation is already recorded.");
         }
+    }
+
+    private LocalDateTime resolveStart(ServiceVenue venue, FuneralPackage funeralPackage, ArrangementRequest request) {
+        LocalDateTime requested = request.getCeremonyStart();
+        if (requested != null) {
+            return requested;
+        }
+        return dateAssignmentService.chooseStart(venue, funeralPackage);
     }
 
     @Override

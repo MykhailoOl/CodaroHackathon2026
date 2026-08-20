@@ -134,6 +134,10 @@ public class Reservation {
     @Column(name = "submission_token", unique = true, length = 36)
     private String submissionToken;
 
+    @Size(max = 32)
+    @Column(name = "invite_token", unique = true, length = 32)
+    private String inviteToken;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -328,6 +332,14 @@ public class Reservation {
 
     public void setSubmissionToken(String submissionToken) {
         this.submissionToken = submissionToken;
+    }
+
+    public String getInviteToken() {
+        return inviteToken;
+    }
+
+    public void setInviteToken(String inviteToken) {
+        this.inviteToken = inviteToken;
     }
 
     public Instant getCreatedAt() {

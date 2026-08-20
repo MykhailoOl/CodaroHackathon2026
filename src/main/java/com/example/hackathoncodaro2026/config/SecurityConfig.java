@@ -47,7 +47,9 @@ public class SecurityConfig {
                                 "/login",
                                 "/h2-console/**",
                                 "/h2-launch",
-                                "/error"
+                                "/error",
+                                "/api/voice/**",
+                                "/voice/invite/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/manager/**").hasAnyRole("ADMIN", "MANAGER")
@@ -67,7 +69,7 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**", "/api/voice/**"))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(assistantEntryPoint()))
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())

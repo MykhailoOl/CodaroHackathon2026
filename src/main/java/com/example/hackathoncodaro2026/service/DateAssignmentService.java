@@ -14,4 +14,6 @@ public interface DateAssignmentService {
     List<LocalDate> previewDates(ServiceVenue venue, FuneralPackage funeralPackage);
 
     LocalDateTime chooseStart(ServiceVenue venue, FuneralPackage funeralPackage);
+
+    LocalDateTime chooseStart(ServiceVenue venue, FuneralPackage funeralPackage, LocalDate earliest, LocalDate latest);
 }
