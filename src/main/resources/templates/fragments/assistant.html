@@ -37,8 +37,10 @@
             <p class="wheel-headline" id="wheel-headline">Congratulations, but we are very sorry!</p>
             <p class="wheel-overlay-copy" id="wheel-overlay-copy">Your available ceremony date is being assigned.</p>
             <div class="wheel-stage wheel-stage-lg">
+                <div class="wheel-peg-ring" aria-hidden="true"></div>
                 <div class="wheel-pointer" aria-hidden="true"></div>
                 <div class="wheel" id="overlay-wheel" role="img" aria-label="Date wheel"></div>
+                <div class="wheel-hub" aria-hidden="true"></div>
             </div>
             <p id="wheel-overlay-status" class="wheel-overlay-status">Finding an available date…</p>
             <p id="wheel-overlay-result" class="wheel-overlay-result" hidden></p>
@@ -49,8 +51,8 @@
             </div>
         </div>
     </div>
-    <script th:src="@{/js/wheel.js(v=4)}"></script>
-    <script th:src="@{/js/assistant.js(v=4)}"></script>
+    <script th:src="@{/js/wheel.js(v=5)}"></script>
+    <script th:src="@{/js/assistant.js(v=5)}"></script>
 </th:block>
 </body>
 </html>

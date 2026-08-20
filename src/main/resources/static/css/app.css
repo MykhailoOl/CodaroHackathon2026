@@ -1985,36 +1985,116 @@ a.occ-cell:hover {
     margin: 1.5rem auto;
 }
 
+.wheel-peg-ring {
+    position: absolute;
+    inset: -18px;
+    border-radius: 50%;
+    background:
+        repeating-conic-gradient(#c4a574 0deg 6deg, #1a1a1d 6deg 15deg);
+    box-shadow:
+        0 18px 40px rgba(0, 0, 0, 0.28),
+        inset 0 0 0 7px #111114;
+    z-index: 0;
+}
+
 .wheel {
     width: 280px;
     height: 280px;
     border-radius: 50%;
-    border: 8px solid var(--sun);
+    border: 8px solid #c4a574;
     position: relative;
-    box-shadow: var(--shadow);
+    z-index: 1;
+    overflow: hidden;
+    box-shadow:
+        inset 0 0 0 3px rgba(255, 248, 230, 0.18),
+        inset 0 0 28px rgba(0, 0, 0, 0.28),
+        0 10px 28px rgba(0, 0, 0, 0.22);
+    background: #1a1a1d;
+}
+
+.wheel::after {
+    content: "";
+    position: absolute;
+    inset: 6%;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.28), transparent 38%, transparent 62%, rgba(0, 0, 0, 0.16));
+}
+
+.wheel.is-spinning {
+    box-shadow:
+        inset 0 0 0 3px rgba(255, 248, 230, 0.22),
+        inset 0 0 28px rgba(0, 0, 0, 0.28),
+        0 0 0 8px rgba(196, 165, 116, 0.16),
+        0 16px 42px rgba(0, 0, 0, 0.32);
 }
 
 .wheel-pointer {
     position: absolute;
-    top: -8px;
+    top: -22px;
     left: 50%;
     transform: translateX(-50%);
+    width: 22px;
+    height: 34px;
+    z-index: 4;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+}
+
+.wheel-pointer::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff4d6, #c4a574 55%, #7a5e2e);
+    transform: translateX(-50%);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.wheel-pointer::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 12px;
     width: 0;
     height: 0;
-    border-left: 12px solid transparent;
-    border-right: 12px solid transparent;
-    border-top: 22px solid var(--grass-deep);
-    z-index: 2;
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-top: 22px solid #c4a574;
+    transform: translateX(-50%);
+}
+
+.wheel-hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    background:
+        radial-gradient(circle at 32% 28%, #fff6de, #c4a574 42%, #6f5426 78%, #2a2418);
+    border: 3px solid #f3e2b8;
+    box-shadow:
+        0 6px 16px rgba(0, 0, 0, 0.35),
+        inset 0 2px 4px rgba(255, 255, 255, 0.45);
 }
 
 .wheel-slice-label {
     position: absolute;
     left: 50%;
     top: 50%;
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     font-weight: 700;
+    letter-spacing: 0.04em;
     color: #FBF8F2;
     pointer-events: none;
+    z-index: 2;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
 .wheel-slice-label.is-winner {
@@ -2121,7 +2201,9 @@ body.wheel-open > .site-footer {
     width: min(40rem, calc(100vw - 1.6rem));
     max-height: calc(100vh - 2rem);
     overflow: auto;
-    background: #111114;
+    background:
+        radial-gradient(circle at 50% 18%, rgba(196, 165, 116, 0.18), transparent 42%),
+        #111114;
     color: #F7F7F8;
     border: 1px solid #3A3A40;
     border-radius: 24px;
@@ -2163,24 +2245,33 @@ body.wheel-open > .site-footer {
 .wheel-overlay .wheel-stage-lg {
     width: min(360px, 72vw);
     height: min(360px, 72vw);
+    margin: 2.2rem auto 1.5rem;
 }
 
 .wheel-overlay .wheel {
     width: 100%;
     height: 100%;
-    border: 10px solid #F4D06F;
+    border: 10px solid #C4A574;
     filter: none;
-    box-shadow: 0 0 0 6px rgba(244, 208, 111, 0.18), 0 18px 40px rgba(0, 0, 0, 0.35);
+    box-shadow:
+        inset 0 0 0 3px rgba(255, 248, 230, 0.2),
+        inset 0 0 34px rgba(0, 0, 0, 0.32),
+        0 14px 36px rgba(0, 0, 0, 0.38);
 }
 
 .wheel-overlay .wheel-pointer {
-    border-top-color: #F4D06F;
+    top: -28px;
+}
+
+.wheel-overlay .wheel-hub {
+    width: 64px;
+    height: 64px;
 }
 
 .wheel-overlay .wheel-slice-label {
     color: #FFFFFF;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
-    font-size: 0.82rem;
+    font-size: 0.88rem;
 }
 
 .wheel-overlay-actions {

@@ -11,7 +11,10 @@
     if (!overlay || !wheelEl) {
         return;
     }
-    var COLORS = ["#2F6FED", "#7B2D8E", "#0F8B8D", "#8B1E3F", "#D4A017", "#E05A4F"];
+    var COLORS = ["#1A1A1D", "#3D5C4A", "#2A2A2E", "#C4A574", "#141416", "#5C5C63"];
+    var SPIN_SECONDS = 5.8;
+    var SPIN_DELAY_MS = 6000;
+    var SPIN_TURNS = 9;
     var busy = false;
     var open = false;
     var settled = false;
@@ -43,10 +46,17 @@
             return;
         }
         var slice = 360 / count;
-        var stops = dates.map(function (_, index) {
-            return COLORS[index % COLORS.length] + " " + (index * slice) + "deg " + ((index + 1) * slice) + "deg";
+        var gap = Math.min(1.1, slice * 0.04);
+        var stops = [];
+        dates.forEach(function (_, index) {
+            var start = index * slice;
+            var end = (index + 1) * slice;
+            stops.push("#C4A574 " + start + "deg " + (start + gap) + "deg");
+            stops.push(COLORS[index % COLORS.length] + " " + (start + gap) + "deg " + (end - gap) + "deg");
+            stops.push("#C4A574 " + (end - gap) + "deg " + end + "deg");
         });
         wheelEl.style.background = "conic-gradient(" + stops.join(",") + ")";
+        var radius = Math.max(86, Math.round((wheelEl.clientWidth || 280) * 0.34));
         dates.forEach(function (date, index) {
             var label = document.createElement("span");
             label.className = "wheel-slice-label";
@@ -54,7 +64,7 @@
                 label.classList.add("is-winner");
             }
             var angle = slice * index + slice / 2;
-            label.style.transform = "rotate(" + angle + "deg) translate(0, -118px) rotate(" + (-angle) + "deg)";
+            label.style.transform = "rotate(" + angle + "deg) translate(0, -" + radius + "px) rotate(" + (-angle) + "deg)";
             label.textContent = formatDate(date);
             wheelEl.appendChild(label);
         });
@@ -139,6 +149,7 @@
         overlay.hidden = true;
         overlay.setAttribute("aria-hidden", "true");
         document.body.classList.remove("wheel-open");
+        wheelEl.classList.remove("is-spinning");
         open = false;
         busy = false;
         var restore = lastFocus;
@@ -185,13 +196,15 @@
                 index = 0;
             }
             var reduce = reduced();
-            var rotation = 360 * (reduce ? 0 : 6) + (360 - (index * slice + slice / 2));
+            var rotation = 360 * (reduce ? 0 : SPIN_TURNS) + (360 - (index * slice + slice / 2));
+            wheelEl.classList.add("is-spinning");
             requestAnimationFrame(function () {
-                wheelEl.style.transition = reduce ? "none" : "transform 2.8s cubic-bezier(0.12, 0.7, 0.16, 1)";
+                wheelEl.style.transition = reduce ? "none" : "transform " + SPIN_SECONDS + "s cubic-bezier(0.05, 0.88, 0.08, 1)";
                 wheelEl.style.transform = "rotate(" + rotation + "deg)";
             });
-            var delay = reduce ? 0 : 2900;
+            var delay = reduce ? 0 : SPIN_DELAY_MS;
             timer = window.setTimeout(function () {
+                wheelEl.classList.remove("is-spinning");
                 statusEl.hidden = true;
                 resultEl.hidden = false;
                 resultEl.textContent = "Assigned " + String(data.startAt).replace("T", " ").slice(0, 16)
@@ -204,6 +217,7 @@
             }, delay);
         },
         fail: function (message, canRetry) {
+            wheelEl.classList.remove("is-spinning");
             statusEl.hidden = false;
             statusEl.textContent = message || "No ceremony times are free right now.";
             resultEl.hidden = true;

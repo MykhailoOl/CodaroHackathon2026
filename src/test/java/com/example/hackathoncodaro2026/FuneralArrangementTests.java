@@ -524,6 +524,8 @@ class FuneralArrangementTests {
         assertThat(seed).doesNotContain("sportsbooking");
         assertThat(mark).contains("M22 18 H46");
         assertThat(css).contains("wheel-overlay-copy");
+        assertThat(css).contains("wheel-peg-ring");
+        assertThat(css).contains("wheel-hub");
         assertThat(css).contains("text-align: center");
     }
 
@@ -537,6 +539,10 @@ class FuneralArrangementTests {
         assertThat(arrangeJs).doesNotContain("getElementById(\"spin-btn\")");
         assertThat(arrangeJs).doesNotContain("getElementById(\"preview-btn\")");
         assertThat(wheelJs).doesNotContain("Math.random");
+        assertThat(wheelJs).contains("SPIN_SECONDS = 5.8");
+        assertThat(wheelJs).contains("SPIN_DELAY_MS = 6000");
+        String h2Launch = Files.readString(Path.of("src/main/resources/templates/h2-launch.html"));
+        assertThat(h2Launch).contains("/images/brand/mark.svg");
         assertThat(assistantJs).contains("Confirm arrangements");
         assertThat(assistantJs).doesNotContain("Spin for a date");
         String html = Files.readString(Path.of("src/main/resources/templates/venues/arrange.html"));
