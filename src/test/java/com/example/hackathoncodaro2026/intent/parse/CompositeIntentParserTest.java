@@ -1,5 +1,6 @@
 package com.example.hackathoncodaro2026.intent.parse;
 
+import com.example.hackathoncodaro2026.config.DomainProperties;
 import com.example.hackathoncodaro2026.intent.config.IntentProperties;
 import com.example.hackathoncodaro2026.intent.model.IntentSpec;
 import org.junit.jupiter.api.Test;
@@ -17,8 +18,8 @@ class CompositeIntentParserTest {
 
     @Test
     void fallsBackToRulesWhenLlmIsUnconfigured() {
-        CodaroIntentParser unconfigured = new CodaroIntentParser("", "", "", config);
-        RuleIntentParser ruleParser = new RuleIntentParser(config);
+        CodaroIntentParser unconfigured = new CodaroIntentParser("", "", "", config, DomainProperties.defaults());
+        RuleIntentParser ruleParser = new RuleIntentParser(config, DomainProperties.defaults());
         CompositeIntentParser composite = new CompositeIntentParser(unconfigured, ruleParser);
 
         IntentParser.ParseResult result = composite.parse(
@@ -32,8 +33,8 @@ class CompositeIntentParserTest {
 
     @Test
     void doesNotThrowOrLogScarilyWhenCredentialsAreAbsent() {
-        CodaroIntentParser unconfigured = new CodaroIntentParser(null, null, null, config);
-        CompositeIntentParser composite = new CompositeIntentParser(unconfigured, new RuleIntentParser(config));
+        CodaroIntentParser unconfigured = new CodaroIntentParser(null, null, null, config, DomainProperties.defaults());
+        CompositeIntentParser composite = new CompositeIntentParser(unconfigured, new RuleIntentParser(config, DomainProperties.defaults()));
 
         assertThatCode(() -> composite.parse("gym tomorrow", TODAY, 1)).doesNotThrowAnyException();
     }
@@ -41,7 +42,7 @@ class CompositeIntentParserTest {
     @Test
     void fallsBackToRulesWhenConfiguredLlmParserThrows() {
         CodaroIntentParser configuredButBroken = new CodaroIntentParser(
-                "http://localhost:1234/v1", "sk-test", "some-model", config) {
+                "http://localhost:1234/v1", "sk-test", "some-model", config, DomainProperties.defaults()) {
             @Override
             public boolean isConfigured() {
                 return true;
@@ -52,7 +53,7 @@ class CompositeIntentParserTest {
                 throw new IntentParseException("simulated network failure");
             }
         };
-        CompositeIntentParser composite = new CompositeIntentParser(configuredButBroken, new RuleIntentParser(config));
+        CompositeIntentParser composite = new CompositeIntentParser(configuredButBroken, new RuleIntentParser(config, DomainProperties.defaults()));
 
         IntentParser.ParseResult result = composite.parse("squash tomorrow", TODAY, 1);
 
@@ -63,7 +64,7 @@ class CompositeIntentParserTest {
     @Test
     void fallsBackToRulesWhenConfiguredLlmParserReturnsInvalidResultViaException() {
         CodaroIntentParser configuredButInvalid = new CodaroIntentParser(
-                "http://localhost:1234/v1", "sk-test", "some-model", config) {
+                "http://localhost:1234/v1", "sk-test", "some-model", config, DomainProperties.defaults()) {
             @Override
             public boolean isConfigured() {
                 return true;
@@ -74,7 +75,7 @@ class CompositeIntentParserTest {
                 throw new IntentParseException("LLM returned dayFrom after dayTo");
             }
         };
-        CompositeIntentParser composite = new CompositeIntentParser(configuredButInvalid, new RuleIntentParser(config));
+        CompositeIntentParser composite = new CompositeIntentParser(configuredButInvalid, new RuleIntentParser(config, DomainProperties.defaults()));
 
         IntentParser.ParseResult result = composite.parse("basketball next Friday evening", TODAY, 1);
 

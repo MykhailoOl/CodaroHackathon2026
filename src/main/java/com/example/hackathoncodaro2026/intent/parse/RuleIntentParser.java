@@ -1,5 +1,6 @@
 package com.example.hackathoncodaro2026.intent.parse;
 
+import com.example.hackathoncodaro2026.config.DomainProperties;
 import com.example.hackathoncodaro2026.intent.config.IntentProperties;
 import com.example.hackathoncodaro2026.intent.model.IntentSpec;
 import com.example.hackathoncodaro2026.intent.model.TimeOfDay;
@@ -23,9 +24,11 @@ public class RuleIntentParser implements IntentParser {
     private static final int DEFAULT_WINDOW_DAYS = 7;
 
     private final IntentProperties config;
+    private final List<String[]> synonyms;
 
-    public RuleIntentParser(IntentProperties config) {
+    public RuleIntentParser(IntentProperties config, DomainProperties domain) {
         this.config = config;
+        this.synonyms = domain.synonymPairs();
     }
 
     @Override
@@ -246,16 +249,6 @@ public class RuleIntentParser implements IntentParser {
     }
 
 
-    private static final List<String[]> SYNONYMS = List.of(
-            new String[]{"football", "FOOTBALL"},
-            new String[]{"soccer", "FOOTBALL"},
-            new String[]{"gym", "GYM"},
-            new String[]{"workout", "GYM"},
-            new String[]{"pool", "SWIMMING"},
-            new String[]{"swimming", "SWIMMING"},
-            new String[]{"swim", "SWIMMING"}
-    );
-
     private String parseResourceType(String lower) {
         for (ResourceType type : ResourceType.values()) {
             if (containsWordish(lower, type.name().toLowerCase(Locale.ROOT))) {
@@ -265,7 +258,7 @@ public class RuleIntentParser implements IntentParser {
                 return type.name();
             }
         }
-        for (String[] syn : SYNONYMS) {
+        for (String[] syn : synonyms) {
             if (containsWordish(lower, syn[0])) {
                 return syn[1];
             }
