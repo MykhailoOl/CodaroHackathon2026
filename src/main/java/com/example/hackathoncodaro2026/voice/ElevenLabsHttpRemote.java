@@ -114,18 +114,18 @@ public class ElevenLabsHttpRemote implements ElevenLabsRemote {
         Map<String, Object> agent = new LinkedHashMap<>();
         agent.put("first_message", request.firstMessage());
         agent.put("language", "en");
-        agent.put("disable_first_message_interruptions", false);
+        agent.put("disable_first_message_interruptions", true);
         agent.put("prompt", prompt);
 
         Map<String, Object> tts = new LinkedHashMap<>();
         tts.put("model_id", "eleven_flash_v2");
         tts.put("expressive_mode", false);
-        tts.put("stability", 0.7);
-        tts.put("similarity_boost", 0.8);
-        tts.put("speed", 1.0);
-        tts.put("optimize_streaming_latency", 4);
+        tts.put("stability", 0.82);
+        tts.put("similarity_boost", 0.75);
+        tts.put("speed", 0.86);
+        tts.put("optimize_streaming_latency", 3);
         tts.put("voice_id", request.voiceId() == null || request.voiceId().isBlank()
-                ? "cgSgspJ2msm6clMCkdW9"
+                ? "EXAVITQu4vr4xnSDxMaL"
                 : request.voiceId());
 
         Map<String, Object> conversation = new LinkedHashMap<>();
@@ -137,9 +137,9 @@ public class ElevenLabsHttpRemote implements ElevenLabsRemote {
                 "user_input_audio_format", "pcm_16000"
         ));
         conversation.put("turn", Map.of(
-                "turn_timeout", 3,
+                "turn_timeout", 8,
                 "mode", "turn",
-                "turn_eagerness", "eager",
+                "turn_eagerness", "patient",
                 "turn_model", "turn_v2"
         ));
         conversation.put("language_presets", Map.of());

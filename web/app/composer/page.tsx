@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PageShell } from "@/components/PageShell";
 import {
   ApiError,
   createArrangement,
@@ -161,26 +162,22 @@ export default function ComposerPage() {
     router.push("/");
   }
 
-  const field = "mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500";
+  const field =
+    "mt-1 w-full rounded-md border border-stone-400 bg-white px-3 py-3 text-sm outline-none focus:border-forest";
   const label = "block text-sm font-medium text-stone-700";
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-4 py-10">
-      <header className="mb-8 flex items-center justify-between">
+    <PageShell signedInAs={displayName} onSignOut={handleLogout}>
+      <div className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
+      <form onSubmit={handlePreview} className="space-y-6 px-6 py-10 sm:px-10">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-stone-900">EverRest</h1>
-          {displayName && <p className="text-sm text-stone-500">Signed in as {displayName}</p>}
+          <p className="text-xs tracking-[0.16em] text-stone-500 uppercase">Arrangement</p>
+          <h1 className="font-display mt-2 text-4xl leading-none text-charcoal">Tell us the circumstances</h1>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-stone-600">
+            I&apos;m sorry for your loss. You do not pick a day. We assign the earliest free ceremony, and you approve it.
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="text-sm text-stone-500 underline underline-offset-4 hover:text-stone-800"
-        >
-          Sign out
-        </button>
-      </header>
 
-      <form onSubmit={handlePreview} className="space-y-5 rounded-xl border border-stone-300 bg-white p-6 shadow-sm">
         <div>
           <label htmlFor="deceased" className={label}>Who died</label>
           <p className="text-xs text-stone-500">Their full name, as it should appear on the record.</p>
@@ -285,58 +282,70 @@ export default function ComposerPage() {
         <button
           type="submit"
           disabled={loading || !offered.length}
-          className="w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
+          className="w-full bg-charcoal px-4 py-3 text-sm font-semibold text-ivory hover:bg-forest disabled:opacity-50"
         >
           {loading ? "Checking…" : "See what can be held"}
         </button>
       </form>
 
-      {preview && !created && (
-        <section className="mt-6 rounded-xl border-2 border-stone-900 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Proposed arrangement</h2>
-          <p className="mt-3 text-lg font-semibold text-stone-900">{deceased}</p>
-          {chosenVenue && (
-            <p className="text-sm text-stone-600">
-              {chosenVenue.name} — {chosenVenue.address}
+      <aside className="flex flex-col justify-center border-t border-stone-300 bg-white/50 px-6 py-10 sm:px-10 lg:border-l lg:border-t-0">
+        {!preview && !created && (
+          <div>
+            <p className="text-xs tracking-[0.16em] text-stone-500 uppercase">Proposal</p>
+            <p className="font-display mt-3 text-3xl leading-tight text-charcoal">
+              The home will settle the day after you tell us the facts.
             </p>
-          )}
-          {/* The date is assigned on confirmation, not picked: the API takes no date and
-              the day it settles on can fall outside the sample below. Never render these
-              as if they were a menu. */}
-          <p className="mt-4 text-sm text-stone-700">
-            {preview.dates.length
-              ? `Days are open from ${formatDate(preview.dates[0])} onwards. The funeral home settles the exact day and hour when you confirm.`
-              : "The funeral home will settle the day when you confirm."}
-          </p>
-          <p className="mt-3 text-sm text-stone-900">
-            {attendees} attending · {preview.amount} {preview.currency}
-          </p>
-          {preview.notice && <p className="mt-2 text-sm text-stone-600">{preview.notice}</p>}
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={loading}
-            className="mt-5 w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
-          >
-            {loading ? "Confirming…" : "Confirm this arrangement"}
-          </button>
-        </section>
-      )}
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-stone-600">
+              There is no calendar to shop from. One ceremony is assigned. A director still confirms.
+            </p>
+          </div>
+        )}
 
-      {created && (
-        <section className="mt-6 rounded-xl border border-emerald-400 bg-emerald-50 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-800">Confirmed</h2>
-          <p className="mt-3 text-lg font-semibold text-stone-900">{deceased}</p>
-          {chosenVenue && <p className="text-sm text-stone-700">{chosenVenue.name}</p>}
-          <p className="mt-2 text-sm text-stone-900">{formatDateTime(created.startAt)}</p>
-          <p className="mt-1 text-sm text-stone-700">
-            Reference {created.id} · {created.formattedAmount} · {created.status.toLowerCase()}
-          </p>
-          <p className="mt-3 text-sm text-stone-600">
-            The funeral home has been notified and will be in touch about the rest.
-          </p>
-        </section>
-      )}
-    </main>
+        {preview && !created && (
+          <section>
+            <p className="text-xs tracking-[0.16em] text-stone-500 uppercase">Proposed arrangement</p>
+            <h2 className="font-display mt-3 text-3xl leading-tight text-charcoal">{deceased || "The person remembered"}</h2>
+            {chosenVenue && (
+              <p className="mt-2 text-sm text-stone-600">
+                {chosenVenue.name} — {chosenVenue.address}
+              </p>
+            )}
+            <p className="mt-6 text-sm leading-relaxed text-stone-700">
+              {preview.dates.length
+                ? `Days are open from ${formatDate(preview.dates[0])} onwards. The funeral home settles the exact day and hour when you confirm.`
+                : "The funeral home will settle the day when you confirm."}
+            </p>
+            <p className="mt-3 text-sm text-charcoal">
+              {attendees} attending · {preview.amount} {preview.currency}
+            </p>
+            {preview.notice && <p className="mt-2 text-sm text-stone-600">{preview.notice}</p>}
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={loading}
+              className="mt-8 w-full bg-charcoal px-4 py-3 text-sm font-semibold text-ivory hover:bg-forest disabled:opacity-50"
+            >
+              {loading ? "Confirming…" : "Confirm this arrangement"}
+            </button>
+          </section>
+        )}
+
+        {created && (
+          <section>
+            <p className="text-xs tracking-[0.16em] text-forest uppercase">Received</p>
+            <h2 className="font-display mt-3 text-3xl leading-tight text-charcoal">{deceased}</h2>
+            {chosenVenue && <p className="mt-2 text-sm text-stone-700">{chosenVenue.name}</p>}
+            <p className="mt-4 text-sm text-charcoal">{formatDateTime(created.startAt)}</p>
+            <p className="mt-1 text-sm text-stone-700">
+              Reference {created.id} · {created.formattedAmount} · {created.status.toLowerCase()}
+            </p>
+            <p className="mt-6 text-sm leading-relaxed text-stone-600">
+              The funeral home has been notified and will be in touch about the rest. This is pending until a director confirms.
+            </p>
+          </section>
+        )}
+      </aside>
+      </div>
+    </PageShell>
   );
 }

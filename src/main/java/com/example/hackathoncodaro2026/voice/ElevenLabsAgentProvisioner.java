@@ -75,7 +75,7 @@ public class ElevenLabsAgentProvisioner {
             ));
             agentId = elevenLabsRemote.createAgent(new ElevenLabsRemote.AgentRequest(
                     "EverRest phone receptionist",
-                    "EverRest. I can help arrange a ceremony.",
+                    "I'm sorry for your loss. I'm here when you are ready.",
                     systemPrompt(),
                     List.of(checkId, bookId),
                     blankToNull(properties.getElevenlabs().getVoiceId()),
@@ -87,7 +87,7 @@ public class ElevenLabsAgentProvisioner {
 
         elevenLabsRemote.updateAgent(agentId, new ElevenLabsRemote.AgentRequest(
                 "EverRest phone receptionist",
-                "EverRest. I can help arrange a ceremony.",
+                "I'm sorry for your loss. I'm here when you are ready.",
                 systemPrompt(),
                 List.of(),
                 blankToNull(properties.getElevenlabs().getVoiceId()),
@@ -130,7 +130,7 @@ public class ElevenLabsAgentProvisioner {
     private Map<String, Object> baseSpec(String base) {
         Map<String, Object> spec = new LinkedHashMap<>();
         spec.put("name", "EverRest phone receptionist");
-        spec.put("firstMessage", "EverRest. I can help arrange a ceremony.");
+        spec.put("firstMessage", "I'm sorry for your loss. I'm here when you are ready.");
         spec.put("systemPrompt", systemPrompt());
         spec.put("voiceIdConfigured", notBlank(properties.getElevenlabs().getVoiceId()));
         spec.put("tools", List.of(
@@ -173,15 +173,17 @@ public class ElevenLabsAgentProvisioner {
 
     private String systemPrompt() {
         return """
-                You are EverRest, a funeral-home receptionist in Warsaw. Keep every reply to one short sentence, then wait.
-                Speak English. Stay calm. No puns. Never invent times. Propose one ceremony, not a menu.
-                Ask for the date of death, burial or cremation, about how many mourners, and the name of the deceased.
+                You are a quiet funeral-home receptionist at EverRest in Warsaw. The caller is grieving. Speak English, slowly, in a low sad voice.
+                Keep every reply to one short sentence, then wait. Never sound cheerful, brisk, or like a shop. No puns. No pep.
+                If they pause or cry, stay silent and wait. Do not fill the silence. Do not rush them.
+                Never invent times. Propose one ceremony, not a menu.
+                Ask gently for the date of death, burial or cremation, about how many mourners, and the name of the person who died.
                 Call check_availability with those facts in text. partySize is a digit. skipCount starts at 0.
                 Read displayLabel verbatim. Labels already contain spoken English times. Do not convert them to digits.
                 If they refuse that time, call check_availability again with skipCount increased by one, then propose the next time.
                 On confirm, call create_booking with slotId from the last proposal, deceasedFullName, and the caller's name. Omit playerPhone.
                 After booking, say an SMS with a calendar reminder is on the way. A director still confirms the arrangement.
-                When the caller says goodbye and the request is done, say one short goodbye, then call end_call. Never hang up mid-arrangement.
+                When the caller says goodbye and the request is done, say a short, quiet goodbye, then call end_call. Never hang up mid-arrangement.
                 """;
     }
 

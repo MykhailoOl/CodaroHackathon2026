@@ -11,6 +11,8 @@ public class OccupancyGrid {
     private Long funeralHomeId;
     private List<LocalTime> hours = new ArrayList<>();
     private List<OccupancyRow> rows = new ArrayList<>();
+    private List<OccupancyMapMarker> homes = new ArrayList<>();
+    private List<OccupancyMapMarker> people = new ArrayList<>();
     private int bookedUnits;
     private int capacityUnits;
 
@@ -51,6 +53,22 @@ public class OccupancyGrid {
 
     public void setRows(List<OccupancyRow> rows) {
         this.rows = rows;
+    }
+
+    public List<OccupancyMapMarker> getHomes() {
+        return homes;
+    }
+
+    public void setHomes(List<OccupancyMapMarker> homes) {
+        this.homes = homes;
+    }
+
+    public List<OccupancyMapMarker> getPeople() {
+        return people;
+    }
+
+    public void setPeople(List<OccupancyMapMarker> people) {
+        this.people = people;
     }
 
     public int getBookedUnits() {

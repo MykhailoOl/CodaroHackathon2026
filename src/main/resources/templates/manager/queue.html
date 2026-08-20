@@ -40,6 +40,10 @@
                     <span th:text="${#temporals.format(item.endAt, 'HH:mm')}">12:00</span>
                 </p>
                 <p class="meta-label">
+                    Channel
+                    <span th:text="${item.channelLabel}">Website</span>
+                </p>
+                <p class="meta-label">
                     Remembering
                     <span th:text="${item.deceasedFullName}">Name</span>
                 </p>

@@ -131,6 +131,10 @@ class VoiceBookingWebTests {
         assertThat(smsClient.sent()).hasSize(1);
         assertThat(smsClient.sent().getFirst().to()).isEqualTo("+48585006115");
         assertThat(smsClient.sent().getFirst().body()).contains("/voice/invite/" + reservation.getInviteToken());
+        assertThat(smsClient.sent().getFirst().body()).contains("Jan Kowalski");
+        assertThat(smsClient.sent().getFirst().body()).contains("pending");
+        assertThat(smsClient.sent().getFirst().body()).contains("Willow Chapel");
+        assertThat(reservation.getBookingSource()).isEqualTo("PHONE");
 
         mockMvc.perform(get("/voice/invite/" + reservation.getInviteToken()))
                 .andExpect(status().isOk())

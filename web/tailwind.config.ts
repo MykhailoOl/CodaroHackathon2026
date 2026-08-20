@@ -11,6 +11,14 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        ivory: "#F6F1E8",
+        charcoal: "#2C3338",
+        forest: "#3D5C4A",
+        brass: "#C4A574",
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "Segoe UI", "sans-serif"],
+        display: ["var(--font-display)", "Times New Roman", "serif"],
       },
     },
   },

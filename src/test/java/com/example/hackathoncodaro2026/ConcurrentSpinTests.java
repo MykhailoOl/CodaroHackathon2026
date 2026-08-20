@@ -91,7 +91,13 @@ class ConcurrentSpinTests {
         venue.setEnabled(true);
         venue = serviceVenueRepository.saveAndFlush(venue);
         final Long venueId = venue.getId();
-        List<LocalDateTime> starts = dateAssignmentService.availableStarts(venue, FuneralPackage.ESSENTIAL);
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Europe/Warsaw"));
+        List<LocalDateTime> starts = dateAssignmentService.availableStarts(venue, FuneralPackage.ESSENTIAL).stream()
+                .filter(start -> {
+                    LocalDate day = start.toLocalDate();
+                    return !day.isBefore(today) && !day.isAfter(today.plusDays(3));
+                })
+                .toList();
         assertThat(starts).isNotEmpty();
         User filler = userService.findByUsername("admin").orElseThrow();
         for (int i = 0; i < starts.size() - 1; i++) {
@@ -182,7 +188,7 @@ class ConcurrentSpinTests {
         request.setServiceType(ServiceType.MEMORIAL_SERVICE);
         request.setFuneralPackage(FuneralPackage.ESSENTIAL);
         request.setDeceasedFullName("Concurrent Person");
-        request.setDateOfDeath(LocalDate.of(2024, 4, 4));
+        request.setDateOfDeath(LocalDate.now(java.time.ZoneId.of("Europe/Warsaw")).minusDays(1));
         request.setAttendees(1);
         request.setPaymentMethod(PaymentMethod.CASH);
         request.setPhone(user.getPhone());

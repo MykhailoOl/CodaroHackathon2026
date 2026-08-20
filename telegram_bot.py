@@ -415,7 +415,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text(
             f"<b>{esc(BRAND)}</b>\n\n"
             f"Signed in as {esc(se.display_name)}.\n\n"
-            "Tell me the name to remember, or describe the arrangement. "
+            "I'm sorry for your loss.\n\n"
+            "Tell me the name of the person who died, when you are ready. "
             "A ceremony date will be assigned — you do not choose it.",
             parse_mode=ParseMode.HTML,
         )
@@ -464,7 +465,9 @@ async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.effective_message.reply_text(
         f"<b>{esc(BRAND)}</b>\n\n"
-        "Describe the arrangement. A date is assigned from what is free — it is not chosen here.\n\n"
+        "I'm sorry for your loss.\n\n"
+        "Tell me who died and a few details. A date is assigned from what is free — "
+        "it is not chosen here.\n\n"
         "/login — sign in (privately)\n"
         "/logout — sign out\n"
         "/status — this arrangement and your session\n"

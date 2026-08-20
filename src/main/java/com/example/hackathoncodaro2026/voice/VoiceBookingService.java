@@ -377,14 +377,25 @@ public class VoiceBookingService {
             log.info("SMS skipped phonePresent={} enabled={}", notBlank(phone), properties.getSms().isEnabled());
             return "skipped";
         }
-        String body = "EverRest arrangement:\n"
+        String body = "EverRest pending arrangement for "
+                + reservation.getDeceasedFullName()
+                + "\n"
                 + SpokenLabels.slot(
                         reservation.getVenue().getName(),
                         reservation.getVenue().getFuneralHome() == null ? null : reservation.getVenue().getFuneralHome().getName(),
                         reservation.getStartAt(),
                         reservation.getEndAt()
                 )
-                + "\nAdd this to your calendar: " + inviteUrl;
+                + "\n"
+                + reservation.getServiceType().getLabel()
+                + " · "
+                + reservation.getFuneralPackage().getLabel()
+                + " · "
+                + reservation.getAttendees()
+                + " guests"
+                + "\nA director will confirm."
+                + "\nCalendar: "
+                + inviteUrl;
         return smsClient.send(phone.trim(), body);
     }
 

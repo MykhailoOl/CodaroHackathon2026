@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>EverRest — Codaro demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fraunces (editorial display, optical sizing) + Inter (body). -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- html2canvas-pro understands oklch(); jsPDF builds the file. SRI pins the exact CDN build. -->
+<script
+  src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"
+  integrity="sha384-QbVSYhU9faw2C7l92rI0Dmke8Yod6KaOixC1kkbO/dGnMDKtbWhwcxSSOkmHXWom"
+  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+  integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk"
+  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  /* ===== Design tokens — warm paper, emerald accent (OKLCH, tinted neutrals) ===== */
+  :root {
+    --bg:       oklch(0.974 0.007 75);
+    --bg-2:     oklch(0.949 0.012 75);
+    --ink:      oklch(0.21 0.012 60);
+    --ink-2:    oklch(0.44 0.010 60);
+    --ink-3:    oklch(0.61 0.008 60);
+    --line:     oklch(0.88 0.010 70);
+    --line-2:   oklch(0.82 0.012 70);
+
+    /* Charcoal on warm paper. Quiet, not funeral-black, not medical-teal. */
+    --accent:    oklch(0.28 0.012 70);
+    --accent-2:  oklch(0.93 0.012 75);
+    --accent-ink: oklch(0.32 0.014 70);
+
+    /* Negative (lost calls), used sparingly */
+    --bad:      oklch(0.505 0.130 28);
+    --bad-2:    oklch(0.93 0.045 28);
+
+    /* Dark title slide */
+    --dark:     oklch(0.205 0.012 60);
+    --paper:    oklch(0.955 0.010 80);
+    --paper-2:  oklch(0.80 0.010 80);
+
+    --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
+
+    --pad-x: clamp(2rem, 6vw, 6.5rem);
+    --pad-y: clamp(1.8rem, 5vw, 4rem);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+    cursor: default;
+  }
+
+  /* ===== Deck + slides ===== */
+  .deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+
+  .slide {
+    position: absolute; inset: 0;
+    padding: var(--pad-y) var(--pad-x);
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    opacity: 0; transform: translateY(12px);
+    transition: opacity 380ms var(--ease-out), transform 380ms var(--ease-out);
+    pointer-events: none; visibility: hidden;
+  }
+  .slide.active { opacity: 1; transform: translateY(0); pointer-events: auto; visibility: visible; }
+  .slide.active [data-reveal] {
+    animation: rise 520ms var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 55ms + 80ms);
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ===== Header strip ===== */
+  .strip {
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--ink-3); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600;
+  }
+  .strip .tag { display: inline-flex; align-items: center; }
+  .strip .tag::before {
+    content: ""; display: inline-block; width: 22px; height: 1px;
+    background: var(--accent); vertical-align: middle; margin-right: 0.6rem; transform: translateY(-1px);
+  }
+  .strip .brand { color: var(--ink-2); font-weight: 700; letter-spacing: 0.16em; }
+
+  /* ===== Body ===== */
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 1180px; width: 100%; margin: 0 auto; }
+
+  h1.deck-h, h2.deck-h { font-family: 'Fraunces', Georgia, serif; margin: 0; text-wrap: balance; color: var(--ink); }
+  h1.deck-h { font-size: clamp(2.7rem, 5.6vw, 4.6rem); font-weight: 500; line-height: 1.02; letter-spacing: -0.02em; font-optical-sizing: auto; }
+  h2.deck-h { font-size: clamp(1.95rem, 3.6vw, 3rem); font-weight: 500; line-height: 1.08; letter-spacing: -0.015em; }
+  .deck-h em { font-style: italic; color: var(--accent-ink); }
+  .lede { color: var(--ink-2); font-size: clamp(1.02rem, 1.35vw, 1.22rem); max-width: 64ch; margin: 1.15rem 0 0; line-height: 1.55; }
+  .source { color: var(--ink-3); font-size: 0.72rem; line-height: 1.5; margin: 1.4rem 0 0; max-width: 90ch; }
+  .note { color: var(--ink-3); font-size: 0.78rem; font-style: italic; margin: 0.8rem 0 0; }
+
+  /* ===== Footer / nav chrome ===== */
+  .foot { display: flex; align-items: center; justify-content: space-between; color: var(--ink-3); font-size: 0.72rem; letter-spacing: 0.06em; }
+  .foot .num { font-variant-numeric: tabular-nums; }
+
+  .progress { position: fixed; top: 0; left: 0; height: 2px; width: 0%; background: var(--accent); transition: width 380ms var(--ease-out); z-index: 50; }
+  .nav-dots { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); display: flex; gap: 0.5rem; z-index: 40; padding: 0.5rem 0.75rem; background: oklch(0.974 0.007 75 / 0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 999px; }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); border: none; padding: 0; cursor: pointer; transition: transform 180ms var(--ease-out), background 180ms var(--ease-out); }
+  .nav-dot:hover { transform: scale(1.25); }
+  .nav-dot.is-active { background: var(--accent); transform: scale(1.4); }
+
+  .arrow-btn { position: fixed; bottom: 1.2rem; width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--line); background: oklch(0.974 0.007 75 / 0.7); color: var(--ink-2); cursor: pointer; display: grid; place-items: center; transition: transform 160ms var(--ease-out), background 160ms var(--ease-out), border-color 160ms var(--ease-out); z-index: 41; }
+  .arrow-btn:hover { background: var(--bg-2); border-color: var(--line-2); color: var(--ink); }
+  .arrow-btn:active { transform: scale(0.95); }
+  .arrow-btn[data-dir="prev"] { right: calc(50% + 92px); }
+  .arrow-btn[data-dir="next"] { left:  calc(50% + 92px); }
+  .arrow-btn svg { width: 13px; height: 13px; }
+
+  /* ===== Toolbar ===== */
+  .toolbar { position: fixed; top: 1rem; right: 1.1rem; z-index: 60; display: flex; gap: 0.5rem; align-items: center; }
+  .tbtn { padding: 0.42rem 0.85rem; border-radius: 999px; border: 1px solid oklch(0.88 0.010 70 / 0.7); background: oklch(0.974 0.007 75 / 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--ink-2); cursor: pointer; font-family: inherit; font-size: 0.73rem; letter-spacing: 0.04em; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; transition: transform 150ms var(--ease-out), background 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out); }
+  .tbtn:hover { background: var(--bg-2); border-color: var(--line-2); color: var(--ink); }
+  .tbtn:active { transform: scale(0.97); }
+  .tbtn svg { width: 13px; height: 13px; }
+  .tbtn[aria-busy="true"] { opacity: 0.6; cursor: wait; }
+  .tbtn.is-on { background: var(--accent); border-color: var(--accent); color: oklch(0.99 0.01 80); }
+  .tbtn.hidden-when-clean { display: none; }
+  body.editing .tbtn.hidden-when-clean { display: inline-flex; }
+  .save-state { font-size: 0.7rem; letter-spacing: 0.04em; color: var(--accent); opacity: 0; transition: opacity 220ms var(--ease-out); font-weight: 600; }
+  .save-state.show { opacity: 1; }
+
+  /* ===== Edit affordances ===== */
+  [data-edit] { border-radius: 4px; transition: box-shadow 140ms var(--ease-out), background 140ms var(--ease-out); }
+  body.editing [data-edit] { outline: 1px dashed oklch(0.49 0.085 158 / 0.4); outline-offset: 3px; cursor: text; }
+  body.editing [data-edit]:hover { background: oklch(0.49 0.085 158 / 0.06); }
+  body.editing [data-edit]:focus { outline: 1.5px solid var(--accent); outline-offset: 3px; background: oklch(0.49 0.085 158 / 0.05); }
+  body.editing .slide { transition: none; }
+
+  .block { position: relative; }
+  .block-ctrls { position: absolute; top: -10px; right: -6px; display: none; gap: 3px; z-index: 22; }
+  body.editing .block:hover > .block-ctrls, body.editing .block:focus-within > .block-ctrls { display: flex; }
+  .block-ctrls button { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); color: var(--ink-2); cursor: pointer; font-size: 0.72rem; display: grid; place-items: center; line-height: 1; transition: transform 140ms var(--ease-out), background 140ms var(--ease-out), color 140ms var(--ease-out); }
+  .block-ctrls button:hover { background: var(--accent); color: oklch(0.99 0.01 80); border-color: var(--accent); }
+  .block-ctrls button:active { transform: scale(0.9); }
+  .block-ctrls .grip { cursor: grab; }
+  .block.is-hidden { display: none; }
+  body.editing .block.is-hidden { display: block; opacity: 0.35; filter: grayscale(1); }
+  body.editing .block.is-hidden::after { content: "hidden"; position: absolute; top: 4px; left: 4px; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bad); font-weight: 700; }
+
+  /* draggable elements keep a relative origin so left/top nudges don't fight the reveal transform */
+  .draggable { position: relative; }
+  body.editing .draggable { cursor: grab; }
+  body.editing .draggable:hover { outline: 1px dashed oklch(0.49 0.085 158 / 0.4); outline-offset: 4px; }
+  body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; }
+
+  /* alignment guides */
+  .guide { position: fixed; z-index: 70; background: var(--accent); pointer-events: none; display: none; }
+  .guide.v { width: 1px; top: 0; bottom: 0; }
+  .guide.h { height: 1px; left: 0; right: 0; }
+
+  .edit-hint { position: fixed; bottom: 1.4rem; left: 1.2rem; z-index: 45; font-size: 0.72rem; color: var(--ink-3); max-width: 24rem; line-height: 1.5; display: none; }
+  body.editing .edit-hint { display: block; }
+
+  /* ===== Media placeholders (shown until real assets exist) ===== */
+  .ph { position: relative; background: var(--bg-2); border: 1px dashed var(--line-2); border-radius: 14px; overflow: hidden; display: grid; place-items: center; color: var(--ink-3); }
+  .ph .ph-label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; text-align: center; padding: 0.6rem 1rem; }
+  img.smart { display: block; }
+  img.smart.broken { display: none; }
+  /* when an <img> fails, its sibling .ph shows; when it loads, .ph hides */
+  .imgwrap { position: relative; }
+  .imgwrap.loaded .ph { display: none; }
+
+  /* ============================================================ */
+  /* Slide 1 — Title with background image + dark scrim           */
+  /* ============================================================ */
+  #s-1 { padding: 0; background: var(--dark); color: var(--paper); }
+  #s-1 .hero-wrap { position: absolute; inset: 0; overflow: hidden; }
+  #s-1 .hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% center; }
+  #s-1 .hero-photo.broken { display: none; }
+  #s-1 .hero-fallback { position: absolute; inset: 0; background: radial-gradient(120% 90% at 85% 15%, oklch(0.55 0.02 80 / 0.18) 0%, transparent 55%), radial-gradient(90% 80% at 8% 100%, oklch(0.35 0.012 70 / 0.16) 0%, transparent 60%); }
+  #s-1 .hero-scrim { position: absolute; inset: 0; background-image: linear-gradient(110deg, oklch(0.15 0.012 60 / 0.88) 0%, oklch(0.15 0.012 60 / 0.66) 30%, oklch(0.15 0.012 60 / 0.30) 58%, oklch(0.15 0.012 60 / 0.08) 85%), linear-gradient(180deg, transparent 55%, oklch(0.13 0.012 60 / 0.6) 100%); }
+  #s-1 .hero-content { position: relative; z-index: 2; height: 100%; padding: var(--pad-y) var(--pad-x); display: flex; flex-direction: column; }
+  #s-1 .strip { color: var(--paper-2); }
+  #s-1 .strip .brand { color: var(--paper); }
+  #s-1 h1.deck-h { color: var(--paper); max-width: 18ch; }
+  #s-1 h1.deck-h em { color: oklch(0.86 0.025 80); }
+  #s-1 .lede { color: var(--paper-2); max-width: 56ch; }
+  #s-1 .foot { color: var(--paper-2); }
+  #s-1 .kicker { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; color: oklch(0.84 0.025 80); font-size: clamp(1rem, 1.5vw, 1.25rem); margin: 0 0 0.9rem; }
+
+  /* ============================================================ */
+  /* Slide 2 — Scenario + portrait                                */
+  /* ============================================================ */
+  #s-2 .body { max-width: 1240px; }
+  .scene-split { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(2rem, 5vw, 3.5rem); align-items: center; }
+  .beats { display: flex; flex-direction: column; gap: 0.1rem; }
+  .beat { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(1.6rem, 3.3vw, 2.7rem); line-height: 1.18; letter-spacing: -0.015em; color: var(--ink); }
+  .beat.dim { color: var(--ink-3); }
+  .beat .b-accent { color: var(--accent-ink); }
+  .beat .b-bad { color: var(--bad); }
+  .scene-time { font-variant-numeric: tabular-nums; color: var(--accent-ink); font-weight: 700; letter-spacing: 0.04em; }
+  .portrait { width: 100%; aspect-ratio: 3/2; border-radius: 16px; }
+  .portrait .ph { width: 100%; height: 100%; }
+  img.portrait-img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+
+  /* ============================================================ */
+  /* Slide 3 — Polish reality (3 stats)                           */
+  /* ============================================================ */
+  .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1.4rem, 3.2vw, 3rem); margin-top: 2rem; align-items: start; }
+  .stat .fig { font-family: 'Fraunces', serif; font-weight: 600; color: var(--accent-ink); font-size: clamp(3rem, 6.5vw, 5.2rem); line-height: 0.95; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .stat .cap { color: var(--ink-2); font-size: clamp(0.95rem, 1.2vw, 1.08rem); line-height: 1.45; margin-top: 0.7rem; max-width: 30ch; }
+  .stat .src { color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 0.7rem; font-weight: 600; }
+  .stat .cap b { color: var(--ink); font-weight: 600; }
+  #s-2 .stat .fig { font-size: clamp(1.35rem, 2.1vw, 1.85rem); letter-spacing: -0.02em; line-height: 1.15; }
+
+  /* ============================================================ */
+  /* Slide 4 — Who this works for                                 */
+  /* ============================================================ */
+  .split { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(2rem, 5vw, 4.5rem); margin-top: 1.6rem; align-items: center; }
+  .chart-title, .icp-title { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 1rem; }
+  .bars { display: flex; flex-direction: column; gap: 0.7rem; }
+  .bar-row { display: grid; grid-template-columns: 5.5rem 1fr auto; align-items: center; gap: 0.8rem; }
+  .bar-row .lbl { font-size: 0.88rem; color: var(--ink-2); font-weight: 500; }
+  .bar-track { height: 12px; background: var(--bg-2); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 999px; transform: scaleX(0); transform-origin: left center; transition: transform 720ms var(--ease-out); }
+  .bar-row .val { font-size: 0.8rem; color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 3rem; text-align: right; }
+  .icp-list { display: flex; flex-direction: column; gap: 0.85rem; }
+  .icp-item { display: flex; align-items: center; gap: 0.8rem; font-size: clamp(1rem, 1.35vw, 1.2rem); color: var(--ink); font-weight: 500; }
+  .icp-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+
+  /* ============================================================ */
+  /* Slide 5 — Competition                                        */
+  /* ============================================================ */
+  .cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1rem, 2.4vw, 2rem); margin-top: 1.5rem; }
+  .col { border-top: 2px solid var(--line-2); padding-top: 1rem; }
+  .col h4 { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+  .col p { margin: 0; color: var(--ink-2); font-size: 0.92rem; line-height: 1.5; }
+  .col .who { color: var(--ink-3); font-size: 0.74rem; letter-spacing: 0.04em; margin-top: 0.6rem; }
+  .wedge { margin-top: 1.8rem; padding: 1.2rem 1.5rem; border-radius: 14px; background: var(--accent-2); border: 1px solid oklch(0.49 0.085 158 / 0.28); display: flex; gap: 1rem; align-items: baseline; }
+  .wedge .w-tag { font-family: 'Fraunces', serif; font-weight: 600; font-style: italic; color: var(--accent-ink); font-size: 1.05rem; flex: none; }
+  .wedge p { margin: 0; color: var(--ink); font-size: 1rem; line-height: 1.5; }
+  .wedge p b { color: var(--accent-ink); }
+
+  /* ============================================================ */
+  /* Slide 6 — Business model                                     */
+  /* ============================================================ */
+  .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; }
+  .tier { border: 1px solid var(--line); border-radius: 14px; padding: 1.3rem 1.4rem; background: var(--bg); }
+  .tier.featured { border-color: var(--accent); background: var(--accent-2); }
+  .tier .t-name { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+  .tier.featured .t-name { color: var(--accent-ink); }
+  .tier .t-price { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(1.8rem, 3vw, 2.4rem); color: var(--ink); margin: 0.5rem 0 0.1rem; letter-spacing: -0.02em; }
+  .tier .t-price small { font-family: 'Inter', sans-serif; font-size: 0.42em; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+  .tier .t-min { color: var(--ink-2); font-size: 0.9rem; }
+  .tier .t-rate { color: var(--ink-3); font-size: 0.8rem; margin-top: 0.6rem; }
+  .guarantee { margin-top: 1.6rem; display: grid; grid-template-columns: auto 1fr; gap: 1.1rem; align-items: center; padding: 1.1rem 1.4rem; border-radius: 14px; background: var(--accent-2); border: 1px solid oklch(0.49 0.085 158 / 0.28); }
+  .guarantee .g-badge { font-family: 'Fraunces', serif; font-weight: 600; color: var(--accent-ink); font-size: 1.4rem; white-space: nowrap; }
+  .guarantee p { margin: 0; color: var(--ink); font-size: 0.98rem; line-height: 1.5; }
+  .guarantee p b { color: var(--accent-ink); }
+  .econ-line { margin-top: 1.1rem; color: var(--ink-2); font-size: 0.92rem; }
+  .econ-line b { color: var(--ink); font-weight: 600; }
+
+  /* ============================================================ */
+  /* Slides 7 & 8 — demo                                          */
+  /* ============================================================ */
+  .demo-split { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; margin-top: 1.4rem; }
+  .demo-stepno { font-family: 'Fraunces', serif; font-style: italic; color: var(--accent-ink); font-size: 1.1rem; margin: 0 0 0.6rem; }
+  .demo-cue { margin-top: 1.6rem; display: inline-flex; align-items: center; gap: 0.6rem; color: var(--ink-3); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+  .demo-cue .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 oklch(0.49 0.085 158 / 0.5); animation: pulse 1.8s var(--ease-out) infinite; }
+  .demo-cue.live .pulse { background: var(--bad); box-shadow: 0 0 0 0 oklch(0.505 0.130 28 / 0.5); animation-name: pulseLive; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 oklch(0.49 0.085 158 / 0.5); } 70% { box-shadow: 0 0 0 10px oklch(0.49 0.085 158 / 0); } 100% { box-shadow: 0 0 0 0 oklch(0.49 0.085 158 / 0); } }
+  @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 oklch(0.505 0.130 28 / 0.5); } 70% { box-shadow: 0 0 0 10px oklch(0.505 0.130 28 / 0); } 100% { box-shadow: 0 0 0 0 oklch(0.505 0.130 28 / 0); } }
+
+  /* video / media frame */
+  .media-frame { width: 100%; max-width: 560px; aspect-ratio: 860/900; border-radius: 14px; overflow: hidden; background: var(--bg-2); display: grid; place-items: center; justify-self: center; }
+  .media-frame video, .media-frame iframe { width: 100%; height: 100%; border: 0; display: block; object-fit: cover; }
+  .media-ph { color: var(--paper-2); display: grid; place-items: center; gap: 0.8rem; text-align: center; }
+  .media-poster { display: none; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  body.exporting .media-frame video { display: none; }
+  body.exporting .media-poster { display: block; }
+  .media-ph .play { width: 56px; height: 56px; border-radius: 999px; background: oklch(0.49 0.085 158); display: grid; place-items: center; }
+  .media-ph .play svg { width: 22px; height: 22px; color: oklch(0.99 0.01 80); margin-left: 3px; }
+  .media-ph .ml { font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+
+  /* agent CTA */
+  .cta-btn { display: inline-flex; align-self: flex-start; align-items: center; gap: 0.65rem; margin-top: 1.6rem; padding: 0.85rem 1.5rem; border-radius: 999px; background: var(--accent); color: oklch(0.99 0.01 80); font-weight: 700; font-size: 1rem; text-decoration: none; letter-spacing: 0.01em; transition: transform 150ms var(--ease-out), background 150ms var(--ease-out); box-shadow: 0 1px 2px oklch(0.2 0.02 60 / 0.15); }
+  .cta-btn:hover { background: var(--accent-ink); }
+  .cta-btn:active { transform: scale(0.97); }
+  .cta-btn svg { width: 18px; height: 18px; }
+  .cta-url { display: block; margin-top: 0.7rem; font-size: 0.74rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  /* ============================================================ */
+  /* Slide 9 — dashboard embed                                    */
+  /* ============================================================ */
+  .dash-frame { position: relative; width: 720px; max-width: 100%; height: 450px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin-top: 1.1rem; background: var(--bg-2); box-shadow: 0 2px 10px oklch(0.2 0.02 60 / 0.06); }
+  .dash-live { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; transform: scale(0.5625); transform-origin: top left; }
+  .dash-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; display: none; }
+  body.exporting .dash-live { display: none; }
+  body.exporting .dash-shot { display: block; }
+
+  /* framed product screenshots */
+  .shot { width: 100%; max-width: 880px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin-top: 1.1rem; background: var(--bg-2); box-shadow: 0 2px 12px oklch(0.2 0.02 60 / 0.07); }
+  .shot.wide { max-width: 1040px; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot .ph { width: 100%; }
+
+  /* slide 9 — full dashboard on one slide: heading left, screenshot right at full height */
+  .dash-one { display: grid; grid-template-columns: 0.82fr 1fr; gap: clamp(1.5rem, 4vw, 2.75rem); align-items: center; }
+  .dash-one .shot { margin: 0; justify-self: center; max-width: 100%; }
+  .dash-one .shot img { width: auto; max-width: 100%; max-height: 66vh; }
+  @media (max-width: 860px) { .dash-one { grid-template-columns: 1fr; } .dash-one .shot img { max-height: none; width: 100%; } }
+
+  /* ============================================================ */
+  /* Slide 10 — contact (team photos + QR)                        */
+  /* ============================================================ */
+  .team { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1.6rem, 4vw, 3.5rem); margin-top: 2.6rem; max-width: 70rem; }
+  .person { display: flex; flex-direction: column; align-items: flex-start; gap: 1.05rem; }
+  .person .avatar { width: 148px; height: 148px; border-radius: 999px; overflow: hidden; }
+  .person .avatar .ph { width: 100%; height: 100%; border-radius: 999px; }
+  .person .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 999px; }
+  .person .p-name { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.7rem; line-height: 1.1; color: var(--ink); }
+  .person .qr { width: 132px; height: 132px; border-radius: 10px; overflow: hidden; margin-top: 0.1rem; }
+  .person .qr .ph { width: 100%; height: 100%; border-radius: 12px; }
+  .person .qr img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+  .person .qr-cap { font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+
+  /* ===== Export / reduced-motion / print ===== */
+  body.exporting .slide [data-reveal] { animation: none !important; opacity: 1 !important; transform: none !important; }
+  body.exporting .bar-fill { transform: scaleX(var(--w, 1)) !important; transition: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .slide.active [data-reveal], .bar-fill, .demo-cue .pulse { transition: none !important; animation: none !important; }
+    .slide.active [data-reveal] { opacity: 1; transform: none; }
+    .bar-fill { transform: scaleX(var(--w, 1)); }
+  }
+
+  @media print {
+    @page { size: 297mm 167mm; margin: 0; }
+    html, body { width: 297mm; height: auto; overflow: visible; background: var(--bg); }
+    body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .deck { width: 297mm; height: auto; overflow: visible; }
+    .slide { position: relative !important; inset: auto !important; width: 297mm; height: 167mm; opacity: 1 !important; transform: none !important; visibility: visible !important; pointer-events: auto !important; page-break-after: always; break-after: page; animation: none !important; }
+    .slide:last-of-type { page-break-after: auto; break-after: auto; }
+    .slide [data-reveal] { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .bar-fill { transform: scaleX(var(--w, 1)) !important; transition: none !important; }
+    .dash-live { display: none !important; } .dash-shot { display: block !important; }
+    .media-frame video { display: none !important; } .media-poster { display: block !important; }
+    .nav-dots, .arrow-btn, .progress, .toolbar, .edit-hint, .block-ctrls, .guide { display: none !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
+
+  @media (max-width: 860px) {
+    .stats3, .cols3, .tiers, .team { grid-template-columns: 1fr; }
+    .split, .scene-split, .demo-split { grid-template-columns: 1fr; }
+    .dash-frame { width: 100%; height: auto; aspect-ratio: 16/10; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="guide v" id="guide-v"></div>
+<div class="guide h" id="guide-h"></div>
+
+<div class="toolbar">
+  <span class="save-state" id="save-state">Saved</span>
+  <button class="tbtn hidden-when-clean" id="reset-btn" title="Discard all your edits">Reset</button>
+  <button class="tbtn hidden-when-clean" id="save-btn" title="Save edited deck to a file">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    Save to file
+  </button>
+  <button class="tbtn" id="edit-btn" title="Toggle edit mode">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Edit
+  </button>
+  <button class="tbtn" id="pdf-btn" title="Export deck as PDF">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    PDF
+  </button>
+</div>
+
+<div class="edit-hint">
+  Edit mode. Click text to rewrite. Drag images and use the <b>grip</b> on a block to move them, alignment guides snap to other blocks. Hover a block for ↑ ↓ ⊘. Edits autosave to this browser; <b>Save to file</b> bakes them into the deck.
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- ============== Slide 1 — Title ============== -->
+  <section class="slide active" id="s-1" data-slide="1">
+    <div class="hero-wrap">
+      <div class="hero-fallback"></div>
+      <img class="hero-photo broken" src="assets/reception.png" alt="">
+      <div class="hero-scrim"></div>
+    </div>
+    <div class="hero-content">
+      <div class="strip" data-reveal style="--i:0">
+        <span class="brand" data-edit>EVERREST</span>
+        <span class="tag" data-edit>Codaro × GDG · Track B</span>
+      </div>
+      <div class="body">
+        <p class="kicker" data-reveal style="--i:1" data-edit>Funeral arrangement, Warsaw</p>
+        <h1 class="deck-h" data-reveal style="--i:2" data-edit>The family does not <em>pick a date</em>.</h1>
+        <p class="lede" data-reveal style="--i:3" data-edit>Facts about the deceased derive a legal window. The server assigns the earliest free chapel hour. The family approves. A director confirms. Most of this is the phone AI. The web is only so you can see it land.</p>
+      </div>
+      <div class="foot" data-reveal style="--i:4">
+        <span data-edit>Local demo · one line · one caller</span>
+        <span class="num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== Slide 2 — Live demo ============== -->
+  <section class="slide" id="s-2" data-slide="2">
+    <div class="strip" data-reveal style="--i:0">
+      <span class="tag" data-edit>Live demo</span>
+      <span class="brand" data-edit>EVERREST</span>
+    </div>
+    <div class="body">
+      <h2 class="deck-h" data-reveal style="--i:1" data-edit>Call this number. Watch the same arrangement appear.</h2>
+      <div class="stats3">
+        <div class="block stat draggable" data-reveal style="--i:2" data-block>
+          <div class="block-ctrls"></div>
+          <div class="fig" data-edit>+48 585 006 115</div>
+          <p class="cap" data-edit>One spare line. Invite <b>one person</b>. Script: dad died yesterday, burial, about twenty people, Jan Kowalski. Say yes to the first time.</p>
+        </div>
+        <div class="block stat draggable" data-reveal style="--i:3" data-block>
+          <div class="block-ctrls"></div>
+          <div class="fig" data-edit>localhost:8080</div>
+          <p class="cap" data-edit>Family <b>everrest_demo / Demo123!</b>. Desk <b>manager / Manager123!</b>. After the call: queue Channel Phone, then the Warsaw map.</p>
+        </div>
+        <div class="block stat draggable" data-reveal style="--i:4" data-block>
+          <div class="block-ctrls"></div>
+          <div class="fig" data-edit>Telegram</div>
+          <p class="cap" data-edit>Encore if the line is busy. <b>/login</b> as everrest_demo, same facts, approve the assigned time. Channel Chat on the queue.</p>
+        </div>
+      </div>
+      <p class="source" data-reveal style="--i:5" data-edit>Local H2 only. No cloud database. Tunnel: https://spring-hornish-expressly.ngrok-free.dev</p>
+    </div>
+    <div class="foot" data-reveal style="--i:6"><span data-edit>Did 15. Do not touch DID 16.</span><span class="num"></span></div>
+  </section>
+</div>
+
+<button class="arrow-btn" data-dir="prev" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+<button class="arrow-btn" data-dir="next" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+<div class="nav-dots" id="dots"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORE_KEY = "everrest-codaro-deck-v1";
+  const SNAP = 6; // px snap threshold for alignment guides
+  const slides   = Array.from(document.querySelectorAll(".slide"));
+  const dotsWrap = document.getElementById("dots");
+  const progress = document.getElementById("progress");
+  const deckEl   = document.getElementById("deck");
+  const guideV   = document.getElementById("guide-v");
+  const guideH   = document.getElementById("guide-h");
+  let cur = 0;
+  let editing = false;
+
+  /* ---------- stable keys ---------- */
+  slides.forEach((slide) => {
+    const sid = slide.id;
+    slide.querySelectorAll("[data-edit]").forEach((el, i) => { if (!el.dataset.key) el.dataset.key = sid + ":e" + i; });
+    slide.querySelectorAll("[data-block]").forEach((el, i) => { if (!el.dataset.bkey) el.dataset.bkey = sid + ":b" + i; });
+    slide.querySelectorAll(".draggable").forEach((el, i) => { if (!el.dataset.dkey) el.dataset.dkey = sid + ":d" + i; });
+  });
+
+  /* ---------- persistence ---------- */
+  function loadStore() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } }
+  function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); flashSaved(); refreshDirtyChrome(); return true; } catch (e) { return false; } }
+  let store = loadStore();
+  store.text   = store.text   || {};
+  store.order  = store.order  || {};
+  store.hidden = store.hidden || {};
+  store.pos    = store.pos    || {};   // dkey -> {x,y}
+  store.links  = store.links  || {};   // id -> href
+
+  function applyStore() {
+    document.querySelectorAll("[data-edit]").forEach((el) => {
+      const v = store.text[el.dataset.key];
+      if (typeof v === "string") el.innerHTML = v;
+    });
+    document.querySelectorAll("[data-block]").forEach((el) => {
+      el.classList.toggle("is-hidden", !!store.hidden[el.dataset.bkey]);
+    });
+    Object.keys(store.order).forEach((sid) => {
+      const slide = document.getElementById(sid);
+      if (!slide) return;
+      store.order[sid].forEach((bkey) => {
+        const block = slide.querySelector('[data-bkey="' + cssEsc(bkey) + '"]');
+        if (block && block.parentNode) block.parentNode.appendChild(block);
+      });
+    });
+    document.querySelectorAll(".draggable").forEach((el) => {
+      const p = store.pos[el.dataset.dkey];
+      if (p) { el.style.left = p.x + "px"; el.style.top = p.y + "px"; }
+    });
+    // agent link
+    const a = document.getElementById("agent-link");
+    if (a && store.links["agent-link"]) { a.href = store.links["agent-link"]; document.querySelector(".agent-url-text").textContent = store.links["agent-link"]; }
+    refreshDirtyChrome();
+  }
+  function cssEsc(s) { return (window.CSS && CSS.escape) ? CSS.escape(s) : s.replace(/:/g, "\\:"); }
+  function isDirty() { return ["text","order","hidden","pos","links"].some((k) => Object.keys(store[k]).length > 0); }
+  function refreshDirtyChrome() { document.body.classList.toggle("has-edits", isDirty()); }
+
+  let savedTimer = null;
+  const savedEl = document.getElementById("save-state");
+  function flashSaved() { savedEl.textContent = "Saved"; savedEl.classList.add("show"); clearTimeout(savedTimer); savedTimer = setTimeout(() => savedEl.classList.remove("show"), 1300); }
+
+  /* ---------- navigation ---------- */
+  slides.forEach((s, i) => { const num = s.querySelector(".foot .num"); if (num) num.textContent = String(i + 1).padStart(2, "0") + " / " + String(slides.length).padStart(2, "0"); });
+  slides.forEach((_, i) => {
+    const b = document.createElement("button");
+    b.className = "nav-dot" + (i === 0 ? " is-active" : "");
+    b.setAttribute("aria-label", "Slide " + (i + 1));
+    b.addEventListener("click", () => go(i));
+    dotsWrap.appendChild(b);
+  });
+
+  function go(i) {
+    if (i < 0 || i >= slides.length || i === cur) return;
+    slides[cur].classList.remove("active");
+    cur = i;
+    slides[cur].classList.add("active");
+    progress.style.width = ((cur + 1) / slides.length) * 100 + "%";
+    dotsWrap.querySelectorAll(".nav-dot").forEach((d, idx) => d.classList.toggle("is-active", idx === cur));
+    playSlideMotion(slides[cur]);
+  }
+
+  function playSlideMotion(slide) {
+    slides.forEach((s) => { if (s !== slide) s.querySelectorAll('video.demo-video').forEach((v) => v.pause()); });
+    slide.querySelectorAll('video.demo-video').forEach((v) => { try { v.currentTime = 0; v.play().catch(function(){}); } catch (e) {} });
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    slide.querySelectorAll(".bar-fill").forEach((el) => {
+      const w = el.style.getPropertyValue("--w") || "1";
+      el.style.transform = "scaleX(0)";
+      requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transform = "scaleX(" + w + ")"; }));
+    });
+    slide.querySelectorAll("[data-count]").forEach((el) => {
+      if (editing) return;
+      if (store.text[el.dataset.key] != null) return;
+      const target = parseFloat(el.dataset.count); const suffix = el.dataset.suffix || "";
+      if (isNaN(target)) return;
+      const dur = 900, t0 = performance.now();
+      function tick(now) { const p = Math.min(1, (now - t0) / dur); const eased = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(target * eased) + suffix; if (p < 1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  progress.style.width = (1 / slides.length) * 100 + "%";
+
+  window.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey) return;
+    if (editing && e.target.isContentEditable) return;
+    if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); go(cur + 1); }
+    if (e.key === "ArrowLeft"  || e.key === "PageUp")   { e.preventDefault(); go(cur - 1); }
+    if (e.key === " " && !editing)                       { e.preventDefault(); go(cur + 1); }
+    if (e.key === "Home") go(0);
+    if (e.key === "End")  go(slides.length - 1);
+  });
+
+  deckEl.addEventListener("click", (e) => {
+    if (editing) return;
+    if (e.target.closest("button") || e.target.closest("a") || e.target.closest("iframe") || e.target.closest("video")) return;
+    const half = window.innerWidth / 2;
+    if (e.clientX > half) go(cur + 1); else go(cur - 1);
+  });
+
+  document.querySelectorAll(".arrow-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => { e.stopPropagation(); go(cur + (btn.dataset.dir === "next" ? 1 : -1)); });
+  });
+
+  let touchX = null;
+  window.addEventListener("touchstart", (e) => { if (!editing) touchX = e.touches[0].clientX; }, { passive: true });
+  window.addEventListener("touchend", (e) => { if (touchX === null) return; const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1)); touchX = null; });
+
+  /* ---------- edit mode ---------- */
+  const editBtn = document.getElementById("edit-btn");
+  function setEditing(on) {
+    editing = on;
+    document.body.classList.toggle("editing", on);
+    editBtn.classList.toggle("is-on", on);
+    editBtn.lastChild.textContent = on ? " Done" : " Edit";
+    document.querySelectorAll("[data-edit]").forEach((el) => el.setAttribute("contenteditable", on ? "true" : "false"));
+    if (on) { buildBlockControls(); enableDrag(); } else { removeBlockControls(); disableDrag(); }
+  }
+
+  let inputTimer = null;
+  document.addEventListener("input", (e) => {
+    const el = e.target.closest("[data-edit]");
+    if (!el || !editing) return;
+    clearTimeout(inputTimer);
+    inputTimer = setTimeout(() => { store.text[el.dataset.key] = el.innerHTML; saveStore(); }, 250);
+  });
+  document.addEventListener("paste", (e) => {
+    if (!editing) return;
+    const el = e.target.closest("[data-edit]"); if (!el) return;
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, text);
+  });
+
+  function buildBlockControls() {
+    document.querySelectorAll(".block-ctrls").forEach((wrap) => {
+      const block = wrap.closest("[data-block]");
+      if (!block || wrap.dataset.built) return;
+      wrap.dataset.built = "1"; wrap.innerHTML = "";
+      const grip = ctrlBtn("⠿", "Drag to move"); grip.classList.add("grip");
+      const up   = ctrlBtn("↑", "Move up");
+      const down = ctrlBtn("↓", "Move down");
+      const hide = ctrlBtn("⊘", "Hide / show");
+      up.addEventListener("click", (e) => { e.stopPropagation(); moveBlock(block, -1); });
+      down.addEventListener("click", (e) => { e.stopPropagation(); moveBlock(block, 1); });
+      hide.addEventListener("click", (e) => { e.stopPropagation(); toggleHide(block); });
+      grip.addEventListener("pointerdown", (e) => { e.stopPropagation(); startDrag(block, e); });
+      wrap.append(grip, up, down, hide);
+    });
+  }
+  function removeBlockControls() { document.querySelectorAll(".block-ctrls").forEach((w) => { w.innerHTML = ""; delete w.dataset.built; }); }
+  function ctrlBtn(label, title) { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.title = title; return b; }
+
+  function siblingsOf(block) { return Array.from(block.parentNode.children).filter((c) => c.hasAttribute && c.hasAttribute("data-block")); }
+  function moveBlock(block, dir) {
+    const sibs = siblingsOf(block); const idx = sibs.indexOf(block); const swap = sibs[idx + dir];
+    if (!swap) return;
+    if (dir < 0) block.parentNode.insertBefore(block, swap); else block.parentNode.insertBefore(swap, block);
+    persistOrder(block.closest(".slide"));
+  }
+  function toggleHide(block) {
+    const nowHidden = !block.classList.contains("is-hidden");
+    block.classList.toggle("is-hidden", nowHidden);
+    if (nowHidden) store.hidden[block.dataset.bkey] = true; else delete store.hidden[block.dataset.bkey];
+    saveStore();
+  }
+  function persistOrder(slide) {
+    if (!slide) return;
+    store.order[slide.id] = Array.from(slide.querySelectorAll("[data-block]")).map((b) => b.dataset.bkey);
+    saveStore();
+  }
+
+  /* ---------- drag + alignment guides (hybrid editor) ---------- */
+  let drag = null;
+  function enableDrag() {
+    document.querySelectorAll(".draggable").forEach((el) => {
+      el.style.touchAction = "none";
+      el.addEventListener("pointerdown", onImgDown);
+    });
+  }
+  function disableDrag() {
+    document.querySelectorAll(".draggable").forEach((el) => el.removeEventListener("pointerdown", onImgDown));
+    hideGuides();
+  }
+  function onImgDown(e) {
+    // start drag from the element itself, but not from editable text or control buttons
+    if (!editing) return;
+    if (e.target.isContentEditable) return;
+    if (e.target.closest(".block-ctrls")) return;
+    startDrag(this, e);
+  }
+  function startDrag(el, e) {
+    e.preventDefault();
+    const cur0 = store.pos[el.dataset.dkey] || { x: 0, y: 0 };
+    drag = { el, sx: e.clientX, sy: e.clientY, bx: cur0.x, by: cur0.y, x: cur0.x, y: cur0.y };
+    document.body.classList.add("dragging");
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    window.addEventListener("pointermove", onDragMove);
+    window.addEventListener("pointerup", onDragUp, { once: true });
+  }
+  function onDragMove(e) {
+    if (!drag) return;
+    let nx = drag.bx + (e.clientX - drag.sx);
+    let ny = drag.by + (e.clientY - drag.sy);
+    drag.el.style.left = nx + "px"; drag.el.style.top = ny + "px";
+    // snap against siblings in same slide
+    const slide = drag.el.closest(".slide");
+    const me = drag.el.getBoundingClientRect();
+    const targets = Array.from(slide.querySelectorAll(".draggable, [data-block]")).filter((t) => t !== drag.el);
+    const myXs = [me.left, (me.left + me.right) / 2, me.right];
+    const myYs = [me.top, (me.top + me.bottom) / 2, me.bottom];
+    let bestX = null, bestY = null;
+    targets.forEach((t) => {
+      const r = t.getBoundingClientRect();
+      [r.left, (r.left + r.right) / 2, r.right].forEach((gx) => {
+        myXs.forEach((mx) => { const d = gx - mx; if (Math.abs(d) <= SNAP && (bestX === null || Math.abs(d) < Math.abs(bestX.d))) bestX = { d, line: gx }; });
+      });
+      [r.top, (r.top + r.bottom) / 2, r.bottom].forEach((gy) => {
+        myYs.forEach((my) => { const d = gy - my; if (Math.abs(d) <= SNAP && (bestY === null || Math.abs(d) < Math.abs(bestY.d))) bestY = { d, line: gy }; });
+      });
+    });
+    if (bestX) { nx += bestX.d; drag.el.style.left = nx + "px"; showGuide(guideV, "left", bestX.line); } else hide(guideV);
+    if (bestY) { ny += bestY.d; drag.el.style.top = ny + "px"; showGuide(guideH, "top", bestY.line); } else hide(guideH);
+    drag.x = nx; drag.y = ny;
+  }
+  function onDragUp() {
+    if (!drag) return;
+    if (drag.x === 0 && drag.y === 0) delete store.pos[drag.el.dataset.dkey];
+    else store.pos[drag.el.dataset.dkey] = { x: Math.round(drag.x), y: Math.round(drag.y) };
+    saveStore();
+    document.body.classList.remove("dragging");
+    hideGuides();
+    window.removeEventListener("pointermove", onDragMove);
+    drag = null;
+  }
+  function showGuide(el, prop, val) { el.style[prop] = val + "px"; el.style.display = "block"; }
+  function hide(el) { el.style.display = "none"; }
+  function hideGuides() { hide(guideV); hide(guideH); }
+
+  /* ---------- agent link editing ---------- */
+  const agentLink = document.getElementById("agent-link");
+  if (agentLink) {
+    agentLink.addEventListener("click", (e) => {
+      if (!editing) { if (agentLink.getAttribute("href") === "#") e.preventDefault(); return; }
+      e.preventDefault();
+      const url = prompt("Live agent URL:", store.links["agent-link"] || "https://");
+      if (url) { store.links["agent-link"] = url; agentLink.href = url; document.querySelector(".agent-url-text").textContent = url; saveStore(); }
+    });
+  }
+
+  editBtn.addEventListener("click", (e) => { e.stopPropagation(); setEditing(!editing); });
+
+  /* ---------- reset ---------- */
+  document.getElementById("reset-btn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!confirm("Discard all your edits and restore the original deck?")) return;
+    localStorage.removeItem(STORE_KEY); location.reload();
+  });
+
+  /* ---------- save to file ---------- */
+  function buildCleanHtml() {
+    const clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll("[contenteditable]").forEach((el) => el.removeAttribute("contenteditable"));
+    clone.querySelectorAll(".block-ctrls").forEach((el) => { el.innerHTML = ""; el.removeAttribute("data-built"); });
+    const body = clone.querySelector("body");
+    if (body) body.classList.remove("editing", "exporting", "has-edits", "dragging");
+    clone.querySelectorAll(".slide").forEach((s, i) => s.classList.toggle("active", i === 0));
+    return "<!DOCTYPE html>\n" + clone.outerHTML;
+  }
+  async function saveToFile() {
+    const html = buildCleanHtml();
+    const fname = "demo-day-deck-v2-edited.html";
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName: fname, types: [{ description: "HTML", accept: { "text/html": [".html"] } }] });
+        const w = await handle.createWritable(); await w.write(html); await w.close(); flashSaved(); return;
+      } catch (err) { if (err && err.name === "AbortError") return; }
+    }
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+  document.getElementById("save-btn").addEventListener("click", (e) => { e.stopPropagation(); saveToFile(); });
+
+  /* ---------- PDF export ---------- */
+  async function exportToPdf() {
+    if (typeof html2canvas !== "function" || !window.jspdf) { alert("PDF libraries are still loading. Try again in a second."); return; }
+    const btn = document.getElementById("pdf-btn");
+    const wasEditing = editing; if (wasEditing) setEditing(false);
+    btn.disabled = true; btn.setAttribute("aria-busy", "true");
+    document.body.classList.add("exporting");
+    const savedCur = cur;
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const { jsPDF } = window.jspdf;
+      // Page size follows the on-screen slide aspect so the capture is never stretched.
+      // A hard-coded 16:9 page squashes text whenever the browser window isn't exactly 16:9.
+      const rect0 = slides[0].getBoundingClientRect();
+      const PAGE_W = 297, PAGE_H = Math.round(297 * rect0.height / rect0.width * 100) / 100;
+      const ORIENT = PAGE_W >= PAGE_H ? "landscape" : "portrait";
+      const pdf = new jsPDF({ orientation: ORIENT, unit: "mm", format: [PAGE_W, PAGE_H] });
+      for (let i = 0; i < slides.length; i++) {
+        slides.forEach((s) => s.classList.remove("active"));
+        slides[i].classList.add("active");
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await new Promise((r) => setTimeout(r, 200));
+        const exScale = Math.max(1.5, Math.min(3, 4200 / slides[i].offsetWidth));
+        const canvas = await html2canvas(slides[i], { scale: exScale, useCORS: true, allowTaint: false, backgroundColor: getComputedStyle(slides[i]).backgroundColor || "#f6f3ee", windowWidth: slides[i].offsetWidth, windowHeight: slides[i].offsetHeight, logging: false,
+          // html2canvas-pro rasterization bugs: (1) inline <em> in a different font
+          // family than its line drops below the baseline - inherit the parent font
+          // for the capture only; (2) default ::marker bullets float above the line.
+          onclone: (doc) => { const st = doc.createElement("style"); st.textContent = "em{font-family:inherit!important;}ul{list-style-position:inside!important;}"; doc.head.appendChild(st); } });
+        const img = canvas.toDataURL("image/jpeg", 0.95);
+        if (i > 0) pdf.addPage([PAGE_W, PAGE_H], ORIENT);
+        pdf.addImage(img, "JPEG", 0, 0, PAGE_W, PAGE_H, undefined, "FAST");
+      }
+      pdf.save(((document.title || "deck").replace(/[\\/:*?"<>|]/g, "-")) + ".pdf");
+    } catch (err) { console.error("PDF export failed:", err); alert("PDF export failed: " + (err && err.message ? err.message : "unknown error")); }
+    finally {
+      slides.forEach((s, idx) => s.classList.toggle("active", idx === savedCur));
+      document.body.classList.remove("exporting");
+      btn.disabled = false; btn.removeAttribute("aria-busy");
+      if (wasEditing) setEditing(true);
+    }
+  }
+  document.getElementById("pdf-btn").addEventListener("click", (e) => { e.stopPropagation(); exportToPdf(); });
+
+  /* ---------- init ---------- */
+  applyStore();
+  setEditing(false);
+  playSlideMotion(slides[0]);
+})();
+</script>
+</body>
+</html>
