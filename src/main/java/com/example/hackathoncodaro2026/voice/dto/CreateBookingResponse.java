@@ -8,14 +8,16 @@ public class CreateBookingResponse {
     private String bookingId;
     private String confirmationLine;
     private String smsStatus;
+    private String inviteUrl;
 
     public CreateBookingResponse() {
     }
 
-    public CreateBookingResponse(String bookingId, String confirmationLine, String smsStatus) {
+    public CreateBookingResponse(String bookingId, String confirmationLine, String smsStatus, String inviteUrl) {
         this.bookingId = bookingId;
         this.confirmationLine = confirmationLine;
         this.smsStatus = smsStatus;
+        this.inviteUrl = inviteUrl;
     }
 
     public String getRequestId() {
@@ -48,5 +50,13 @@ public class CreateBookingResponse {
 
     public void setSmsStatus(String smsStatus) {
         this.smsStatus = smsStatus;
+    }
+
+    public String getInviteUrl() {
+        return inviteUrl;
+    }
+
+    public void setInviteUrl(String inviteUrl) {
+        this.inviteUrl = inviteUrl;
     }
 }

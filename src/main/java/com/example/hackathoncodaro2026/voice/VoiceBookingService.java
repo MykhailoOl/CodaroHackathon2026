@@ -10,6 +10,7 @@ import com.example.hackathoncodaro2026.model.enums.PaymentMethod;
 import com.example.hackathoncodaro2026.model.enums.ReservationKind;
 import com.example.hackathoncodaro2026.model.enums.ResourceType;
 import com.example.hackathoncodaro2026.model.enums.Role;
+import com.example.hackathoncodaro2026.repository.ReservationRepository;
 import com.example.hackathoncodaro2026.repository.SportResourceRepository;
 import com.example.hackathoncodaro2026.repository.UserRepository;
 import com.example.hackathoncodaro2026.service.ReservationService;
@@ -19,6 +20,7 @@ import com.example.hackathoncodaro2026.voice.dto.CheckAvailabilityRequest;
 import com.example.hackathoncodaro2026.voice.dto.CheckAvailabilityResponse;
 import com.example.hackathoncodaro2026.voice.dto.CreateBookingRequest;
 import com.example.hackathoncodaro2026.voice.dto.CreateBookingResponse;
+import com.example.hackathoncodaro2026.voice.invite.VoiceInviteService;
 import com.example.hackathoncodaro2026.voice.sms.SmsClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,9 +51,11 @@ public class VoiceBookingService {
     private final ResourceService resourceService;
     private final ReservationService reservationService;
     private final SportResourceRepository sportResourceRepository;
+    private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final SmsClient smsClient;
+    private final VoiceInviteService voiceInviteService;
     private final SlotCodec slotCodec;
 
     public VoiceBookingService(
@@ -59,17 +63,21 @@ public class VoiceBookingService {
             ResourceService resourceService,
             ReservationService reservationService,
             SportResourceRepository sportResourceRepository,
+            ReservationRepository reservationRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            SmsClient smsClient
+            SmsClient smsClient,
+            VoiceInviteService voiceInviteService
     ) {
         this.properties = properties;
         this.resourceService = resourceService;
         this.reservationService = reservationService;
         this.sportResourceRepository = sportResourceRepository;
+        this.reservationRepository = reservationRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.smsClient = smsClient;
+        this.voiceInviteService = voiceInviteService;
         this.slotCodec = new SlotCodec(properties.getToolWebhookSecret());
     }
 
@@ -130,9 +138,12 @@ public class VoiceBookingService {
             log.info("Voice booking rejected field={} message={}", ex.getField(), ex.getMessage());
             throw VoiceToolException.slotGone(callerSafeConflict(ex.getMessage()));
         }
+        saved.setInviteToken(newInviteToken());
+        saved = reservationRepository.save(saved);
+        String inviteUrl = voiceInviteService.inviteUrl(saved.getInviteToken());
         String confirmation = confirmationLine(saved, language(request.getLanguage()));
-        String smsStatus = sendSms(request.getPlayerPhone(), saved, language(request.getLanguage()));
-        return new CreateBookingResponse(String.valueOf(saved.getId()), confirmation, smsStatus);
+        String smsStatus = sendSms(request.getPlayerPhone(), saved, inviteUrl, language(request.getLanguage()));
+        return new CreateBookingResponse(String.valueOf(saved.getId()), confirmation, smsStatus, inviteUrl);
     }
 
     public VoiceCatalog catalog() {
@@ -157,9 +168,23 @@ public class VoiceBookingService {
                         properties.getTelephony().getProvider(),
                         phoneReady
                                 ? "Attach ELEVENLABS_PHONE_NUMBER_ID to the agent and inbound calls will hit these tools."
-                                : "Set ELEVENLABS_PHONE_NUMBER_ID or Twilio placeholders, then assign a temporary number to the agent."
+                                : "Set SIP_FROM_NUMBER / ELEVENLABS_PHONE_NUMBER_ID, then assign the number to the provisioned agent."
+                ),
+                new VoiceCatalog.Wiring(
+                        properties.getElevenlabs().isConfigured() ? "ready" : "placeholder",
+                        "elevenlabs",
+                        "POST /api/voice/provision builds the agent spec from this app. Keys stay in env and can be rotated."
+                ),
+                new VoiceCatalog.Wiring(
+                        properties.getTelephony().sipConfigured() ? "ready" : "placeholder",
+                        properties.getTelephony().getProvider(),
+                        "Paste Telnyx SIP username/password/from number. Import that trunk in ElevenLabs; rotate later."
                 )
         );
+    }
+
+    private String newInviteToken() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 24);
     }
 
     private List<TimeSlotView> openSlots(SportResource resource, LocalDate date, ReservationKind kind, int hours) {
@@ -316,15 +341,15 @@ public class VoiceBookingService {
         return note.length() > 300 ? note.substring(0, 300) : note;
     }
 
-    private String sendSms(String phone, Reservation reservation, String language) {
+    private String sendSms(String phone, Reservation reservation, String inviteUrl, String language) {
         if (isBlank(phone) || !properties.getSms().isEnabled()) {
             return "skipped";
         }
-        smsClient.send(phone.trim(), formatSms(reservation, language));
+        smsClient.send(phone.trim(), formatSms(reservation, inviteUrl, language));
         return "logged";
     }
 
-    private String formatSms(Reservation reservation, String language) {
+    private String formatSms(Reservation reservation, String inviteUrl, String language) {
         String when = reservation.getStartAt().toLocalDate().getDayOfWeek().getDisplayName(TextStyle.FULL, locale(language))
                 + " "
                 + reservation.getStartAt().toLocalDate()
@@ -334,7 +359,10 @@ public class VoiceBookingService {
         if (reservation.getResource().getFacility() != null) {
             venue = venue + ", " + reservation.getResource().getFacility().getName();
         }
-        return "Courtly booking confirmed:\n" + when + "\n" + venue + "\nPay at the facility (Cash).";
+        return "Courtly booking confirmed:\n"
+                + when + "\n"
+                + venue + "\n"
+                + "Enter your email for a calendar invitation: " + inviteUrl;
     }
 
     private String confirmationLine(Reservation reservation, String language) {
@@ -474,11 +502,19 @@ public class VoiceBookingService {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
-    public record VoiceCatalog(List<Tool> tools, PhoneWiring phoneNumberWiring) {
+    public record VoiceCatalog(
+            List<Tool> tools,
+            PhoneWiring phoneNumberWiring,
+            Wiring agentProvisioning,
+            Wiring sipWiring
+    ) {
         public record Tool(String name, String url, String description) {
         }
 
         public record PhoneWiring(String status, String provider, String nextStep) {
+        }
+
+        public record Wiring(String status, String provider, String nextStep) {
         }
     }
 }

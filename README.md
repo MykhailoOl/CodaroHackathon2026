@@ -257,15 +257,29 @@ in `src/main/resources/application.yml`, or pass `--app.browser.auto-open=false`
 | `/h2-console` | H2 web console |
 | `GET /api/voice/tools` | Public ElevenLabs tool catalog (placeholders) |
 | `POST /api/voice/tools/check-availability` | Voice tool: list open slots from the database |
-| `POST /api/voice/tools/create-booking` | Voice tool: persist a booking and log SMS |
+| `POST /api/voice/tools/create-booking` | Voice tool: persist a booking, log SMS, return invite URL |
+| `POST /api/voice/provision` | Agent + SIP spec for ElevenLabs (keys stay in env) |
+| `/voice/invite/{token}` | Caller email form, then calendar invitation (.ics) |
 
 ---
 
-## Voice receptionist (ElevenLabs)
+## Voice receptionist (phone as a second booking channel)
 
-The web UI already books against the H2 database. The voice layer reuses that path: **no Google Calendar, Cal.com, or live SMS provider**. Availability is the same opening-hours grid `ResourceService` already uses. Preferred day / part of day / `HH:MM` narrow the offer. `create_booking` writes a normal `PENDING` reservation (cash at the facility) and logs an SMS body.
+Phone booking is an alternative to the website. Both write the **same Courtly H2 reservations**. There is no Google Calendar.
 
-Copy `.env.example` to `.env` and leave secrets empty until you have them. Default tool auth:
+Flow: caller dials the Courtly Telnyx SIP number → ElevenLabs agent → `check_availability` / `create_booking` → row in the manager queue → SMS with `/voice/invite/{token}` → caller enters email → calendar invitation (.ics). SMS is log-only until Telnyx keys are filled.
+
+Credentials stay as empty env placeholders. Split them like this:
+
+| Who | What to paste | Do not |
+|-----|----------------|--------|
+| Teammate | `ELEVENLABS_API_KEY` (and voice/agent ids after provision) | Copy receptionist ElevenLabs secrets into git |
+| You | Spare Telnyx SIP number into `SIP_FROM_NUMBER` + `SIP_USERNAME` / `SIP_PASSWORD` | Reuse the AI receptionist DID |
+| Later | Rotate Telnyx/EL keys in `.env` only | Commit rotated values |
+
+`POST /api/voice/provision` (same `TOOL_WEBHOOK_SECRET` bearer) returns the agent spec and SIP status. With empty keys it stays `placeholder`. After keys are in env, create/attach the agent in ElevenLabs using that spec and import the Telnyx number from SIP trunk `sip:sip.rtc.elevenlabs.io:5060`.
+
+Copy `.env.example` to `.env`. Default tool auth:
 
 ```
 Authorization: Bearer change-me-tool-webhook-secret
@@ -280,16 +294,9 @@ curl -s -X POST http://localhost:8080/api/voice/tools/check-availability \
   -d '{"sport":"tennis","preferredDay":"tomorrow","partOfDay":"evening","preferredTime":"18:00","language":"en"}'
 ```
 
-Book the returned `slotId`. The agent should only book a slot it just offered.
+Book the returned `slotId`. The SMS body (logged) contains the email-invite link.
 
-### Temporary phone number (later)
-
-1. Fill `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_VOICE_ID` in `.env`.
-2. Point the agent's server tools at `GET /api/voice/tools` URLs (public base URL must be reachable, e.g. ngrok).
-3. Set `ELEVENLABS_PHONE_NUMBER_ID` or Twilio placeholders and assign a temporary number to the agent.
-4. Inbound PSTN then calls the agent; the agent calls these two tools. Until those env vars are set, `phoneNumberWiring.status` stays `placeholder` and SMS stays a log line (`app.voice.sms.provider: log`).
-
-Suggested agent flow: ask sport → ask day → `check_availability` → read two or three labels → on confirm `create_booking` with the caller's name and `system__caller_id`.
+Suggested agent flow: ask sport → ask day → `check_availability` → read `displayLabel` → on confirm `create_booking` with name + `system__caller_id`.
 
 ---
 

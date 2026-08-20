@@ -36,6 +36,7 @@ public class SecurityConfig {
                                 "/login",
                                 "/h2-console/**",
                                 "/api/voice/**",
+                                "/voice/invite/**",
                                 "/error"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")

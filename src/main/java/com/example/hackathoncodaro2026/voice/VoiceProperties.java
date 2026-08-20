@@ -92,6 +92,7 @@ public class VoiceProperties {
         private String agentId = "";
         private String voiceId = "";
         private String phoneNumberId = "";
+        private String webhookSecret = "";
 
         public String getApiKey() {
             return apiKey;
@@ -123,6 +124,14 @@ public class VoiceProperties {
 
         public void setPhoneNumberId(String phoneNumberId) {
             this.phoneNumberId = phoneNumberId;
+        }
+
+        public String getWebhookSecret() {
+            return webhookSecret;
+        }
+
+        public void setWebhookSecret(String webhookSecret) {
+            this.webhookSecret = webhookSecret;
         }
 
         public boolean isConfigured() {
@@ -191,6 +200,13 @@ public class VoiceProperties {
         private String provider = "none";
         private String twilioAccountSid = "";
         private String twilioAuthToken = "";
+        private String telnyxPublicKey = "";
+        private String telnyxFqdnConnectionId = "";
+        private String telnyxTexmlAppId = "";
+        private String sipTerminationUri = "sip:sip.rtc.elevenlabs.io:5060;transport=tcp";
+        private String sipUsername = "";
+        private String sipPassword = "";
+        private String sipFromNumber = "";
 
         public String getProvider() {
             return provider;
@@ -214,6 +230,70 @@ public class VoiceProperties {
 
         public void setTwilioAuthToken(String twilioAuthToken) {
             this.twilioAuthToken = twilioAuthToken;
+        }
+
+        public String getTelnyxPublicKey() {
+            return telnyxPublicKey;
+        }
+
+        public void setTelnyxPublicKey(String telnyxPublicKey) {
+            this.telnyxPublicKey = telnyxPublicKey;
+        }
+
+        public String getTelnyxFqdnConnectionId() {
+            return telnyxFqdnConnectionId;
+        }
+
+        public void setTelnyxFqdnConnectionId(String telnyxFqdnConnectionId) {
+            this.telnyxFqdnConnectionId = telnyxFqdnConnectionId;
+        }
+
+        public String getTelnyxTexmlAppId() {
+            return telnyxTexmlAppId;
+        }
+
+        public void setTelnyxTexmlAppId(String telnyxTexmlAppId) {
+            this.telnyxTexmlAppId = telnyxTexmlAppId;
+        }
+
+        public String getSipTerminationUri() {
+            return sipTerminationUri;
+        }
+
+        public void setSipTerminationUri(String sipTerminationUri) {
+            this.sipTerminationUri = sipTerminationUri;
+        }
+
+        public String getSipUsername() {
+            return sipUsername;
+        }
+
+        public void setSipUsername(String sipUsername) {
+            this.sipUsername = sipUsername;
+        }
+
+        public String getSipPassword() {
+            return sipPassword;
+        }
+
+        public void setSipPassword(String sipPassword) {
+            this.sipPassword = sipPassword;
+        }
+
+        public String getSipFromNumber() {
+            return sipFromNumber;
+        }
+
+        public void setSipFromNumber(String sipFromNumber) {
+            this.sipFromNumber = sipFromNumber;
+        }
+
+        public boolean sipConfigured() {
+            return notBlank(sipUsername) && notBlank(sipPassword) && notBlank(sipFromNumber);
+        }
+
+        private boolean notBlank(String value) {
+            return value != null && !value.isBlank();
         }
     }
 }

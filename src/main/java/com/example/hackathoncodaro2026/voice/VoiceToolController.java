@@ -19,9 +19,16 @@ public class VoiceToolController {
     private final VoiceBookingService voiceBookingService;
     private final VoiceToolAuthenticator authenticator;
 
-    public VoiceToolController(VoiceBookingService voiceBookingService, VoiceToolAuthenticator authenticator) {
+    private final ElevenLabsAgentProvisioner elevenLabsAgentProvisioner;
+
+    public VoiceToolController(
+            VoiceBookingService voiceBookingService,
+            VoiceToolAuthenticator authenticator,
+            ElevenLabsAgentProvisioner elevenLabsAgentProvisioner
+    ) {
         this.voiceBookingService = voiceBookingService;
         this.authenticator = authenticator;
+        this.elevenLabsAgentProvisioner = elevenLabsAgentProvisioner;
     }
 
     @GetMapping(value = "/tools", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -47,5 +54,14 @@ public class VoiceToolController {
     ) {
         authenticator.requireSecret(authorization, toolSecret);
         return voiceBookingService.createBooking(request);
+    }
+
+    @PostMapping(value = "/provision", produces = MediaType.APPLICATION_JSON_VALUE)
+    public java.util.Map<String, Object> provision(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestHeader(value = "X-Tool-Secret", required = false) String toolSecret
+    ) {
+        authenticator.requireSecret(authorization, toolSecret);
+        return elevenLabsAgentProvisioner.provision();
     }
 }

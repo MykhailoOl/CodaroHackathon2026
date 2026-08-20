@@ -3,6 +3,7 @@ package com.example.hackathoncodaro2026;
 import com.example.hackathoncodaro2026.model.Reservation;
 import com.example.hackathoncodaro2026.model.enums.ReservationStatus;
 import com.example.hackathoncodaro2026.repository.ReservationRepository;
+import com.example.hackathoncodaro2026.voice.invite.LoggingInvitationMailer;
 import com.example.hackathoncodaro2026.voice.sms.LoggingSmsClient;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,8 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,9 +43,13 @@ class VoiceBookingWebTests {
     @Autowired
     private LoggingSmsClient loggingSmsClient;
 
+    @Autowired
+    private LoggingInvitationMailer loggingInvitationMailer;
+
     @BeforeEach
     void clearSmsLog() {
         loggingSmsClient.clear();
+        loggingInvitationMailer.clear();
     }
 
     @Test
@@ -102,13 +110,15 @@ class VoiceBookingWebTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bookingId").isString())
                 .andExpect(jsonPath("$.confirmationLine").isString())
-                .andExpect(jsonPath("$.smsStatus").value("logged"));
+                .andExpect(jsonPath("$.smsStatus").value("logged"))
+                .andExpect(jsonPath("$.inviteUrl").value(containsString("/voice/invite/")));
 
         assertThat(reservationRepository.findAll())
                 .anyMatch(this::occupyingTennisForAnna);
         assertThat(loggingSmsClient.sent()).isNotEmpty();
         assertThat(loggingSmsClient.sent().getFirst().to()).contains("600");
         assertThat(loggingSmsClient.sent().getFirst().body()).contains("Courtly");
+        assertThat(loggingSmsClient.sent().getFirst().body()).contains("/voice/invite/");
     }
 
     @Test
@@ -164,7 +174,66 @@ class VoiceBookingWebTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tools[0].name").value("check_availability"))
                 .andExpect(jsonPath("$.tools[1].name").value("create_booking"))
-                .andExpect(jsonPath("$.phoneNumberWiring.status").value("placeholder"));
+                .andExpect(jsonPath("$.phoneNumberWiring.status").value("placeholder"))
+                .andExpect(jsonPath("$.agentProvisioning.status").value("placeholder"))
+                .andExpect(jsonPath("$.sipWiring.status").value("placeholder"));
+    }
+
+    @Test
+    void provisionWithoutSecretIsUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/voice/provision"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void provisionWithoutElevenLabsKeyStaysPlaceholder() throws Exception {
+        mockMvc.perform(post("/api/voice/provision")
+                        .header("Authorization", "Bearer " + SECRET))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("placeholder"))
+                .andExpect(jsonPath("$.createdRemotely").value(false))
+                .andExpect(jsonPath("$.sip.status").value("placeholder"))
+                .andExpect(jsonPath("$.tools[0].name").value("check_availability"));
+    }
+
+    @Test
+    void phoneBookingInviteCollectsEmailAndLogsCalendarInvitation() throws Exception {
+        String slotId = firstSlotId("tennis", "tomorrow", "evening", null);
+        MvcResult booked = mockMvc.perform(post("/api/voice/tools/create-booking")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "slotId":"%s",
+                                  "playerName":"Anna Kowalska",
+                                  "playerPhone":"+48 600 111 222",
+                                  "language":"en"
+                                }
+                                """.formatted(slotId)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String inviteUrl = JsonPath.read(booked.getResponse().getContentAsString(), "$.inviteUrl");
+        String token = inviteUrl.substring(inviteUrl.lastIndexOf('/') + 1);
+
+        mockMvc.perform(get("/voice/invite/" + token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Email for the invitation")));
+
+        mockMvc.perform(post("/voice/invite/" + token)
+                        .with(csrf())
+                        .param("email", "anna@example.com"))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(loggingInvitationMailer.sent())
+                .anyMatch(sent -> sent.to().equals("anna@example.com"));
+        assertThat(reservationRepository.findByInviteToken(token))
+                .map(Reservation::getInviteEmail)
+                .contains("anna@example.com");
+
+        mockMvc.perform(get("/voice/invite/" + token + "/calendar.ics"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("BEGIN:VCALENDAR")));
     }
 
     private String firstSlotId(String sport, String day, String partOfDay, String time) throws Exception {

@@ -70,17 +70,25 @@ app:
       agent-id: ${ELEVENLABS_AGENT_ID:}
       voice-id: ${ELEVENLABS_VOICE_ID:}
       phone-number-id: ${ELEVENLABS_PHONE_NUMBER_ID:}
+      webhook-secret: ${ELEVENLABS_WEBHOOK_SECRET:}
     sms:
       enabled: true
       provider: log
-      from: ${SMS_FROM:Courtly}
+      from: ${TELNYX_SMS_FROM:${SMS_FROM:Courtly}}
       telnyx-api-key: ${TELNYX_API_KEY:}
       telnyx-messaging-profile-id: ${TELNYX_MESSAGING_PROFILE_ID:}
       smsapi-token: ${SMSAPI_TOKEN:}
     telephony:
-      provider: none
+      provider: ${VOICE_TELEPHONY_PROVIDER:telnyx}
       twilio-account-sid: ${TWILIO_ACCOUNT_SID:}
       twilio-auth-token: ${TWILIO_AUTH_TOKEN:}
+      telnyx-public-key: ${TELNYX_PUBLIC_KEY:}
+      telnyx-fqdn-connection-id: ${TELNYX_FQDN_CONNECTION_ID:}
+      telnyx-texml-app-id: ${TELNYX_TEXML_APP_ID:}
+      sip-termination-uri: ${SIP_TERMINATION_URI:sip:sip.rtc.elevenlabs.io:5060;transport=tcp}
+      sip-username: ${SIP_USERNAME:}
+      sip-password: ${SIP_PASSWORD:}
+      sip-from-number: ${SIP_FROM_NUMBER:}
 
 logging:
   level:
