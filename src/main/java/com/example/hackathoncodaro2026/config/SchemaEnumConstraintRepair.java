@@ -29,32 +29,28 @@ public class SchemaEnumConstraintRepair implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        List<String> resourceTypes = List.of(
-                "TENNIS", "FOOTBALL", "BASKETBALL", "VOLLEYBALL", "SWIMMING", "GYM", "SQUASH"
-        );
-        dropMatchingChecks("APP_USERS", "ROLE", List.of("ADMIN", "USER", "MANAGER", "COACH"));
+        List<String> roles = List.of("ADMIN", "USER", "MANAGER");
+        dropMatchingChecks("APP_USERS", "ROLE", roles);
         dropMatchingChecks("RESERVATIONS", "STATUS", List.of("CONFIRMED", "CANCELLED", "PENDING"));
         dropMatchingChecks("RESERVATIONS", "PAYMENT_METHOD", List.of("CASH", "CARD_ON_SITE", "ONLINE_TRANSFER"));
-        dropMatchingChecks("RESERVATIONS", "KIND", List.of("STANDARD", "INDIVIDUAL", "LESSON"));
-        dropMatchingChecks("INVENTORY_ITEMS", "RESOURCE_TYPE", resourceTypes);
-        dropMatchingChecks("USER_SPORT_LEVELS", "SPORT_TYPE", resourceTypes);
-        dropMatchingChecks("USER_SPORT_LEVELS", "SKILL_LEVEL", List.of("BEGINNER", "INTERMEDIATE", "ADVANCED", "COMPETITIVE"));
-        dropMatchingChecks("COACH_OFFERINGS", "SPORT_TYPE", resourceTypes);
-        dropMatchingChecks("COACH_OFFERING_LEVELS", "SKILL_LEVEL", List.of("BEGINNER", "INTERMEDIATE", "ADVANCED", "COMPETITIVE"));
-        dropMatchingChecks("RESERVATIONS", "SKILL_LEVEL", List.of("BEGINNER", "INTERMEDIATE", "ADVANCED", "COMPETITIVE"));
+        dropMatchingChecks("RESERVATIONS", "SERVICE_TYPE", List.of(
+                "BURIAL_CEREMONY", "CREMATION_CEREMONY", "MEMORIAL_SERVICE", "FAREWELL_CEREMONY"
+        ));
+        dropMatchingChecks("RESERVATIONS", "PACKAGE_CODE", List.of("ESSENTIAL", "CLASSIC", "TRIBUTE"));
+        dropMatchingChecks("SERVICE_VENUES", "TYPE", List.of(
+                "CHAPEL", "CEREMONY_HALL", "CREMATORIUM", "MEMORIAL_GARDEN", "RECEPTION_HALL"
+        ));
+        dropMatchingChecks("ARRANGEMENT_EXTRAS", "PRICING_MODE", List.of("FIXED", "PER_ATTENDEE"));
         dropMatchingChecks("NOTIFICATIONS", "TYPE", List.of(
-                "RESERVATION_UPDATED", "COACH_REMOVED", "COACH_ASSIGNED", "COACH_SCHEDULE_CHANGED"
+                "RESERVATION_CREATED", "RESERVATION_UPDATED", "RESERVATION_CONFIRMED", "RESERVATION_CANCELLED"
         ));
         widenColumn("APP_USERS", "ROLE");
         widenColumn("RESERVATIONS", "STATUS");
         widenColumn("RESERVATIONS", "PAYMENT_METHOD");
-        widenColumn("RESERVATIONS", "KIND");
-        widenColumn("RESERVATIONS", "SKILL_LEVEL");
-        widenColumn("INVENTORY_ITEMS", "RESOURCE_TYPE");
-        widenColumn("USER_SPORT_LEVELS", "SPORT_TYPE");
-        widenColumn("USER_SPORT_LEVELS", "SKILL_LEVEL");
-        widenColumn("COACH_OFFERINGS", "SPORT_TYPE");
-        widenColumn("COACH_OFFERING_LEVELS", "SKILL_LEVEL");
+        widenColumn("RESERVATIONS", "SERVICE_TYPE");
+        widenColumn("RESERVATIONS", "PACKAGE_CODE");
+        widenColumn("SERVICE_VENUES", "TYPE");
+        widenColumn("ARRANGEMENT_EXTRAS", "PRICING_MODE");
         widenColumn("NOTIFICATIONS", "TYPE");
         makeColumnNullable("RESERVATION_EXTRAS", "ITEM_ID");
     }

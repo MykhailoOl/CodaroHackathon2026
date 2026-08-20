@@ -6,9 +6,9 @@
 <header th:replace="~{fragments/nav :: header}"></header>
 <main class="auth-main">
     <section class="auth-panel">
-        <p class="eyebrow">Welcome back</p>
-        <h1>Sign in to Courtly</h1>
-        <p class="lede">Reserve courts, manage occupancy, and keep your facility moving.</p>
+        <p class="eyebrow">Welcome</p>
+        <h1>Sign in to EverRest</h1>
+        <p class="lede">Arrange a ceremony, review availability, and follow notices from the manager desk.</p>
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${param.error}">Those credentials do not match our records.</div>
         <div class="alert alert-info" th:if="${param.logout}">You have been signed out.</div>
@@ -16,24 +16,24 @@
         <form id="login-form" class="auth-form" th:action="@{/login}" method="post" novalidate>
             <div class="field">
                 <label for="username">Username</label>
-                <input id="username" name="username" type="text" autocomplete="username" required maxlength="32" placeholder="your_handle">
+                <input id="username" name="username" type="text" autocomplete="username" required maxlength="32">
                 <p class="field-error" data-error-for="username" hidden></p>
             </div>
             <div class="field">
                 <label for="password">Password</label>
-                <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="••••••••">
+                <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8">
                 <p class="field-error" data-error-for="password" hidden></p>
             </div>
-            <button class="btn btn-accent btn-block" type="submit">Enter the facility</button>
+            <button class="btn btn-accent btn-block" type="submit">Sign in</button>
         </form>
         <p class="auth-switch">New here? <a th:href="@{/register}">Create an account</a></p>
     </section>
     <aside class="auth-aside">
-        <h2>Book the space. Own the hour.</h2>
+        <h2>A quiet path through the details.</h2>
         <ul class="feature-list">
-            <li>Courts, pitches, pools, and studios in one grid</li>
-            <li>Confirmations and cancellations that stay in sync</li>
-            <li>Live occupancy so you never overbook a lane</li>
+            <li>Choose home, venue, package, and extras</li>
+            <li>Spin for an available date — the server assigns the time</li>
+            <li>Managers confirm pending family arrangements</li>
         </ul>
     </aside>
 </main>

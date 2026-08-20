@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head(${home.name})}"></head>
+<body class="app-body">
+<div class="court-grid" aria-hidden="true"></div>
+<header th:replace="~{fragments/nav :: header}"></header>
+<main class="dashboard">
+    <div class="section-head">
+        <p class="eyebrow">Funeral home</p>
+        <h1 th:text="${home.name}">Home</h1>
+        <p th:text="${home.description}">Description</p>
+        <p class="address-line" th:text="${home.address.toDisplayString()}">Address</p>
+        <p class="meta-label" th:if="${home.phone != null}" th:text="${home.phone}">Phone</p>
+    </div>
+    <div class="card-grid">
+        <a class="media-card" th:each="venue : ${venues}" th:href="@{/venues/{id}(id=${venue.id})}">
+            <img th:src="@{${venue.resolvedImagePath}}" th:alt="${venue.name}">
+            <div>
+                <p class="eyebrow" th:text="${venue.type.label}">Chapel</p>
+                <h3 th:text="${venue.name}">Venue</h3>
+                <p class="meta-label" th:text="${venue.address.toDisplayString()}">Address</p>
+                <p class="meta-label" th:text="${'Up to ' + venue.maxAttendees + ' guests'}">Guests</p>
+                <p class="meta-label"
+                   th:text="${#temporals.format(venue.openingTime, 'HH:mm') + '–' + #temporals.format(venue.closingTime, 'HH:mm')}">09:00–17:00</p>
+            </div>
+        </a>
+    </div>
+</main>
+<footer th:replace="~{fragments/nav :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

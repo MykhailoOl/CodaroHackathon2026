@@ -1,8 +1,9 @@
 package com.example.hackathoncodaro2026.model;
 
+import com.example.hackathoncodaro2026.model.enums.FuneralPackage;
 import com.example.hackathoncodaro2026.model.enums.PaymentMethod;
-import com.example.hackathoncodaro2026.model.enums.ReservationKind;
 import com.example.hackathoncodaro2026.model.enums.ReservationStatus;
+import com.example.hackathoncodaro2026.model.enums.ServiceType;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,11 +20,14 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -32,16 +36,15 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "reservations")
+@Table(name = "reservations", uniqueConstraints = @UniqueConstraint(name = "uk_reservations_submission_token", columnNames = "submission_token"))
 public class Reservation {
 
     @Id
@@ -55,16 +58,37 @@ public class Reservation {
 
     @NotNull
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "resource_id", nullable = false)
-    private SportResource resource;
+    @JoinColumn(name = "venue_id", nullable = false)
+    private ServiceVenue venue;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "coach_id")
-    private User coach;
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "service_type", nullable = false, length = 32)
+    private ServiceType serviceType;
 
-    @Size(max = 32)
-    @Column(name = "skill_level", length = 32)
-    private String skillLevel;
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "package_code", nullable = false, length = 32)
+    private FuneralPackage funeralPackage;
+
+    @NotBlank
+    @Size(max = 120)
+    @Column(name = "deceased_full_name", nullable = false, length = 120)
+    private String deceasedFullName;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @NotNull
+    @PastOrPresent
+    @Column(name = "date_of_death", nullable = false)
+    private LocalDate dateOfDeath;
+
+    @Min(1)
+    @Column(nullable = false)
+    private int attendees = 1;
 
     @NotNull
     @Column(name = "start_at", nullable = false)
@@ -80,11 +104,6 @@ public class Reservation {
     @Column(nullable = false, length = 32)
     private ReservationStatus status = ReservationStatus.PENDING;
 
-    @Min(1)
-    @ColumnDefault("1")
-    @Column(name = "party_size", nullable = false)
-    private int partySize = 1;
-
     @NotNull
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
@@ -99,21 +118,21 @@ public class Reservation {
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO.setScale(2);
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @ColumnDefault("'STANDARD'")
-    @Column(name = "kind", nullable = false, length = 32)
-    private ReservationKind kind = ReservationKind.STANDARD;
-
-    @Min(1)
-    @ColumnDefault("1")
-    @Column(name = "occupancy_units", nullable = false)
-    private int occupancyUnits = 1;
-
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private Set<ReservationExtra> extras = new LinkedHashSet<>();
+
+    @Size(max = 1000)
+    @Column(length = 1000)
+    private String note;
+
+    @Size(max = 40)
+    @Column(name = "cancellation_reason", length = 40)
+    private String cancellationReason;
+
+    @Size(max = 36)
+    @Column(name = "submission_token", unique = true, length = 36)
+    private String submissionToken;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -121,53 +140,25 @@ public class Reservation {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @Size(max = 300)
-    @Column(length = 300)
-    private String note;
-
-    @Size(max = 40)
-    @Column(name = "invite_token", unique = true, length = 40)
-    private String inviteToken;
-
-    @Size(max = 254)
-    @Column(name = "invite_email", length = 254)
-    private String inviteEmail;
-
-    @Column(name = "invite_sent_at")
-    private Instant inviteSentAt;
-
-    @Size(max = 500)
-    @Column(name = "cancellation_reason", length = 500)
-    private String cancellationReason;
-
-    public Reservation() {
-    }
-
     @PrePersist
     void prePersist() {
         if (createdAt == null) {
             createdAt = Instant.now();
         }
+        if (updatedAt == null) {
+            updatedAt = createdAt;
+        }
         if (status == null) {
             status = ReservationStatus.PENDING;
-        }
-        if (partySize < 1) {
-            partySize = 1;
         }
         if (paymentMethod == null) {
             paymentMethod = PaymentMethod.CASH;
         }
         if (totalAmount == null) {
-            totalAmount = BigDecimal.ZERO.setScale(2);
+            totalAmount = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
-        if (kind == null) {
-            kind = ReservationKind.STANDARD;
-        }
-        if (occupancyUnits < 1) {
-            occupancyUnits = 1;
-        }
-        if (updatedAt == null) {
-            updatedAt = createdAt;
+        if (attendees < 1) {
+            attendees = 1;
         }
     }
 
@@ -182,6 +173,17 @@ public class Reservation {
             return true;
         }
         return endAt.isAfter(startAt);
+    }
+
+    public String getFormattedTotalAmount() {
+        return totalAmount == null ? "0.00 PLN" : totalAmount.setScale(2, RoundingMode.HALF_UP) + " PLN";
+    }
+
+    public String getExtrasSummary() {
+        if (extras == null || extras.isEmpty()) {
+            return "";
+        }
+        return extras.stream().map(ReservationExtra::getDisplayLabel).collect(Collectors.joining(", "));
     }
 
     public Long getId() {
@@ -200,28 +202,60 @@ public class Reservation {
         this.user = user;
     }
 
-    public SportResource getResource() {
-        return resource;
+    public ServiceVenue getVenue() {
+        return venue;
     }
 
-    public void setResource(SportResource resource) {
-        this.resource = resource;
+    public void setVenue(ServiceVenue venue) {
+        this.venue = venue;
     }
 
-    public User getCoach() {
-        return coach;
+    public ServiceType getServiceType() {
+        return serviceType;
     }
 
-    public void setCoach(User coach) {
-        this.coach = coach;
+    public void setServiceType(ServiceType serviceType) {
+        this.serviceType = serviceType;
     }
 
-    public String getSkillLevel() {
-        return skillLevel;
+    public FuneralPackage getFuneralPackage() {
+        return funeralPackage;
     }
 
-    public void setSkillLevel(String skillLevel) {
-        this.skillLevel = skillLevel;
+    public void setFuneralPackage(FuneralPackage funeralPackage) {
+        this.funeralPackage = funeralPackage;
+    }
+
+    public String getDeceasedFullName() {
+        return deceasedFullName;
+    }
+
+    public void setDeceasedFullName(String deceasedFullName) {
+        this.deceasedFullName = deceasedFullName;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public LocalDate getDateOfDeath() {
+        return dateOfDeath;
+    }
+
+    public void setDateOfDeath(LocalDate dateOfDeath) {
+        this.dateOfDeath = dateOfDeath;
+    }
+
+    public int getAttendees() {
+        return attendees;
+    }
+
+    public void setAttendees(int attendees) {
+        this.attendees = attendees;
     }
 
     public LocalDateTime getStartAt() {
@@ -248,14 +282,6 @@ public class Reservation {
         this.status = status;
     }
 
-    public int getPartySize() {
-        return partySize;
-    }
-
-    public void setPartySize(int partySize) {
-        this.partySize = partySize;
-    }
-
     public PaymentMethod getPaymentMethod() {
         return paymentMethod;
     }
@@ -269,35 +295,7 @@ public class Reservation {
     }
 
     public void setTotalAmount(BigDecimal totalAmount) {
-        this.totalAmount = totalAmount;
-    }
-
-    public String getPartySizeLabel() {
-        if (resource == null) {
-            return String.valueOf(partySize);
-        }
-        return resource.partySizeLabel(partySize, kind);
-    }
-
-    public String getFormattedTotalAmount() {
-        BigDecimal amount = totalAmount == null ? BigDecimal.ZERO : totalAmount;
-        return amount.setScale(2, RoundingMode.HALF_UP).toPlainString() + " PLN";
-    }
-
-    public ReservationKind getKind() {
-        return kind;
-    }
-
-    public void setKind(ReservationKind kind) {
-        this.kind = kind;
-    }
-
-    public int getOccupancyUnits() {
-        return occupancyUnits;
-    }
-
-    public void setOccupancyUnits(int occupancyUnits) {
-        this.occupancyUnits = occupancyUnits;
+        this.totalAmount = totalAmount == null ? BigDecimal.ZERO.setScale(2) : totalAmount.setScale(2, RoundingMode.HALF_UP);
     }
 
     public Set<ReservationExtra> getExtras() {
@@ -308,49 +306,6 @@ public class Reservation {
         this.extras = extras;
     }
 
-    public void addExtra(ReservationExtra extra) {
-        extras.add(extra);
-        extra.setReservation(this);
-    }
-
-    public boolean isLesson() {
-        return kind == ReservationKind.LESSON;
-    }
-
-    public String getKindLabel() {
-        return kind == null ? ReservationKind.STANDARD.getLabel() : kind.getLabel();
-    }
-
-    public boolean hasExtras() {
-        return extras != null && !extras.isEmpty();
-    }
-
-    public String getExtrasSummary() {
-        if (!hasExtras()) {
-            return "";
-        }
-        List<String> labels = extras.stream()
-                .map(ReservationExtra::getDisplayLabel)
-                .collect(Collectors.toCollection(ArrayList::new));
-        return String.join(", ", labels);
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     public String getNote() {
         return note;
     }
@@ -359,36 +314,28 @@ public class Reservation {
         this.note = note;
     }
 
-    public String getInviteToken() {
-        return inviteToken;
-    }
-
-    public void setInviteToken(String inviteToken) {
-        this.inviteToken = inviteToken;
-    }
-
-    public String getInviteEmail() {
-        return inviteEmail;
-    }
-
-    public void setInviteEmail(String inviteEmail) {
-        this.inviteEmail = inviteEmail;
-    }
-
-    public Instant getInviteSentAt() {
-        return inviteSentAt;
-    }
-
-    public void setInviteSentAt(Instant inviteSentAt) {
-        this.inviteSentAt = inviteSentAt;
-    }
-
     public String getCancellationReason() {
         return cancellationReason;
     }
 
     public void setCancellationReason(String cancellationReason) {
         this.cancellationReason = cancellationReason;
+    }
+
+    public String getSubmissionToken() {
+        return submissionToken;
+    }
+
+    public void setSubmissionToken(String submissionToken) {
+        this.submissionToken = submissionToken;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     @Override

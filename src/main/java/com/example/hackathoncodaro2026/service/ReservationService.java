@@ -1,6 +1,9 @@
 package com.example.hackathoncodaro2026.service;
 
-import com.example.hackathoncodaro2026.dto.ReservationRequest;
+import com.example.hackathoncodaro2026.dto.ArrangementCreateResponse;
+import com.example.hackathoncodaro2026.dto.ArrangementPreview;
+import com.example.hackathoncodaro2026.dto.ArrangementRequest;
+import com.example.hackathoncodaro2026.dto.PriceQuote;
 import com.example.hackathoncodaro2026.dto.ReservationUpdateResult;
 import com.example.hackathoncodaro2026.model.Reservation;
 import com.example.hackathoncodaro2026.model.User;
@@ -12,9 +15,15 @@ import java.util.Optional;
 
 public interface ReservationService {
 
-    Reservation create(User user, ReservationRequest request);
+    ArrangementPreview preview(User user, ArrangementRequest request);
 
-    ReservationUpdateResult update(User actor, Long reservationId, ReservationRequest request);
+    PriceQuote quote(User user, ArrangementRequest request);
+
+    Reservation create(User user, ArrangementRequest request);
+
+    ArrangementCreateResponse spin(User user, ArrangementRequest request);
+
+    ReservationUpdateResult update(User actor, Long reservationId, ArrangementRequest request);
 
     void cancel(User actor, Long reservationId);
 
@@ -30,11 +39,7 @@ public interface ReservationService {
 
     List<Reservation> findManagerQueue(LocalDate date);
 
-    List<Reservation> findForCoach(User coach);
-
     long countUpcomingActive(User user);
-
-    long countUpcomingAsCoach(User coach);
 
     int deleteEndedBefore(LocalDateTime cutoff);
 

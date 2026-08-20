@@ -6,10 +6,10 @@
 <header th:replace="~{fragments/nav :: header}"></header>
 <main class="auth-main">
     <section class="auth-panel">
-        <p class="eyebrow">Timeout</p>
-        <h1>We dropped the ball</h1>
+        <p class="eyebrow">Unavailable</p>
+        <h1>This page could not be opened</h1>
         <p class="lede" th:text="${errorMessage != null ? errorMessage : 'The page you wanted is not available.'}">The page you wanted is not available.</p>
-        <a class="btn btn-accent" th:href="@{/}">Back to the desk</a>
+        <a class="btn btn-accent" th:href="@{/}">Return home</a>
     </section>
 </main>
 <footer th:replace="~{fragments/nav :: footer}"></footer>

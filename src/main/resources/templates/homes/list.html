@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('Funeral homes')}"></head>
+<body class="app-body">
+<div class="court-grid" aria-hidden="true"></div>
+<header th:replace="~{fragments/nav :: header}"></header>
+<main class="dashboard">
+    <div class="section-head">
+        <p class="eyebrow">Warsaw</p>
+        <h1>Funeral homes</h1>
+        <p>Choose a house, then a chapel, hall, garden, cremation suite, or reception room. Demo names are fictional.</p>
+    </div>
+    <div class="card-grid">
+        <a class="media-card" th:each="home : ${homes}" th:href="@{/homes/{id}(id=${home.id})}">
+            <img th:src="@{${home.resolvedImagePath}}" th:alt="${home.name}">
+            <div>
+                <h3 th:text="${home.name}">Home</h3>
+                <p class="lede" th:text="${home.description}">Description</p>
+                <p class="meta-label" th:text="${home.address.toDisplayString()}">Address</p>
+            </div>
+        </a>
+    </div>
+</main>
+<footer th:replace="~{fragments/nav :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -6,5 +6,5 @@ import java.time.LocalDate;
 
 public interface OccupancyService {
 
-    OccupancyGrid gridFor(LocalDate date, Long facilityId);
+    OccupancyGrid gridFor(LocalDate date, Long funeralHomeId);
 }

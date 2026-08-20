@@ -36,7 +36,7 @@ class HackathonCodaro2026ApplicationTests {
     void contextLoads() {
         assertThat(userRepository.existsByUsernameIgnoreCase("admin")).isTrue();
         assertThat(userRepository.existsByUsernameIgnoreCase("manager")).isTrue();
-        assertThat(userRepository.existsByRole(Role.COACH)).isFalse();
+        assertThat(userRepository.findByRoleOrderByFullNameAsc(Role.MANAGER)).isNotEmpty();
     }
 
     @Test
@@ -61,16 +61,16 @@ class HackathonCodaro2026ApplicationTests {
     @Test
     void registerCreatesUserAndRedirectsToLogin() throws Exception {
         mockMvc.perform(post("/register")
-                        .param("username", "playerone")
-                        .param("email", "player@example.com")
-                        .param("fullName", "Player One")
+                        .param("username", "familyone")
+                        .param("email", "family@example.com")
+                        .param("fullName", "Family One")
                         .param("phone", "")
                         .param("password", "Password1")
                         .param("confirmPassword", "Password1")
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login"));
-        assertThat(userRepository.existsByUsernameIgnoreCase("playerone")).isTrue();
+        assertThat(userRepository.existsByUsernameIgnoreCase("familyone")).isTrue();
     }
 
     @Test
@@ -88,8 +88,8 @@ class HackathonCodaro2026ApplicationTests {
     }
 
     @Test
-    void facilitiesRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/facilities"))
+    void homesRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/homes"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login"));
     }
@@ -103,8 +103,8 @@ class HackathonCodaro2026ApplicationTests {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void authenticatedAdminCanOpenFacilitiesAndHistory() throws Exception {
-        mockMvc.perform(get("/facilities"))
+    void authenticatedAdminCanOpenHomesAndHistory() throws Exception {
+        mockMvc.perform(get("/homes"))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/reservations"))
                 .andExpect(status().isOk());

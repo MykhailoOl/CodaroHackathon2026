@@ -5,13 +5,9 @@ import com.example.hackathoncodaro2026.dto.ProfileUpdateRequest;
 import com.example.hackathoncodaro2026.dto.RegistrationRequest;
 import com.example.hackathoncodaro2026.exception.DuplicateUserException;
 import com.example.hackathoncodaro2026.model.User;
-import com.example.hackathoncodaro2026.model.UserSportLevel;
-import com.example.hackathoncodaro2026.model.enums.ResourceType;
 import com.example.hackathoncodaro2026.model.enums.Role;
 import com.example.hackathoncodaro2026.repository.UserRepository;
-import com.example.hackathoncodaro2026.repository.UserSportLevelRepository;
 import com.example.hackathoncodaro2026.service.AuditLogService;
-import com.example.hackathoncodaro2026.service.SportSkillLevelCatalog;
 import com.example.hackathoncodaro2026.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,22 +23,16 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final UserSportLevelRepository userSportLevelRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SportSkillLevelCatalog sportSkillLevelCatalog;
     private final AuditLogService auditLogService;
 
     public UserServiceImpl(
             UserRepository userRepository,
-            UserSportLevelRepository userSportLevelRepository,
             PasswordEncoder passwordEncoder,
-            SportSkillLevelCatalog sportSkillLevelCatalog,
             AuditLogService auditLogService
     ) {
         this.userRepository = userRepository;
-        this.userSportLevelRepository = userSportLevelRepository;
         this.passwordEncoder = passwordEncoder;
-        this.sportSkillLevelCatalog = sportSkillLevelCatalog;
         this.auditLogService = auditLogService;
     }
 
@@ -140,7 +130,6 @@ public class UserServiceImpl implements UserService {
             passwordChanged = true;
         }
         User saved = userRepository.save(managed);
-        saveSportLevels(saved, request.getSportLevels());
         auditLogService.record(
                 saved,
                 "PROFILE_UPDATE",
@@ -178,8 +167,8 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public User createStaff(AdminUserCreateRequest request) {
         Role role = request.getRole();
-        if (role != Role.USER && role != Role.MANAGER && role != Role.COACH) {
-            throw new DuplicateUserException("role", "Admins can create players, managers, or coaches only");
+        if (role != Role.USER && role != Role.MANAGER) {
+            throw new DuplicateUserException("role", "Staff accounts may be Family or Manager");
         }
         String username = request.getUsername().trim();
         String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
@@ -257,39 +246,5 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> findById(Long id) {
         return id == null ? Optional.empty() : userRepository.findById(id);
-    }
-
-    @Override
-    @Transactional
-    public void saveSportLevel(User user, ResourceType sport, String level) {
-        if (user == null || sport == null) {
-            return;
-        }
-        persistSportLevel(user, sport, level);
-    }
-
-    private void saveSportLevels(User user, Map<String, String> posted) {
-        Map<String, String> values = posted == null ? Map.of() : posted;
-        for (ResourceType sport : ResourceType.values()) {
-            persistSportLevel(user, sport, values.get(sport.name()));
-        }
-    }
-
-    private void persistSportLevel(User user, ResourceType sport, String raw) {
-        if (raw == null || raw.isBlank()) {
-            userSportLevelRepository.findByUser_IdAndSportType(user.getId(), sport)
-                    .ifPresent(userSportLevelRepository::delete);
-            return;
-        }
-        String code = raw.trim();
-        if (!sportSkillLevelCatalog.isValid(sport, code)) {
-            return;
-        }
-        UserSportLevel row = userSportLevelRepository.findByUser_IdAndSportType(user.getId(), sport)
-                .orElseGet(UserSportLevel::new);
-        row.setUser(user);
-        row.setSportType(sport);
-        row.setSkillLevel(code);
-        userSportLevelRepository.save(row);
     }
 }

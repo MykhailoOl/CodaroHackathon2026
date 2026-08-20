@@ -8,7 +8,7 @@ import java.util.List;
 public class OccupancyGrid {
 
     private LocalDate date;
-    private Long facilityId;
+    private Long funeralHomeId;
     private List<LocalTime> hours = new ArrayList<>();
     private List<OccupancyRow> rows = new ArrayList<>();
     private int bookedUnits;
@@ -29,12 +29,12 @@ public class OccupancyGrid {
         this.date = date;
     }
 
-    public Long getFacilityId() {
-        return facilityId;
+    public Long getFuneralHomeId() {
+        return funeralHomeId;
     }
 
-    public void setFacilityId(Long facilityId) {
-        this.facilityId = facilityId;
+    public void setFuneralHomeId(Long funeralHomeId) {
+        this.funeralHomeId = funeralHomeId;
     }
 
     public List<LocalTime> getHours() {

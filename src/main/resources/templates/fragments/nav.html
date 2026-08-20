@@ -5,16 +5,16 @@
     <div class="header-inner">
         <a class="brand" th:href="@{/}">
             <span class="brand-mark" aria-hidden="true">
-                <img th:src="@{/images/brand/logo.png}" alt="" width="40" height="40">
+                <img th:src="@{/images/brand/mark.svg}" alt="" width="40" height="40">
             </span>
             <span class="brand-copy">
-                <span class="brand-name">Courtly</span>
-                <span class="brand-tag">Sports Facility Booking</span>
+                <span class="brand-name">EverRest</span>
+                <span class="brand-tag">Funeral arrangements</span>
             </span>
         </a>
         <nav class="main-nav" aria-label="Primary">
             <th:block sec:authorize="isAuthenticated()">
-                <a class="nav-link" th:href="@{/facilities}">Facilities</a>
+                <a class="nav-link" th:href="@{/homes}">Homes</a>
                 <a class="nav-link" th:href="@{/reservations}">History</a>
                 <a class="nav-link nav-notify" th:href="@{/notifications}">
                     Notices
@@ -22,15 +22,13 @@
                           th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
                           th:text="${unreadNotificationCount}">1</span>
                 </a>
-                <a class="nav-link" th:href="@{/occupancy}">Occupancy</a>
-                <a class="nav-link" sec:authorize="hasRole('COACH')" th:href="@{/coach/offerings}">Offerings</a>
-                <a class="nav-link" sec:authorize="hasRole('COACH')" th:href="@{/coach/sessions}">Sessions</a>
+                <a class="nav-link" th:href="@{/availability}">Availability</a>
                 <a class="nav-link" sec:authorize="hasAnyRole('ADMIN','MANAGER')" th:href="@{/manager/reservations}">Queue</a>
                 <a class="nav-link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}">Staff</a>
                 <span class="nav-user" th:if="${currentUser != null}">
                     <a class="nav-user-name"
                        th:href="@{/profile}"
-                       th:text="${currentUser.fullName != null and !#strings.isEmpty(currentUser.fullName) ? currentUser.fullName : currentUser.username}">Athlete</a>
+                       th:text="${currentUser.fullName != null and !#strings.isEmpty(currentUser.fullName) ? currentUser.fullName : currentUser.username}">Family</a>
                 </span>
                 <form class="logout-form" th:action="@{/logout}" method="post">
                     <button class="btn btn-ghost" type="submit">Log out</button>
@@ -43,8 +41,60 @@
         </nav>
     </div>
 </header>
-<footer class="site-footer" th:fragment="footer">
-    <p>Courtly · Track B Resource Reservation and Scheduling</p>
-</footer>
+<th:block th:fragment="footer">
+    <footer class="site-footer">
+        <p>EverRest · Track B resource reservation and scheduling · Warsaw demo</p>
+        <div id="everrest-assistant"
+             class="ca-root"
+             th:attr="data-authenticated=${currentUser != null},
+                      data-user-id=${currentUser != null ? currentUser.id : ''},
+                      data-username=${currentUser != null ? currentUser.username : ''},
+                      data-role=${currentUser != null ? currentUser.role.name() : ''},
+                      data-phone-required=${currentUser != null and (currentUser.phone == null or #strings.isEmpty(currentUser.phone))},
+                      data-login-url=@{/login},
+                      data-history-url=@{/reservations},
+                      data-occupancy-url=@{/availability},
+                      data-notices-url=@{/notifications}">
+            <button type="button" class="ca-launcher" id="ca-launcher" aria-label="Open arrangement guide" aria-expanded="false" aria-controls="ca-panel">
+                <img th:src="@{/images/brand/mark.svg}" alt="" width="28" height="28">
+                <span class="ca-launcher-label">Ask Evelyn</span>
+            </button>
+            <section class="ca-panel" id="ca-panel" hidden tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="ca-title">
+                <header class="ca-head" id="ca-head">
+                    <img class="ca-brand" th:src="@{/images/brand/mark.svg}" alt="" width="28" height="28">
+                    <div class="ca-head-copy" id="ca-grip">
+                        <h2 id="ca-title">Evelyn</h2>
+                        <p class="ca-sub">EverRest guide · no AI</p>
+                    </div>
+                    <p class="ca-progress" id="ca-progress">Step 1</p>
+                    <button type="button" class="ca-icon-btn" id="ca-restart">Restart</button>
+                    <button type="button" class="ca-icon-btn" id="ca-close" aria-label="Close guide">Close</button>
+                </header>
+                <div class="ca-log" id="ca-log" role="log" aria-live="polite"></div>
+                <div class="ca-controls" id="ca-controls"></div>
+                <p class="ca-hint">Dates stay open for others until a time is assigned.</p>
+            </section>
+        </div>
+    </footer>
+    <div id="wheel-overlay" class="wheel-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="wheel-headline" aria-describedby="wheel-overlay-copy">
+        <div class="wheel-overlay-card">
+            <p class="wheel-headline" id="wheel-headline">Congratulations, but we are very sorry!</p>
+            <p class="lede wheel-overlay-copy" id="wheel-overlay-copy">Your available ceremony date is being assigned.</p>
+            <div class="wheel-stage wheel-stage-lg">
+                <div class="wheel-pointer" aria-hidden="true"></div>
+                <div class="wheel" id="overlay-wheel" role="img" aria-label="Date wheel"></div>
+            </div>
+            <p id="wheel-overlay-status" class="wheel-overlay-status">Finding an available date…</p>
+            <p id="wheel-overlay-result" class="wheel-overlay-result" hidden></p>
+            <div id="wheel-overlay-actions" class="wheel-overlay-actions" hidden>
+                <a class="btn btn-accent" id="wheel-overlay-history" href="/reservations">History</a>
+                <button type="button" class="btn btn-ghost" id="wheel-overlay-close">Close</button>
+                <button type="button" class="btn btn-accent" id="wheel-overlay-retry" hidden>Retry</button>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/js/wheel.js}"></script>
+    <script th:src="@{/js/assistant.js}"></script>
+</th:block>
 </body>
 </html>

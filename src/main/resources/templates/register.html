@@ -6,61 +6,61 @@
 <header th:replace="~{fragments/nav :: header}"></header>
 <main class="auth-main">
     <section class="auth-panel">
-        <p class="eyebrow">Join the roster</p>
-        <h1>Create your Courtly account</h1>
-        <p class="lede">Players and staff use the same door. Admins unlock facility tools later.</p>
+        <p class="eyebrow">Join EverRest</p>
+        <h1>Create a family account</h1>
+        <p class="lede">Use this account to arrange a ceremony. Staff accounts are created by an administrator.</p>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
         <form id="register-form" class="auth-form" th:action="@{/register}" th:object="${registrationRequest}" method="post" novalidate>
             <div class="field-grid">
                 <div class="field">
                     <label for="username">Username</label>
-                    <input id="username" th:field="*{username}" type="text" autocomplete="username" required minlength="3" maxlength="32" placeholder="court_runner">
+                    <input id="username" th:field="*{username}" type="text" autocomplete="username" required minlength="3" maxlength="32">
                     <p class="field-error" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></p>
                     <p class="field-error" data-error-for="username" hidden></p>
                 </div>
                 <div class="field">
                     <label for="email">Email</label>
-                    <input id="email" th:field="*{email}" type="email" autocomplete="email" required maxlength="254" placeholder="you@club.com">
+                    <input id="email" th:field="*{email}" type="email" autocomplete="email" required maxlength="254">
                     <p class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
                     <p class="field-error" data-error-for="email" hidden></p>
                 </div>
             </div>
             <div class="field">
                 <label for="fullName">Full name</label>
-                <input id="fullName" th:field="*{fullName}" type="text" autocomplete="name" required minlength="2" maxlength="100" placeholder="Alex Morgan">
+                <input id="fullName" th:field="*{fullName}" type="text" autocomplete="name" required minlength="2" maxlength="100">
                 <p class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></p>
                 <p class="field-error" data-error-for="fullName" hidden></p>
             </div>
             <div class="field">
                 <label for="phone">Phone <span class="optional">(optional)</span></label>
-                <input id="phone" th:field="*{phone}" type="tel" autocomplete="tel" maxlength="20" placeholder="+1 555 0100">
+                <input id="phone" th:field="*{phone}" type="tel" autocomplete="tel" maxlength="20">
                 <p class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></p>
                 <p class="field-error" data-error-for="phone" hidden></p>
             </div>
             <div class="field-grid">
                 <div class="field">
                     <label for="password">Password</label>
-                    <input id="password" th:field="*{password}" type="password" autocomplete="new-password" required minlength="8" maxlength="72" placeholder="At least 8 characters">
+                    <input id="password" th:field="*{password}" type="password" autocomplete="new-password" required minlength="8" maxlength="72">
                     <p class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></p>
                     <p class="field-error" data-error-for="password" hidden></p>
                 </div>
                 <div class="field">
                     <label for="confirmPassword">Confirm password</label>
-                    <input id="confirmPassword" th:field="*{confirmPassword}" type="password" autocomplete="new-password" required minlength="8" maxlength="72" placeholder="Repeat password">
+                    <input id="confirmPassword" th:field="*{confirmPassword}" type="password" autocomplete="new-password" required minlength="8" maxlength="72">
                     <p class="field-error" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></p>
                     <p class="field-error" data-error-for="confirmPassword" hidden></p>
                 </div>
             </div>
             <button class="btn btn-accent btn-block" type="submit">Create account</button>
         </form>
-        <p class="auth-switch">Already on the roster? <a th:href="@{/login}">Sign in</a></p>
+        <p class="auth-switch">Already registered? <a th:href="@{/login}">Sign in</a></p>
     </section>
     <aside class="auth-aside">
-        <h2>Built for the next booking window.</h2>
+        <h2>Private by design.</h2>
         <ul class="feature-list">
-            <li>Unique username and email, hashed passwords</li>
-            <li>Staff roles ready for resource management</li>
-            <li>Scheduling, confirmations, and occupancy come next</li>
+            <li>Hashed passwords and unique usernames</li>
+            <li>Deceased and family notes are never written to logs</li>
+            <li>Evelyn, the arrangement guide, is a button flow — not AI</li>
         </ul>
     </aside>
 </main>

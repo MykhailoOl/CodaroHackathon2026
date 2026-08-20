@@ -5,44 +5,44 @@ import java.util.List;
 
 public class OccupancyRow {
 
-    private Long resourceId;
-    private String resourceName;
-    private String facilityName;
-    private String sport;
+    private Long venueId;
+    private String venueName;
+    private String funeralHomeName;
+    private String venueType;
     private String imagePath;
-    private int capacity;
+    private int maxAttendees;
     private List<OccupancyCell> cells = new ArrayList<>();
 
-    public Long getResourceId() {
-        return resourceId;
+    public Long getVenueId() {
+        return venueId;
     }
 
-    public void setResourceId(Long resourceId) {
-        this.resourceId = resourceId;
+    public void setVenueId(Long venueId) {
+        this.venueId = venueId;
     }
 
-    public String getResourceName() {
-        return resourceName;
+    public String getVenueName() {
+        return venueName;
     }
 
-    public void setResourceName(String resourceName) {
-        this.resourceName = resourceName;
+    public void setVenueName(String venueName) {
+        this.venueName = venueName;
     }
 
-    public String getFacilityName() {
-        return facilityName;
+    public String getFuneralHomeName() {
+        return funeralHomeName;
     }
 
-    public void setFacilityName(String facilityName) {
-        this.facilityName = facilityName;
+    public void setFuneralHomeName(String funeralHomeName) {
+        this.funeralHomeName = funeralHomeName;
     }
 
-    public String getSport() {
-        return sport;
+    public String getVenueType() {
+        return venueType;
     }
 
-    public void setSport(String sport) {
-        this.sport = sport;
+    public void setVenueType(String venueType) {
+        this.venueType = venueType;
     }
 
     public String getImagePath() {
@@ -53,12 +53,12 @@ public class OccupancyRow {
         this.imagePath = imagePath;
     }
 
-    public int getCapacity() {
-        return capacity;
+    public int getMaxAttendees() {
+        return maxAttendees;
     }
 
-    public void setCapacity(int capacity) {
-        this.capacity = capacity;
+    public void setMaxAttendees(int maxAttendees) {
+        this.maxAttendees = maxAttendees;
     }
 
     public List<OccupancyCell> getCells() {

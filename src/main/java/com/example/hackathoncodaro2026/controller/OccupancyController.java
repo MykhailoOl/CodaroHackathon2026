@@ -1,7 +1,7 @@
 package com.example.hackathoncodaro2026.controller;
 
 import com.example.hackathoncodaro2026.dto.OccupancyGrid;
-import com.example.hackathoncodaro2026.service.FacilityService;
+import com.example.hackathoncodaro2026.service.CatalogService;
 import com.example.hackathoncodaro2026.service.OccupancyService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -18,37 +18,37 @@ public class OccupancyController {
     private static final ZoneId WARSAW = ZoneId.of("Europe/Warsaw");
 
     private final OccupancyService occupancyService;
-    private final FacilityService facilityService;
+    private final CatalogService catalogService;
 
-    public OccupancyController(OccupancyService occupancyService, FacilityService facilityService) {
+    public OccupancyController(OccupancyService occupancyService, CatalogService catalogService) {
         this.occupancyService = occupancyService;
-        this.facilityService = facilityService;
+        this.catalogService = catalogService;
     }
 
-    @GetMapping("/occupancy")
+    @GetMapping({"/occupancy", "/availability"})
     public String occupancy(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) String facilityId,
+            @RequestParam(required = false) String homeId,
             Model model
     ) {
         LocalDate today = LocalDate.now(WARSAW);
         LocalDate selected = date == null ? today : date;
-        Long facilityKey = parseFacilityId(facilityId);
-        OccupancyGrid grid = occupancyService.gridFor(selected, facilityKey);
+        Long homeKey = parseHomeId(homeId);
+        OccupancyGrid grid = occupancyService.gridFor(selected, homeKey);
         model.addAttribute("grid", grid);
         model.addAttribute("today", today);
         model.addAttribute("selectedDate", selected);
-        model.addAttribute("facilityId", facilityKey);
-        model.addAttribute("facilities", facilityService.findAllEnabled());
+        model.addAttribute("homeId", homeKey);
+        model.addAttribute("homes", catalogService.homes());
         return "occupancy/index";
     }
 
-    private Long parseFacilityId(String facilityId) {
-        if (facilityId == null || facilityId.isBlank()) {
+    private Long parseHomeId(String homeId) {
+        if (homeId == null || homeId.isBlank()) {
             return null;
         }
         try {
-            return Long.valueOf(facilityId);
+            return Long.valueOf(homeId);
         } catch (NumberFormatException ex) {
             return null;
         }

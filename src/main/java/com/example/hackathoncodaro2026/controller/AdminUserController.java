@@ -35,7 +35,7 @@ public class AdminUserController {
             request.setRole(Role.MANAGER);
             model.addAttribute("adminUserCreateRequest", request);
         }
-        model.addAttribute("roles", new Role[]{Role.USER, Role.MANAGER, Role.COACH});
+        model.addAttribute("roles", new Role[]{Role.USER, Role.MANAGER});
         return "admin/users";
     }
 
@@ -46,9 +46,9 @@ public class AdminUserController {
             Model model,
             RedirectAttributes redirectAttributes
     ) {
-        model.addAttribute("roles", new Role[]{Role.USER, Role.MANAGER, Role.COACH});
+        model.addAttribute("roles", new Role[]{Role.USER, Role.MANAGER});
         if (adminUserCreateRequest.getRole() == Role.ADMIN) {
-            bindingResult.rejectValue("role", "invalid", "Admins can create players, managers, or coaches only");
+            bindingResult.rejectValue("role", "invalid", "Admins can create family or manager accounts only");
         }
         if (!bindingResult.hasFieldErrors("username")
                 && userService.existsByUsername(adminUserCreateRequest.getUsername())) {

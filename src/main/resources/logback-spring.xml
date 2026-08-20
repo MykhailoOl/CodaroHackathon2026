@@ -13,12 +13,12 @@
 
     <springProfile name="!test">
         <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>${LOG_PATH}/courtly.log</file>
+            <file>${LOG_PATH}/everrest.log</file>
             <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
                 <level>INFO</level>
             </filter>
             <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-                <fileNamePattern>${LOG_PATH}/courtly.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <fileNamePattern>${LOG_PATH}/everrest.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
                 <maxFileSize>50MB</maxFileSize>
                 <maxHistory>30</maxHistory>
                 <totalSizeCap>1GB</totalSizeCap>
@@ -30,12 +30,12 @@
         </appender>
 
         <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>${LOG_PATH}/courtly-error.log</file>
+            <file>${LOG_PATH}/everrest-error.log</file>
             <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
                 <level>WARN</level>
             </filter>
             <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-                <fileNamePattern>${LOG_PATH}/courtly-error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <fileNamePattern>${LOG_PATH}/everrest-error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
                 <maxFileSize>50MB</maxFileSize>
                 <maxHistory>30</maxHistory>
                 <totalSizeCap>1GB</totalSizeCap>
@@ -47,9 +47,9 @@
         </appender>
 
         <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>${LOG_PATH}/courtly-audit.log</file>
+            <file>${LOG_PATH}/everrest-audit.log</file>
             <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-                <fileNamePattern>${LOG_PATH}/courtly-audit.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <fileNamePattern>${LOG_PATH}/everrest-audit.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
                 <maxFileSize>50MB</maxFileSize>
                 <maxHistory>90</maxHistory>
                 <totalSizeCap>2GB</totalSizeCap>

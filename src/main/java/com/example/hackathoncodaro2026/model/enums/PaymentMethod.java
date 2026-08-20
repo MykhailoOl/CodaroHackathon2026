@@ -2,7 +2,7 @@ package com.example.hackathoncodaro2026.model.enums;
 
 public enum PaymentMethod {
     CASH("Cash"),
-    CARD_ON_SITE("Card at the facility"),
+    CARD_ON_SITE("Card at the funeral home"),
     ONLINE_TRANSFER("Bank transfer");
 
     private final String label;

@@ -8,20 +8,13 @@
     <section class="auth-panel profile-panel">
         <p class="eyebrow">Account</p>
         <h1>Your profile</h1>
-        <p class="lede">Update your contact details. Username stays as your sign-in identity.</p>
+        <p class="lede">Update contact details and password. Username stays as your sign-in identity.</p>
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-        <form id="profile-form" class="auth-form" th:action="@{/profile}" th:object="${profileUpdateRequest}" method="post" enctype="multipart/form-data" novalidate>
+        <form id="profile-form" class="auth-form" th:action="@{/profile}" th:object="${profileUpdateRequest}" method="post" novalidate>
             <div class="field">
                 <label for="username">Username</label>
                 <input id="username" type="text" th:value="${username}" readonly class="is-readonly" tabindex="-1" aria-readonly="true">
-            </div>
-            <div class="field">
-                <label>Photo</label>
-                <div class="avatar-row">
-                    <img class="profile-avatar" th:src="@{/avatars/{id}(id=${profileUserId})}" alt="">
-                    <input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
-                </div>
             </div>
             <div class="field">
                 <label for="fullName">Full name</label>
@@ -64,18 +57,6 @@
                     <p class="field-error" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></p>
                     <p class="field-error" data-error-for="confirmPassword" hidden></p>
                 </div>
-            </div>
-            <p class="eyebrow">Skill levels</p>
-            <p class="lede">Set the level you play at for each sport. Matching coaches appear when you book a court or individual session.</p>
-            <div class="field" th:each="sport : ${sports}">
-                <label th:for="${'level-' + sport.name()}" th:text="${sport.displayName}">Tennis</label>
-                <select th:id="${'level-' + sport.name()}" th:name="${'sportLevels[' + sport.name() + ']'}">
-                    <option value="">Not set</option>
-                    <option th:each="level : ${sportLevelOptions.get(sport.name())}"
-                            th:value="${level.code}"
-                            th:text="${level.label}"
-                            th:selected="${profileUpdateRequest.sportLevels.get(sport.name()) == level.code}">NTRP 3.0</option>
-                </select>
             </div>
             <button class="btn btn-accent btn-block" type="submit">Save profile</button>
         </form>

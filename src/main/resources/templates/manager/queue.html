@@ -1,69 +1,72 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('Reservation queue')}"></head>
+<head th:replace="~{fragments/head :: head('Arrangement queue')}"></head>
 <body class="app-body">
 <div class="court-grid" aria-hidden="true"></div>
 <header th:replace="~{fragments/nav :: header}"></header>
 <main class="dashboard">
     <div class="section-head">
         <p class="eyebrow">Manager desk</p>
-        <h1>Reservation queue</h1>
-        <p>Pick a date to review that day's bookings, soonest start time first. Confirm anything still pending.</p>
+        <h1>Arrangement queue</h1>
+        <p>Filter by assigned date, soonest first. Confirm pending family arrangements.</p>
     </div>
     <form id="queue-filter" class="occ-filters" method="get" th:action="@{/manager/reservations}">
         <div class="field">
-            <label for="date">Date</label>
+            <label for="date">Assigned date</label>
             <input id="date" name="date" type="date" required th:value="${selectedDate}">
         </div>
         <button class="btn btn-accent" type="submit">Show day</button>
     </form>
     <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
     <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-    <p class="lede" th:if="${#lists.isEmpty(reservations)}">No reservations on this date.</p>
+    <p class="lede" th:if="${#lists.isEmpty(reservations)}">No arrangements on this date.</p>
     <div class="history-list">
         <article class="history-card" th:each="item : ${reservations}">
             <img class="history-thumb"
-                 th:src="@{${item.resource.imagePath != null ? item.resource.imagePath : item.resource.type.imagePath}}"
-                 th:alt="${item.resource.type.displayName}">
+                 th:src="@{${item.venue.resolvedImagePath}}"
+                 th:alt="${item.venue.name}">
             <div class="history-main">
-                <p class="eyebrow" th:text="${item.resource.type.displayName}">Tennis</p>
+                <p class="eyebrow" th:text="${item.serviceType.label}">Memorial</p>
                 <h3>
-                    <span th:text="${item.resource.name}">Court</span>
+                    <span th:text="${item.venue.name}">Venue</span>
                     <span class="muted"> · </span>
-                    <span th:text="${item.resource.facility.name}">Venue</span>
+                    <span th:text="${item.venue.funeralHome.name}">Home</span>
                 </h3>
-                <p class="address-line" th:text="${item.resource.address.toDisplayString()}">Address</p>
+                <p class="address-line" th:text="${item.venue.address.toDisplayString()}">Address</p>
                 <p class="meta-label">
-                    <span th:text="${#temporals.format(item.startAt, 'yyyy-MM-dd')}">2026-08-20</span>
-                    ·
-                    <span th:text="${#temporals.format(item.startAt, 'HH:mm')}">18:00</span>
+                    Assigned
+                    <span th:text="${#temporals.format(item.startAt, 'yyyy-MM-dd HH:mm')}">10:00</span>
                     –
-                    <span th:text="${#temporals.format(item.endAt, 'HH:mm')}">19:00</span>
+                    <span th:text="${#temporals.format(item.endAt, 'HH:mm')}">12:00</span>
                 </p>
-                <p class="lede" th:if="${item.note != null}" th:text="${item.note}">Note</p>
                 <p class="meta-label">
-                    Booked by <span th:text="${item.user.fullName}">Player</span>
+                    Remembering
+                    <span th:text="${item.deceasedFullName}">Name</span>
+                </p>
+                <p class="meta-label">
+                    Package
+                    <span th:text="${item.funeralPackage.label}">Classic</span>
+                </p>
+                <p class="meta-label">
+                    Guests
+                    <span th:text="${item.attendees}">20</span>
+                </p>
+                <p class="meta-label" th:if="${item.extrasSummary != null and !#strings.isEmpty(item.extrasSummary)}">
+                    Extras
+                    <span th:text="${item.extrasSummary}">Flowers</span>
+                </p>
+                <p class="meta-label">
+                    Client
+                    <span th:text="${item.user.fullName}">Family</span>
                     (<span th:text="${item.user.username}">user</span>)
                 </p>
                 <p class="meta-label">
                     Email
-                    <span th:text="${item.user.email}">player@club.com</span>
+                    <span th:text="${item.user.email}">family@example.com</span>
                 </p>
                 <p class="meta-label">
                     Phone
                     <span th:text="${item.user.phone != null and !#strings.isEmpty(item.user.phone) ? item.user.phone : '—'}">—</span>
-                </p>
-                <p class="meta-label">
-                    Type
-                    <span th:text="${item.kindLabel}">Individual</span>
-                </p>
-                <p class="meta-label">
-                    People
-                    <span th:text="${item.partySizeLabel}">1</span>
-                </p>
-                <p class="meta-label" th:if="${item.hasExtras()}">
-                    Extras
-                    <span th:text="${item.extrasSummary}">Racket ×2</span>
                 </p>
                 <p class="meta-label">
                     Payment
@@ -71,20 +74,20 @@
                 </p>
                 <p class="meta-label">
                     Amount
-                    <span th:text="${item.formattedTotalAmount}">80.00 PLN</span>
+                    <span th:text="${item.formattedTotalAmount}">4200.00 PLN</span>
                 </p>
             </div>
             <div class="history-aside">
                 <span class="status-badge status-pending" th:if="${item.status.name() == 'PENDING'}">Pending</span>
                 <span class="status-badge status-confirmed" th:if="${item.status.name() == 'CONFIRMED'}">Confirmed</span>
-                <form th:if="${item.status.name() == 'PENDING' and item.startAt.isAfter(now)}"
+                <form th:if="${item.status.name() == 'PENDING'}"
                       th:action="@{/manager/reservations/{id}/confirm(id=${item.id}, date=${selectedDate})}"
                       method="post">
                     <button class="btn btn-accent" type="submit">Confirm</button>
                 </form>
                 <button type="button"
                         class="btn btn-danger js-open-cancel"
-                        th:if="${item.status.name() == 'PENDING' and item.startAt.isAfter(now)}"
+                        th:if="${item.status.name() == 'PENDING'}"
                         th:attr="data-action=@{/manager/reservations/{id}/cancel(id=${item.id}, date=${selectedDate})}">Cancel</button>
             </div>
         </article>
@@ -92,7 +95,7 @@
 </main>
 <dialog id="cancel-dialog" class="cancel-dialog">
     <form id="cancel-dialog-form" class="cancel-dialog-form" method="post" th:action="@{/manager/reservations}">
-        <p class="eyebrow">Cancel booking</p>
+        <p class="eyebrow">Cancel arrangement</p>
         <h2>Why are you cancelling?</h2>
         <p class="lede">Pick a reason to finish the cancellation.</p>
         <fieldset class="cancel-options">
@@ -104,7 +107,7 @@
         </fieldset>
         <div class="field" id="other-note-wrap" hidden>
             <label for="otherNote">Note <span class="optional">(optional)</span></label>
-            <textarea id="otherNote" name="otherNote" maxlength="400" rows="2" placeholder="Add a short note"></textarea>
+            <textarea id="otherNote" name="otherNote" maxlength="400" rows="2"></textarea>
         </div>
         <p class="field-error" id="cancel-reason-error" hidden>Choose a cancellation reason</p>
         <div class="dialog-actions">

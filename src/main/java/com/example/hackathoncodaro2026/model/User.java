@@ -71,10 +71,6 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
-    @Size(max = 80)
-    @Column(name = "avatar_filename", length = 80)
-    private String avatarFilename;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -153,30 +149,6 @@ public class User {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-    }
-
-    public String getAvatarFilename() {
-        return avatarFilename;
-    }
-
-    public void setAvatarFilename(String avatarFilename) {
-        this.avatarFilename = avatarFilename;
-    }
-
-    public boolean hasAvatar() {
-        return avatarFilename != null && !avatarFilename.isBlank();
-    }
-
-    public String getInitials() {
-        String source = fullName != null && !fullName.isBlank() ? fullName.trim() : (username == null ? "" : username.trim());
-        if (source.isEmpty()) {
-            return "C";
-        }
-        String[] parts = source.split("\\s+");
-        if (parts.length == 1) {
-            return parts[0].substring(0, 1).toUpperCase();
-        }
-        return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
     }
 
     public Instant getCreatedAt() {

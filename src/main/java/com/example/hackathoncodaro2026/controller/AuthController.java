@@ -97,7 +97,7 @@ public class AuthController {
             bindingResult.rejectValue(ex.getField(), "duplicate", ex.getMessage());
             return "register";
         }
-        redirectAttributes.addFlashAttribute("successMessage", "Account created. Sign in to book a court.");
+        redirectAttributes.addFlashAttribute("successMessage", "Account created. Sign in to arrange a ceremony.");
         return "redirect:/login";
     }
 

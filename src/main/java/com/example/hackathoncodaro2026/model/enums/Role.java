@@ -1,10 +1,9 @@
 package com.example.hackathoncodaro2026.model.enums;
 
 public enum Role {
-    USER("Player"),
+    USER("Family"),
     MANAGER("Manager"),
-    ADMIN("Admin"),
-    COACH("Coach");
+    ADMIN("Admin");
 
     private final String label;
 

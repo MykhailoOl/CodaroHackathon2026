@@ -6,9 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 @ProfilePasswordChange
 public class ProfileUpdateRequest {
 
@@ -31,8 +28,6 @@ public class ProfileUpdateRequest {
     private String newPassword;
 
     private String confirmPassword;
-
-    private Map<String, String> sportLevels = new LinkedHashMap<>();
 
     public String getFullName() {
         return fullName;
@@ -80,13 +75,5 @@ public class ProfileUpdateRequest {
 
     public void setConfirmPassword(String confirmPassword) {
         this.confirmPassword = confirmPassword;
-    }
-
-    public Map<String, String> getSportLevels() {
-        return sportLevels;
-    }
-
-    public void setSportLevels(Map<String, String> sportLevels) {
-        this.sportLevels = sportLevels;
     }
 }

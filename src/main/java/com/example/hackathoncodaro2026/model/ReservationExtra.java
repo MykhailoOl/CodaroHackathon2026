@@ -33,7 +33,7 @@ public class ReservationExtra {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id")
-    private InventoryItem item;
+    private ArrangementExtra item;
 
     @Size(max = 120)
     @Column(length = 120)
@@ -67,11 +67,11 @@ public class ReservationExtra {
         this.reservation = reservation;
     }
 
-    public InventoryItem getItem() {
+    public ArrangementExtra getItem() {
         return item;
     }
 
-    public void setItem(InventoryItem item) {
+    public void setItem(ArrangementExtra item) {
         this.item = item;
     }
 

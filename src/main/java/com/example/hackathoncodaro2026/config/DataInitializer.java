@@ -1,423 +1,204 @@
 package com.example.hackathoncodaro2026.config;
 
 import com.example.hackathoncodaro2026.model.Address;
-import com.example.hackathoncodaro2026.model.Facility;
-import com.example.hackathoncodaro2026.model.InventoryItem;
-import com.example.hackathoncodaro2026.model.Reservation;
-import com.example.hackathoncodaro2026.model.SportResource;
+import com.example.hackathoncodaro2026.model.ArrangementExtra;
+import com.example.hackathoncodaro2026.model.FuneralHome;
+import com.example.hackathoncodaro2026.model.ServiceVenue;
 import com.example.hackathoncodaro2026.model.User;
-import com.example.hackathoncodaro2026.model.enums.PaymentMethod;
-import com.example.hackathoncodaro2026.model.enums.ReservationKind;
-import com.example.hackathoncodaro2026.model.enums.ResourceType;
+import com.example.hackathoncodaro2026.model.enums.PricingMode;
 import com.example.hackathoncodaro2026.model.enums.Role;
-import com.example.hackathoncodaro2026.repository.FacilityRepository;
-import com.example.hackathoncodaro2026.repository.InventoryItemRepository;
-import com.example.hackathoncodaro2026.repository.ReservationRepository;
-import com.example.hackathoncodaro2026.repository.SportResourceRepository;
+import com.example.hackathoncodaro2026.model.enums.ServiceType;
+import com.example.hackathoncodaro2026.model.enums.VenueType;
+import com.example.hackathoncodaro2026.repository.ArrangementExtraRepository;
+import com.example.hackathoncodaro2026.repository.FuneralHomeRepository;
+import com.example.hackathoncodaro2026.repository.ServiceVenueRepository;
 import com.example.hackathoncodaro2026.repository.UserRepository;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.Ordered;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
-import java.util.List;
 
 @Component
-@Order(Ordered.LOWEST_PRECEDENCE)
-public class DataInitializer implements CommandLineRunner {
-
-    private static final LocalTime OPEN = LocalTime.of(7, 0);
-    private static final LocalTime CLOSE = LocalTime.of(22, 0);
+@Order(20)
+public class DataInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
-    private final FacilityRepository facilityRepository;
-    private final SportResourceRepository sportResourceRepository;
-    private final ReservationRepository reservationRepository;
-    private final InventoryItemRepository inventoryItemRepository;
+    private final FuneralHomeRepository funeralHomeRepository;
+    private final ServiceVenueRepository serviceVenueRepository;
+    private final ArrangementExtraRepository arrangementExtraRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(
             UserRepository userRepository,
-            FacilityRepository facilityRepository,
-            SportResourceRepository sportResourceRepository,
-            ReservationRepository reservationRepository,
-            InventoryItemRepository inventoryItemRepository,
+            FuneralHomeRepository funeralHomeRepository,
+            ServiceVenueRepository serviceVenueRepository,
+            ArrangementExtraRepository arrangementExtraRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
-        this.facilityRepository = facilityRepository;
-        this.sportResourceRepository = sportResourceRepository;
-        this.reservationRepository = reservationRepository;
-        this.inventoryItemRepository = inventoryItemRepository;
+        this.funeralHomeRepository = funeralHomeRepository;
+        this.serviceVenueRepository = serviceVenueRepository;
+        this.arrangementExtraRepository = arrangementExtraRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
-    public void run(String... args) {
-        if (!userRepository.existsByUsernameIgnoreCase("admin")) {
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setEmail("admin@sportsfacility.local");
-            admin.setPassword(passwordEncoder.encode("Admin123!"));
-            admin.setFullName("Facility Administrator");
-            admin.setRole(Role.ADMIN);
-            admin.setPhone("+48 22 621 00 01");
-            admin.setEnabled(true);
-            userRepository.save(admin);
-        } else {
-            userRepository.findByUsernameIgnoreCase("admin").ifPresent(admin -> {
-                if (admin.getPhone() == null || admin.getPhone().isBlank()) {
-                    admin.setPhone("+48 22 621 00 01");
-                    userRepository.save(admin);
-                }
-            });
-        }
-        if (!userRepository.existsByUsernameIgnoreCase("manager")) {
-            User manager = new User();
-            manager.setUsername("manager");
-            manager.setEmail("manager@sportsfacility.local");
-            manager.setPassword(passwordEncoder.encode("Manager123!"));
-            manager.setFullName("Court Manager");
-            manager.setRole(Role.MANAGER);
-            manager.setPhone("+48 22 621 00 02");
-            manager.setEnabled(true);
-            userRepository.save(manager);
-        }
-        if (facilityRepository.count() == 0) {
-            seedWarsawNetwork();
-        }
-        backfillImagePaths();
-        backfillPartySizes();
-        backfillSwimCapacities();
-        backfillLessonPartySizes();
-        backfillHourlyPrices();
-        backfillLessonPrices();
-        seedInventory();
-        backfillReservationFields();
+    @Transactional
+    public void run(ApplicationArguments args) {
+        ensureUser("admin", "admin@everrest.example", "Admin123!", "EverRest Administrator", "+48 22 100 2001", Role.ADMIN);
+        ensureUser("manager", "manager@everrest.example", "Manager123!", "EverRest Manager", "+48 22 100 2002", Role.MANAGER);
+        seedHomes();
+        seedExtras();
     }
 
-    private void seedWarsawNetwork() {
-        Facility torwar = saveFacility(
-                "COS Torwar",
-                "Flagship indoor arena next to the National Stadium. Tennis, basketball, and a high-capacity gym.",
-                "+48 22 621 44 11",
-                address("ul. \u0141azienkowska", "6A", "00-449", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(torwar, "Tennis Court 1", ResourceType.TENNIS, address("ul. \u0141azienkowska", "6A", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(torwar, "Tennis Court 2", ResourceType.TENNIS, address("ul. \u0141azienkowska", "6B", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(torwar, "Main Basketball Hall", ResourceType.BASKETBALL, address("ul. \u0141azienkowska", "8", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(torwar, "Performance Gym", ResourceType.GYM, address("ul. \u0141azienkowska", "6A", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 18)
-        ));
-
-        Facility inflancka = saveFacility(
-                "Centrum Sportu Inflancka",
-                "City sports centre in Muran\u00F3w with a full-size hall, volleyball court, and weights room.",
-                "+48 22 831 20 91",
-                address("ul. Inflancka", "8", "00-189", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.BASKETBALL
-        );
-        saveResources(List.of(
-                resource(inflancka, "Main Hall", ResourceType.BASKETBALL, address("ul. Inflancka", "8", "00-189", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(inflancka, "Volleyball Court", ResourceType.VOLLEYBALL, address("ul. Inflancka", "10", "00-189", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(inflancka, "Studio Gym", ResourceType.GYM, address("ul. Inflancka", "8A", "00-189", "\u015Ar\u00F3dmie\u015Bcie"), 16)
-        ));
-
-        Facility awf = saveFacility(
-                "AWF Warszawa",
-                "University of Physical Education campus in Bielany. Pitches, pool lanes, and tennis.",
-                "+48 22 834 04 31",
-                address("ul. Marymoncka", "34", "01-813", "Bielany"),
-                ResourceType.FOOTBALL
-        );
-        saveResources(List.of(
-                resource(awf, "Football Pitch A", ResourceType.FOOTBALL, address("ul. Marymoncka", "34", "01-813", "Bielany"), 1),
-                resource(awf, "Tennis Court North", ResourceType.TENNIS, address("ul. Marymoncka", "34A", "01-813", "Bielany"), 1),
-                resource(awf, "Pool Lane 1", ResourceType.SWIMMING, address("ul. Marymoncka", "36", "01-813", "Bielany"), 8),
-                resource(awf, "Training Gym", ResourceType.GYM, address("ul. Marymoncka", "32", "01-813", "Bielany"), 20)
-        ));
-
-        Facility agrykola = saveFacility(
-                "O\u015Brodek Agrykola",
-                "Historic club grounds below the Ujazdowski escarpment. Clay tennis and a riverside pitch.",
-                "+48 22 621 47 41",
-                address("ul. My\u015Bliwiecka", "9", "00-459", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(agrykola, "Clay Tennis Court", ResourceType.TENNIS, address("ul. My\u015Bliwiecka", "9", "00-459", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(agrykola, "Football Pitch", ResourceType.FOOTBALL, address("ul. My\u015Bliwiecka", "11", "00-459", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(agrykola, "Outdoor Basketball", ResourceType.BASKETBALL, address("ul. My\u015Bliwiecka", "9A", "00-459", "\u015Ar\u00F3dmie\u015Bcie"), 1)
-        ));
-
-        Facility warszawianka = saveFacility(
-                "KS Warszawianka",
-                "Multi-sport club in \u015Ar\u00F3dmie\u015Bcie with tennis, squash, and a 25 m pool.",
-                "+48 22 628 80 71",
-                address("ul. Szwole\u017Cer\u00F3w", "9", "00-464", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(warszawianka, "Tennis Court 1", ResourceType.TENNIS, address("ul. Szwole\u017Cer\u00F3w", "9", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(warszawianka, "Tennis Court 2", ResourceType.TENNIS, address("ul. Szwole\u017Cer\u00F3w", "11", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(warszawianka, "Squash Court A", ResourceType.SQUASH, address("ul. Szwole\u017Cer\u00F3w", "7", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(warszawianka, "Pool Lane 2", ResourceType.SWIMMING, address("ul. Szwole\u017Cer\u00F3w", "9A", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 6)
-        ));
-
-        Facility kolo = saveFacility(
-                "Hala Sportowa Ko\u0142o",
-                "Indoor halls on the Wola side of the tracks. Basketball, volleyball, and a community gym.",
-                "+48 22 632 11 80",
-                address("ul. Obozowa", "63", "01-425", "Wola"),
-                ResourceType.BASKETBALL
-        );
-        saveResources(List.of(
-                resource(kolo, "Basketball Hall", ResourceType.BASKETBALL, address("ul. Obozowa", "63", "01-425", "Wola"), 1),
-                resource(kolo, "Volleyball Hall", ResourceType.VOLLEYBALL, address("ul. Obozowa", "61", "01-425", "Wola"), 1),
-                resource(kolo, "Community Gym", ResourceType.GYM, address("ul. Obozowa", "65", "01-425", "Wola"), 14)
-        ));
-
-        Facility orlik = saveFacility(
-                "Orlik Wo\u0142oska",
-                "Neighbourhood Orlik pitches next to the hospital campus in Mokot\u00F3w.",
-                "+48 22 566 91 00",
-                address("ul. Wo\u0142oska", "4", "02-561", "Mokot\u00F3w"),
-                ResourceType.FOOTBALL
-        );
-        saveResources(List.of(
-                resource(orlik, "Football Pitch 1", ResourceType.FOOTBALL, address("ul. Wo\u0142oska", "4", "02-561", "Mokot\u00F3w"), 1),
-                resource(orlik, "Football Pitch 2", ResourceType.FOOTBALL, address("ul. Wo\u0142oska", "6", "02-561", "Mokot\u00F3w"), 1),
-                resource(orlik, "Basketball Cage", ResourceType.BASKETBALL, address("ul. Wo\u0142oska", "4A", "02-561", "Mokot\u00F3w"), 1)
-        ));
-
-        Facility szczescie = saveFacility(
-                "O\u015Brodek Szcz\u0119\u015Bliwice",
-                "Park Szcz\u0119\u015Bliwicki sports cluster in Ochota. Tennis, football, and a hillside gym.",
-                "+48 22 822 30 21",
-                address("ul. Drawska", "22", "02-202", "Ochota"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(szczescie, "Park Tennis Court", ResourceType.TENNIS, address("ul. Drawska", "22", "02-202", "Ochota"), 1),
-                resource(szczescie, "Park Football Pitch", ResourceType.FOOTBALL, address("ul. Drawska", "20", "02-202", "Ochota"), 1),
-                resource(szczescie, "Hillside Gym", ResourceType.GYM, address("ul. Drawska", "24", "02-202", "Ochota"), 12)
-        ));
-
-        Facility zoliborz = saveFacility(
-                "O\u015Brodek \u017Boliborz",
-                "District centre on Potocka with indoor volleyball and a compact gym.",
-                "+48 22 839 44 50",
-                address("ul. Potocka", "1", "01-634", "\u017Boliborz"),
-                ResourceType.VOLLEYBALL
-        );
-        saveResources(List.of(
-                resource(zoliborz, "Volleyball Hall", ResourceType.VOLLEYBALL, address("ul. Potocka", "1", "01-634", "\u017Boliborz"), 1),
-                resource(zoliborz, "Tennis Court", ResourceType.TENNIS, address("ul. Potocka", "3", "01-634", "\u017Boliborz"), 1),
-                resource(zoliborz, "District Gym", ResourceType.GYM, address("ul. Potocka", "1A", "01-634", "\u017Boliborz"), 15)
-        ));
-
-        Facility praga = saveFacility(
-                "Hala Sportowa Praga",
-                "East-bank hall on Kaw\u0119czy\u0144ska. Basketball, squash, and a busy gym floor.",
-                "+48 22 818 08 92",
-                address("ul. Kaw\u0119czy\u0144ska", "36", "03-772", "Praga-P\u00F3\u0142noc"),
-                ResourceType.BASKETBALL
-        );
-        saveResources(List.of(
-                resource(praga, "Basketball Hall", ResourceType.BASKETBALL, address("ul. Kaw\u0119czy\u0144ska", "36", "03-772", "Praga-P\u00F3\u0142noc"), 1),
-                resource(praga, "Squash Court B", ResourceType.SQUASH, address("ul. Kaw\u0119czy\u0144ska", "38", "03-772", "Praga-P\u00F3\u0142noc"), 1),
-                resource(praga, "East Gym", ResourceType.GYM, address("ul. Kaw\u0119czy\u0144ska", "34", "03-772", "Praga-P\u00F3\u0142noc"), 20)
-        ));
-    }
-
-    private Address address(String street, String buildingNumber, String postalCode, String district) {
-        return new Address(street, buildingNumber, postalCode, district);
-    }
-
-    private Facility saveFacility(String name, String description, String phone, Address address, ResourceType coverType) {
-        Facility facility = new Facility();
-        facility.setName(name);
-        facility.setDescription(description);
-        facility.setPhone(phone);
-        facility.setAddress(address);
-        facility.setEnabled(true);
-        facility.setImagePath(coverType.getImagePath());
-        return facilityRepository.save(facility);
-    }
-
-    private SportResource resource(Facility facility, String name, ResourceType type, Address address, int capacity) {
-        SportResource resource = new SportResource();
-        resource.setFacility(facility);
-        resource.setName(name);
-        resource.setType(type);
-        resource.setAddress(address);
-        resource.setCapacity(capacity);
-        resource.setSlotDurationMinutes(60);
-        resource.setOpeningTime(OPEN);
-        resource.setClosingTime(CLOSE);
-        resource.setEnabled(true);
-        resource.setImagePath(type.getImagePath());
-        resource.setMinPartySize(type.getMinPartySize());
-        resource.setMaxPartySize(type.getMaxPartySize());
-        applyLessonPartyRange(resource);
-        resource.setBaseHourlyPrice(type.getBaseHourlyPrice());
-        resource.setLessonHourlyPrice(type.getLessonHourlyPrice());
-        return resource;
-    }
-
-    private void saveResources(List<SportResource> resources) {
-        sportResourceRepository.saveAll(resources);
-    }
-
-    private void backfillImagePaths() {
-        for (SportResource resource : sportResourceRepository.findAll()) {
-            if (resource.getImagePath() == null || resource.getImagePath().isBlank()) {
-                resource.setImagePath(resource.getType().getImagePath());
-                sportResourceRepository.save(resource);
-            }
-        }
-        for (Facility facility : facilityRepository.findAll()) {
-            if (facility.getImagePath() == null || facility.getImagePath().isBlank()) {
-                List<SportResource> resources = sportResourceRepository.findByFacility_IdAndEnabledTrueOrderByNameAsc(facility.getId());
-                if (!resources.isEmpty()) {
-                    facility.setImagePath(resources.getFirst().getType().getImagePath());
-                } else {
-                    facility.setImagePath(ResourceType.TENNIS.getImagePath());
-                }
-                facilityRepository.save(facility);
-            }
-        }
-    }
-
-    private void backfillPartySizes() {
-        for (SportResource resource : sportResourceRepository.findAll()) {
-            if (needsPartySizeBackfill(resource)) {
-                resource.setMinPartySize(resource.getType().getMinPartySize());
-                resource.setMaxPartySize(resource.getType().getMaxPartySize());
-                sportResourceRepository.save(resource);
-            }
-        }
-    }
-
-    private boolean needsPartySizeBackfill(SportResource resource) {
-        int min = resource.getMinPartySize();
-        int max = resource.getMaxPartySize();
-        if (min < 1 || max < 1 || max < min) {
-            return true;
-        }
-        return min == 1 && max == 1 && resource.getType().getMaxPartySize() > 1;
-    }
-
-    private void backfillSwimCapacities() {
-        for (SportResource resource : sportResourceRepository.findAll()) {
-            if (resource.getType() != ResourceType.SWIMMING || resource.getCapacity() > 1) {
-                continue;
-            }
-            String name = resource.getName() == null ? "" : resource.getName();
-            resource.setCapacity(name.contains("2") ? 6 : 8);
-            sportResourceRepository.save(resource);
-        }
-    }
-
-    private void backfillLessonPartySizes() {
-        for (SportResource resource : sportResourceRepository.findAll()) {
-            int min = resource.getLessonMinPartySize();
-            int max = resource.getLessonMaxPartySize();
-            applyLessonPartyRange(resource);
-            if (resource.getLessonMinPartySize() != min || resource.getLessonMaxPartySize() != max) {
-                sportResourceRepository.save(resource);
-            }
-        }
-    }
-
-    private void applyLessonPartyRange(SportResource resource) {
-        if (resource.getMinPartySize() == 1 && resource.getMaxPartySize() == 1 && resource.getCapacity() > 1) {
-            resource.setLessonMinPartySize(2);
-            resource.setLessonMaxPartySize(resource.getCapacity());
+    private void ensureUser(String username, String email, String password, String fullName, String phone, Role role) {
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             return;
         }
-        resource.setLessonMinPartySize(1);
-        resource.setLessonMaxPartySize(1);
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setFullName(fullName);
+        user.setPhone(phone);
+        user.setRole(role);
+        user.setEnabled(true);
+        userRepository.save(user);
     }
 
-    private void backfillHourlyPrices() {
-        for (SportResource resource : sportResourceRepository.findAll()) {
-            if (resource.getBaseHourlyPrice() == null || resource.getBaseHourlyPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                resource.setBaseHourlyPrice(resource.getType().getBaseHourlyPrice());
-                sportResourceRepository.save(resource);
-            }
-        }
-    }
-
-    private void backfillLessonPrices() {
-        for (SportResource resource : sportResourceRepository.findAll()) {
-            if (resource.getLessonHourlyPrice() == null || resource.getLessonHourlyPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                BigDecimal lesson = resource.getType().getLessonHourlyPrice();
-                if (lesson != null && lesson.compareTo(BigDecimal.ZERO) > 0) {
-                    resource.setLessonHourlyPrice(lesson);
-                    sportResourceRepository.save(resource);
-                }
-            }
-        }
-    }
-
-    private void seedInventory() {
-        seedItem("Racket", "15.00", ResourceType.TENNIS);
-        seedItem("Ball basket", "12.00", ResourceType.TENNIS);
-        seedItem("Racket", "15.00", ResourceType.SQUASH);
-        seedItem("Balls", "8.00", ResourceType.SQUASH);
-        seedItem("Ball", "10.00", ResourceType.FOOTBALL);
-        seedItem("Bibs", "12.00", ResourceType.FOOTBALL);
-        seedItem("Ball", "10.00", ResourceType.BASKETBALL);
-        seedItem("Ball", "10.00", ResourceType.VOLLEYBALL);
-        seedItem("Towel", "8.00", ResourceType.GYM);
-        seedItem("Locker", "6.00", ResourceType.GYM);
-        seedItem("Towel", "8.00", ResourceType.SWIMMING);
-        seedItem("Goggles", "10.00", ResourceType.SWIMMING);
-    }
-
-    private void seedItem(String name, String price, ResourceType type) {
-        if (inventoryItemRepository.existsByNameIgnoreCaseAndResourceType(name, type)) {
+    private void seedHomes() {
+        if (funeralHomeRepository.count() > 0) {
             return;
         }
-        InventoryItem item = new InventoryItem();
-        item.setName(name);
-        item.setPricePerPerson(new BigDecimal(price));
-        item.setResourceType(type);
-        item.setEnabled(true);
-        inventoryItemRepository.save(item);
+        FuneralHome everRest = home(
+                "EverRest Warsaw",
+                "A quiet chapel house in Mokotów for burial, memorial, and farewell gatherings.",
+                new Address("Puławska", "142", "02-670", "Mokotów"),
+                "+48 22 310 1100",
+                "/images/homes/everrest.jpg"
+        );
+        venue(everRest, "Willow Chapel", VenueType.CHAPEL, new Address("Puławska", "142A", "02-670", "Mokotów"), 80, 9, 17);
+        venue(everRest, "Remembrance Hall", VenueType.CEREMONY_HALL, new Address("Puławska", "142B", "02-670", "Mokotów"), 120, 8, 18);
+        venue(everRest, "Garden Pavilion", VenueType.MEMORIAL_GARDEN, new Address("Puławska", "144", "02-670", "Mokotów"), 60, 9, 17);
+
+        FuneralHome peaceful = home(
+                "Peaceful Passage",
+                "A Żoliborz house for measured farewells, with a hall and reception rooms.",
+                new Address("Mickiewicza", "27", "01-517", "Żoliborz"),
+                "+48 22 310 1200",
+                "/images/homes/peaceful.jpg"
+        );
+        venue(peaceful, "North Chapel", VenueType.CHAPEL, new Address("Mickiewicza", "27A", "01-517", "Żoliborz"), 70, 9, 17);
+        venue(peaceful, "Quiet Reception", VenueType.RECEPTION_HALL, new Address("Mickiewicza", "27B", "01-517", "Żoliborz"), 90, 10, 18);
+
+        FuneralHome gardens = home(
+                "Warsaw Memorial Gardens",
+                "Garden memorials and outdoor farewells beside Wilanów parkland.",
+                new Address("Klimczaka", "5", "02-797", "Wilanów"),
+                "+48 22 310 1300",
+                "/images/homes/gardens.jpg"
+        );
+        venue(gardens, "Garden Memorial Pavilion", VenueType.MEMORIAL_GARDEN, new Address("Klimczaka", "5A", "02-797", "Wilanów"), 50, 9, 17);
+        venue(gardens, "Lakeside Hall", VenueType.CEREMONY_HALL, new Address("Klimczaka", "5B", "02-797", "Wilanów"), 100, 8, 18);
+        venue(gardens, "Wilanów Chapel", VenueType.CHAPEL, new Address("Klimczaka", "7", "02-797", "Wilanów"), 64, 9, 16);
+
+        FuneralHome serenity = home(
+                "Serenity Farewell House",
+                "A Wola house with a cremation suite and a small chapel for family ceremonies.",
+                new Address("Wolska", "88", "01-187", "Wola"),
+                "+48 22 310 1400",
+                "/images/homes/serenity.jpg"
+        );
+        venue(serenity, "Cremation Suite", VenueType.CREMATORIUM, new Address("Wolska", "88A", "01-187", "Wola"), 40, 8, 17);
+        venue(serenity, "West Chapel", VenueType.CHAPEL, new Address("Wolska", "88B", "01-187", "Wola"), 55, 9, 17);
+        venue(serenity, "Family Reception", VenueType.RECEPTION_HALL, new Address("Wolska", "90", "01-187", "Wola"), 70, 10, 18);
+
+        FuneralHome harbor = home(
+                "Quiet Harbor House",
+                "A Praga house for memorials and farewells close to the Vistula.",
+                new Address("Targowa", "44", "03-728", "Praga-Północ"),
+                "+48 22 310 1500",
+                "/images/homes/harbor.jpg"
+        );
+        venue(harbor, "River Chapel", VenueType.CHAPEL, new Address("Targowa", "44A", "03-728", "Praga-Północ"), 72, 9, 17);
+        venue(harbor, "Harbor Hall", VenueType.CEREMONY_HALL, new Address("Targowa", "44B", "03-728", "Praga-Północ"), 110, 8, 18);
+
+        FuneralHome linden = home(
+                "Linden Rest Chapel",
+                "An Ochota chapel house with a garden court for smaller gatherings.",
+                new Address("Grójecka", "61", "02-301", "Ochota"),
+                "+48 22 310 1600",
+                "/images/homes/linden.jpg"
+        );
+        venue(linden, "Linden Chapel", VenueType.CHAPEL, new Address("Grójecka", "61A", "02-301", "Ochota"), 48, 9, 16);
+        venue(linden, "Courtyard Garden", VenueType.MEMORIAL_GARDEN, new Address("Grójecka", "61B", "02-301", "Ochota"), 36, 9, 17);
+
+        FuneralHome dawn = home(
+                "Dawn Remembrance",
+                "A Śródmieście townhouse for memorial services and receptions.",
+                new Address("Marszałkowska", "28", "00-639", "Śródmieście"),
+                "+48 22 310 1700",
+                "/images/homes/dawn.jpg"
+        );
+        venue(dawn, "Town Chapel", VenueType.CHAPEL, new Address("Marszałkowska", "28A", "00-639", "Śródmieście"), 60, 9, 17);
+        venue(dawn, "City Reception", VenueType.RECEPTION_HALL, new Address("Marszałkowska", "28B", "00-639", "Śródmieście"), 80, 10, 18);
+        venue(dawn, "Dawn Hall", VenueType.CEREMONY_HALL, new Address("Marszałkowska", "30", "00-639", "Śródmieście"), 95, 8, 18);
     }
 
-    private void backfillReservationFields() {
-        for (Reservation reservation : reservationRepository.findAll()) {
-            boolean changed = false;
-            if (reservation.getPartySize() < 1) {
-                reservation.setPartySize(1);
-                changed = true;
-            }
-            if (reservation.getPaymentMethod() == null) {
-                reservation.setPaymentMethod(PaymentMethod.CASH);
-                changed = true;
-            }
-            if (reservation.getTotalAmount() == null) {
-                reservation.setTotalAmount(BigDecimal.ZERO.setScale(2));
-                changed = true;
-            }
-            if (reservation.getKind() == null) {
-                reservation.setKind(ReservationKind.STANDARD);
-                changed = true;
-            }
-            if (reservation.getOccupancyUnits() < 1) {
-                reservation.setOccupancyUnits(1);
-                changed = true;
-            }
-            if (changed) {
-                reservationRepository.save(reservation);
-            }
+    private FuneralHome home(String name, String description, Address address, String phone, String imagePath) {
+        FuneralHome home = new FuneralHome();
+        home.setName(name);
+        home.setDescription(description);
+        home.setAddress(address);
+        home.setPhone(phone);
+        home.setEnabled(true);
+        home.setImagePath(imagePath);
+        return funeralHomeRepository.save(home);
+    }
+
+    private void venue(FuneralHome home, String name, VenueType type, Address address, int maxAttendees, int openHour, int closeHour) {
+        ServiceVenue venue = new ServiceVenue();
+        venue.setFuneralHome(home);
+        venue.setName(name);
+        venue.setType(type);
+        venue.setAddress(address);
+        venue.setMaxAttendees(maxAttendees);
+        venue.setOpeningTime(LocalTime.of(openHour, 0));
+        venue.setClosingTime(LocalTime.of(closeHour, 0));
+        venue.setSlotDurationMinutes(30);
+        venue.setEnabled(true);
+        venue.setImagePath(type.getImagePath());
+        serviceVenueRepository.save(venue);
+    }
+
+    private void seedExtras() {
+        extra("Floral arrangement", PricingMode.FIXED, "450.00", null);
+        extra("Memorial cards", PricingMode.PER_ATTENDEE, "12.00", null);
+        extra("Obituary notice", PricingMode.FIXED, "180.00", null);
+        extra("Ceremonial transport", PricingMode.FIXED, "650.00", null);
+        extra("Family transport", PricingMode.FIXED, "320.00", null);
+        extra("Reception catering", PricingMode.PER_ATTENDEE, "85.00", null);
+        extra("Live music", PricingMode.FIXED, "900.00", null);
+        extra("Ceremony livestream", PricingMode.FIXED, "280.00", null);
+        extra("Urn selection", PricingMode.FIXED, "420.00", ServiceType.CREMATION_CEREMONY);
+        extra("Venue decoration", PricingMode.FIXED, "240.00", null);
+    }
+
+    private void extra(String name, PricingMode mode, String amount, ServiceType required) {
+        if (arrangementExtraRepository.existsByNameIgnoreCase(name)) {
+            return;
         }
+        ArrangementExtra extra = new ArrangementExtra();
+        extra.setName(name);
+        extra.setPricingMode(mode);
+        extra.setAmount(new BigDecimal(amount));
+        extra.setRequiredServiceType(required);
+        extra.setEnabled(true);
+        arrangementExtraRepository.save(extra);
     }
 }

@@ -40,10 +40,6 @@ public class GlobalExceptionHandler {
             redirectAttributes.addFlashAttribute("errorMessage", "That email is already registered.");
             return "redirect:/profile";
         }
-        if (uri != null && uri.contains("/coach-rating")) {
-            redirectAttributes.addFlashAttribute("errorMessage", "You already rated this booking.");
-            return "redirect:/reservations";
-        }
         redirectAttributes.addFlashAttribute("errorMessage", "That change could not be saved.");
         return "redirect:/";
     }

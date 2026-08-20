@@ -2,7 +2,7 @@ spring:
   profiles:
     active: test
   datasource:
-    url: jdbc:h2:mem:sportsbookingtest;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000
+    url: jdbc:h2:mem:everresttest;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
@@ -30,3 +30,7 @@ app:
     auto-open: false
   logging:
     dir: ./build/test-logs
+  scheduling:
+    planning-days: 21
+    sunday-enabled: false
+    candidate-dates: 10

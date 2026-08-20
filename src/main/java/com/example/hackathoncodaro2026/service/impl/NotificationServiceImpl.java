@@ -31,7 +31,7 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setRecipient(recipient);
         notification.setType(type);
         notification.setTitle(clip(title, 120, "Notice"));
-        notification.setMessage(clip(message, 500, "Your booking was updated."));
+        notification.setMessage(clip(message, 500, "Your arrangement was updated."));
         notification.setReservationId(reservationId);
         notification.setRead(false);
         return notificationRepository.save(notification);

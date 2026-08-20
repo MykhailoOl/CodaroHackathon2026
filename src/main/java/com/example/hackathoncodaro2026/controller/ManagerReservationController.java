@@ -58,7 +58,7 @@ public class ManagerReservationController {
         User user = requireUser(authentication);
         try {
             reservationService.confirm(user, id);
-            redirectAttributes.addFlashAttribute("successMessage", "Reservation confirmed.");
+            redirectAttributes.addFlashAttribute("successMessage", "Arrangement confirmed.");
         } catch (ReservationException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
@@ -77,7 +77,7 @@ public class ManagerReservationController {
         User user = requireUser(authentication);
         try {
             reservationService.cancel(user, id, reason, otherNote);
-            redirectAttributes.addFlashAttribute("successMessage", "Reservation cancelled.");
+            redirectAttributes.addFlashAttribute("successMessage", "Arrangement cancelled.");
         } catch (ReservationException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }

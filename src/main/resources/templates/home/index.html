@@ -5,147 +5,85 @@
 <div class="court-grid" aria-hidden="true"></div>
 <header th:replace="~{fragments/nav :: header}"></header>
 <main class="dashboard">
-    <section class="hero-card hero-photo reveal">
-        <img th:src="@{/images/home/tennis-player.png}" alt="Tennis player on a grass court">
-        <div class="hero-photo-content">
-            <div>
-                <p class="eyebrow">Warsaw courts</p>
-                <h1>
-                    Welcome back,
-                    <span th:text="${currentUser != null ? currentUser.fullName : 'athlete'}">athlete</span>
-                </h1>
-                <p class="lede">Find a court in Warsaw and book your game.</p>
-            </div>
+    <section class="hero hero-funeral reveal">
+        <div class="hero-copy">
+            <p class="eyebrow">Warsaw · funeral arrangements</p>
+            <h1>Quiet rooms. Clear steps. A date chosen with care.</h1>
+            <p class="lede">EverRest helps families arrange a burial, cremation, memorial, or farewell ceremony in Warsaw. You choose the home, venue, package, and extras. We assign an available date from current openings — never a time you have to pick under pressure.</p>
+            <a class="btn btn-accent" th:href="@{/homes}">Browse funeral homes</a>
         </div>
-    </section>
-    <section class="stat-row reveal" aria-label="Desk metrics">
-        <article class="stat-card reveal-child">
-            <p class="stat-kicker">Today</p>
-            <p class="stat-value" th:text="${occupancyPercent + '%'}">0%</p>
-            <p class="stat-label">Occupancy heatmap</p>
-        </article>
-        <article class="stat-card reveal-child">
-            <p class="stat-kicker">Your reservations</p>
-            <p class="stat-value" th:text="${upcomingCount}">0</p>
-            <p class="stat-label">Upcoming bookings</p>
-        </article>
-        <article class="stat-card reveal-child">
-            <p class="stat-kicker">Inventory</p>
-            <p class="stat-value" th:text="${facilityCount}">0</p>
-            <p class="stat-label">Active facilities</p>
-        </article>
-        <article class="stat-card reveal-child">
-            <p class="stat-kicker">Instances</p>
-            <p class="stat-value" th:text="${resourceCount}">0</p>
-            <p class="stat-label">Bookable courts</p>
-        </article>
+        <img class="hero-image" th:src="@{/images/home/hero.jpg}" alt="Quiet chapel interior with soft daylight">
     </section>
     <section class="reveal">
         <div class="section-head">
-            <h2>How it works</h2>
-            <p>Three quiet steps from a Warsaw venue to a confirmed hour on court.</p>
+            <p class="eyebrow">How it works</p>
+            <h2>Four calm steps</h2>
         </div>
-        <div class="home-steps">
-            <article class="home-step reveal-child">
-                <img th:src="@{/images/sports/tennis.jpg}" alt="Tennis court in Warsaw">
-                <span class="module-icon" aria-hidden="true">01</span>
-                <h3>Browse venues</h3>
-                <p>Open the Warsaw network and pick a facility — each court, gym, and pool has its own address.</p>
+        <div class="card-grid four">
+            <article class="plain-card">
+                <h3>1. Choose a home</h3>
+                <p>Select a funeral home and a chapel, hall, garden, cremation suite, or reception room.</p>
             </article>
-            <article class="home-step reveal-child">
-                <img th:src="@{/images/sports/gym.jpg}" alt="Gym floor">
-                <span class="module-icon" aria-hidden="true">02</span>
-                <h3>Claim a slot</h3>
-                <p>Choose a free start, add extras if you need them, and pick how you will pay on site.</p>
+            <article class="plain-card">
+                <h3>2. Set the arrangement</h3>
+                <p>Pick a ceremony type and package, then add extras such as flowers, music, or catering.</p>
             </article>
-            <article class="home-step reveal-child">
-                <img th:src="@{/images/sports/football.jpg}" alt="Football pitch">
-                <span class="module-icon" aria-hidden="true">03</span>
-                <h3>Pending, then play</h3>
-                <p>Your booking holds the hour as pending until a manager confirms. Cancel a pending booking from history until it is confirmed.</p>
+            <article class="plain-card">
+                <h3>3. Confirm the arrangement</h3>
+                <p>After you confirm, currently available dates appear on a wheel while a time is assigned. The server chooses the date.</p>
+            </article>
+            <article class="plain-card">
+                <h3>4. Manager confirms</h3>
+                <p>Family arrangements stay pending until a manager confirms. You can follow status in History and Notices.</p>
             </article>
         </div>
     </section>
     <section class="reveal">
         <div class="section-head">
-            <h2>What you can book</h2>
-            <p>Tennis, gyms, pool lanes, and football pitches across the city — plus halls and squash where the venue has them.</p>
+            <p class="eyebrow">Places of gathering</p>
+            <h2>Funeral homes in Warsaw</h2>
+            <p>Fictional demo houses with realistic Warsaw addresses. They are not real businesses.</p>
         </div>
-        <div class="sport-gallery">
-            <figure class="sport-tile reveal-child">
-                <img th:src="@{/images/sports/tennis.jpg}" alt="Tennis">
-                <figcaption>Tennis</figcaption>
-            </figure>
-            <figure class="sport-tile reveal-child">
-                <img th:src="@{/images/sports/gym.jpg}" alt="Gym">
-                <figcaption>Gym</figcaption>
-            </figure>
-            <figure class="sport-tile reveal-child">
-                <img th:src="@{/images/sports/swimming.jpg}" alt="Swimming">
-                <figcaption>Pool</figcaption>
-            </figure>
-            <figure class="sport-tile reveal-child">
-                <img th:src="@{/images/sports/football.jpg}" alt="Football">
-                <figcaption>Football</figcaption>
-            </figure>
+        <div class="card-grid">
+            <a class="media-card" th:each="home : ${homes}" th:href="@{/homes/{id}(id=${home.id})}">
+                <img th:src="@{${home.resolvedImagePath}}" th:alt="${home.name}">
+                <div>
+                    <h3 th:text="${home.name}">EverRest Warsaw</h3>
+                    <p class="meta-label" th:text="${home.address.toDisplayString()}">Address</p>
+                </div>
+            </a>
         </div>
     </section>
-    <section class="home-occupancy reveal">
-        <img th:src="@{/images/sports/tennis.jpg}" alt="Tennis coaching">
-        <div class="home-occupancy-copy">
-            <p class="eyebrow">Coaches</p>
-            <h2>Train at your level</h2>
-            <p>Admins add coaches to Courtly. When you book a court, gym, or pool — not a group lesson — you can add a coach as an extra. Pick your real level for that sport and only matching coaches appear, each with their own hourly price.</p>
-            <a class="btn btn-accent" th:href="@{/facilities}">Book a venue</a>
+    <section class="reveal">
+        <div class="section-head">
+            <p class="eyebrow">Packages</p>
+            <h2>Essential, Classic, Tribute</h2>
+        </div>
+        <div class="card-grid three">
+            <article class="plain-card">
+                <h3>Essential · 90 min · 2400 PLN</h3>
+                <p>A quiet gathering with a simple ceremony and family seating.</p>
+            </article>
+            <article class="plain-card">
+                <h3>Classic · 120 min · 4200 PLN</h3>
+                <p>A full ceremony with printed programmes and a reception window.</p>
+            </article>
+            <article class="plain-card">
+                <h3>Tribute · 180 min · 6800 PLN</h3>
+                <p>An extended remembrance with music, flowers, and a longer gathering.</p>
+            </article>
         </div>
     </section>
-    <section class="home-occupancy reveal">
-        <img th:src="@{/images/sports/basketball.jpg}" alt="Indoor sports hall">
-        <div class="home-occupancy-copy">
-            <p class="eyebrow">Live capacity</p>
-            <h2>Find a free hour</h2>
-            <p>The occupancy board shows how full each court is across the day. A green hour is open — tap it and you land on that booking.</p>
-            <a class="btn btn-accent" th:href="@{/occupancy}">Open occupancy</a>
-        </div>
-    </section>
-    <section class="home-cta reveal">
+    <section class="reveal split-band">
+        <img th:src="@{/images/home/flowers.jpg}" alt="White flowers in a calm arrangement">
         <div>
-            <p class="eyebrow">Ready when you are</p>
-            <h2>Pick a venue and play</h2>
-            <p>Facilities, occupancy, and reservation history are live. Welcome in.</p>
-        </div>
-        <a class="btn btn-accent" th:href="@{/facilities}">Browse facilities</a>
-    </section>
-    <section class="reveal">
-        <div class="section-head">
-            <h2>On the board</h2>
-            <p>Jump straight to the desk you need.</p>
-        </div>
-        <div class="module-grid">
-            <a class="module-card reveal-child" th:href="@{/facilities}">
-                <span class="module-icon" aria-hidden="true">01</span>
-                <h3>Facilities</h3>
-                <p>Warsaw venues with courts, pitches, pools, and gyms — each instance has its own address.</p>
-                <span class="chip">Open</span>
-            </a>
-            <a class="module-card reveal-child" th:href="@{/facilities}">
-                <span class="module-icon" aria-hidden="true">02</span>
-                <h3>Slots</h3>
-                <p>Open a venue, pick a start, and claim the court while it is free.</p>
-                <span class="chip">Via facilities</span>
-            </a>
-            <a class="module-card reveal-child" th:href="@{/reservations}">
-                <span class="module-icon" aria-hidden="true">03</span>
-                <h3>History</h3>
-                <p>Your confirmations and cancellations, newest first. Pending bookings can be cancelled until they are confirmed.</p>
-                <span class="chip">Open</span>
-            </a>
-            <a class="module-card reveal-child" th:href="@{/occupancy}">
-                <span class="module-icon" aria-hidden="true">04</span>
-                <h3>Occupancy</h3>
-                <p>Live capacity heat across the city network. Click a free hour to book that court.</p>
-                <span class="chip">Open</span>
-            </a>
+            <p class="eyebrow">Privacy</p>
+            <h2>Family details stay private</h2>
+            <p>Names of the deceased, dates of birth and death, family notes, phone numbers, and emails are never written to application logs. Sensitive fields are not stored in the arrangement guide’s browser storage.</p>
+            <p class="eyebrow">Date assignment</p>
+            <p>The wheel is a visual of currently free dates. The assigned time is chosen on the server from live availability after you confirm. The quoted amount does not change with the assigned date.</p>
+            <p>Today’s occupancy across venues: <strong th:text="${occupancyPercent + '%'}">0%</strong></p>
+            <p th:if="${upcomingCount != null and upcomingCount > 0}">You have <span th:text="${upcomingCount}">1</span> upcoming arrangement(s).</p>
         </div>
     </section>
 </main>

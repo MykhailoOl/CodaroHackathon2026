@@ -4,10 +4,10 @@ import com.example.hackathoncodaro2026.dto.OccupancyCell;
 import com.example.hackathoncodaro2026.dto.OccupancyGrid;
 import com.example.hackathoncodaro2026.dto.OccupancyRow;
 import com.example.hackathoncodaro2026.model.Reservation;
-import com.example.hackathoncodaro2026.model.SportResource;
+import com.example.hackathoncodaro2026.model.ServiceVenue;
 import com.example.hackathoncodaro2026.model.enums.ReservationStatus;
 import com.example.hackathoncodaro2026.repository.ReservationRepository;
-import com.example.hackathoncodaro2026.repository.SportResourceRepository;
+import com.example.hackathoncodaro2026.repository.ServiceVenueRepository;
 import com.example.hackathoncodaro2026.service.OccupancyService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +18,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -27,30 +25,36 @@ public class OccupancyServiceImpl implements OccupancyService {
 
     private static final ZoneId WARSAW = ZoneId.of("Europe/Warsaw");
 
-    private final SportResourceRepository sportResourceRepository;
+    private final ServiceVenueRepository serviceVenueRepository;
     private final ReservationRepository reservationRepository;
 
     public OccupancyServiceImpl(
-            SportResourceRepository sportResourceRepository,
+            ServiceVenueRepository serviceVenueRepository,
             ReservationRepository reservationRepository
     ) {
-        this.sportResourceRepository = sportResourceRepository;
+        this.serviceVenueRepository = serviceVenueRepository;
         this.reservationRepository = reservationRepository;
     }
 
     @Override
-    public OccupancyGrid gridFor(LocalDate date, Long facilityId) {
-        List<SportResource> resources = facilityId == null
-                ? sportResourceRepository.findAllEnabledWithFacility()
-                : sportResourceRepository.findEnabledWithFacilityByFacilityId(facilityId);
+    public OccupancyGrid gridFor(LocalDate date, Long funeralHomeId) {
+        LocalDate day = date == null ? LocalDate.now(WARSAW) : date;
         OccupancyGrid grid = new OccupancyGrid();
-        grid.setDate(date);
-        grid.setFacilityId(facilityId);
-        if (resources.isEmpty()) {
-            return grid;
+        grid.setDate(day);
+        grid.setFuneralHomeId(funeralHomeId);
+        List<ServiceVenue> venues = funeralHomeId == null
+                ? serviceVenueRepository.findByEnabledTrueOrderByNameAsc()
+                : serviceVenueRepository.findByFuneralHome_IdAndEnabledTrueOrderByNameAsc(funeralHomeId);
+        LocalTime open = LocalTime.of(8, 0);
+        LocalTime close = LocalTime.of(18, 0);
+        for (ServiceVenue venue : venues) {
+            if (venue.getOpeningTime() != null && venue.getOpeningTime().isBefore(open)) {
+                open = venue.getOpeningTime();
+            }
+            if (venue.getClosingTime() != null && venue.getClosingTime().isAfter(close)) {
+                close = venue.getClosingTime();
+            }
         }
-        LocalTime open = resources.stream().map(SportResource::getOpeningTime).min(LocalTime::compareTo).orElse(LocalTime.of(7, 0));
-        LocalTime close = resources.stream().map(SportResource::getClosingTime).max(LocalTime::compareTo).orElse(LocalTime.of(22, 0));
         List<LocalTime> hours = new ArrayList<>();
         LocalTime cursor = open;
         while (cursor.isBefore(close)) {
@@ -58,79 +62,46 @@ public class OccupancyServiceImpl implements OccupancyService {
             cursor = cursor.plusHours(1);
         }
         grid.setHours(hours);
-        LocalDateTime dayStart = date.atTime(open);
-        LocalDateTime dayEnd = date.atTime(close);
-        List<Reservation> reservations = reservationRepository.findOccupyingOverlapping(
+        int bookedUnits = 0;
+        int capacityUnits = 0;
+        LocalDateTime dayStart = day.atStartOfDay();
+        LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
+        List<Reservation> occupying = reservationRepository.findOccupyingOverlapping(
                 ReservationStatus.occupying(),
                 dayStart,
                 dayEnd
         );
-        Map<Long, List<Reservation>> byResource = reservations.stream()
-                .collect(Collectors.groupingBy(item -> item.getResource().getId()));
-        LocalDateTime now = LocalDateTime.now(WARSAW);
-        int bookedUnits = 0;
-        int capacityUnits = 0;
-        List<OccupancyRow> rows = new ArrayList<>();
-        for (SportResource resource : resources) {
+        for (ServiceVenue venue : venues) {
             OccupancyRow row = new OccupancyRow();
-            row.setResourceId(resource.getId());
-            row.setResourceName(resource.getName());
-            row.setFacilityName(resource.getFacility().getName());
-            row.setSport(resource.getType().getDisplayName());
-            row.setImagePath(resource.getImagePath() != null ? resource.getImagePath() : resource.getType().getImagePath());
-            row.setCapacity(resource.getCapacity());
-            List<Reservation> booked = byResource.getOrDefault(resource.getId(), List.of());
-            List<OccupancyCell> cells = new ArrayList<>();
+            row.setVenueId(venue.getId());
+            row.setVenueName(venue.getName());
+            row.setFuneralHomeName(venue.getFuneralHome() == null ? "" : venue.getFuneralHome().getName());
+            row.setVenueType(venue.getType() == null ? "" : venue.getType().getLabel());
+            row.setImagePath(venue.resolvedImagePath());
+            row.setMaxAttendees(venue.getMaxAttendees());
             for (LocalTime hour : hours) {
-                LocalDateTime slotStart = date.atTime(hour);
+                LocalDateTime slotStart = LocalDateTime.of(day, hour);
                 LocalDateTime slotEnd = slotStart.plusHours(1);
-                boolean openSlot = !hour.isBefore(resource.getOpeningTime())
-                        && !slotEnd.toLocalTime().isAfter(resource.getClosingTime())
-                        && !slotEnd.toLocalDate().isAfter(date);
-                if (!openSlot) {
-                    cells.add(new OccupancyCell(hour, 0, resource.getCapacity(), "closed", false));
-                    continue;
-                }
-                int count = 0;
-                for (Reservation reservation : booked) {
+                int booked = 0;
+                String level = "free";
+                for (Reservation reservation : occupying) {
+                    if (!reservation.getVenue().getId().equals(venue.getId())) {
+                        continue;
+                    }
                     if (reservation.getStartAt().isBefore(slotEnd) && reservation.getEndAt().isAfter(slotStart)) {
-                        count += Math.max(1, reservation.getOccupancyUnits());
+                        booked = 1;
+                        level = reservation.getStatus() == ReservationStatus.CONFIRMED ? "confirmed" : "pending";
+                        break;
                     }
                 }
-                boolean past = !slotStart.isAfter(now);
-                boolean full = count >= resource.getCapacity();
-                String level = levelFor(count, resource.getCapacity(), past);
-                boolean bookable = !full && !past;
-                cells.add(new OccupancyCell(hour, count, resource.getCapacity(), level, bookable));
-                bookedUnits += count;
-                capacityUnits += resource.getCapacity();
+                row.getCells().add(new OccupancyCell(hour, booked, 1, level, false));
+                bookedUnits += booked;
+                capacityUnits += 1;
             }
-            row.setCells(cells);
-            rows.add(row);
+            grid.getRows().add(row);
         }
-        grid.setRows(rows);
         grid.setBookedUnits(bookedUnits);
         grid.setCapacityUnits(capacityUnits);
         return grid;
-    }
-
-    private String levelFor(int booked, int capacity, boolean past) {
-        if (booked >= capacity) {
-            return "full";
-        }
-        if (past) {
-            return booked == 0 ? "past" : "past-used";
-        }
-        if (booked == 0) {
-            return "free";
-        }
-        double ratio = booked / (double) capacity;
-        if (ratio < 0.5) {
-            return "low";
-        }
-        if (ratio < 0.85) {
-            return "partial";
-        }
-        return "near";
     }
 }

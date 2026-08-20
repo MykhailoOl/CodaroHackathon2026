@@ -1,104 +1,81 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('Reservation history')}"></head>
+<head th:replace="~{fragments/head :: head('History')}"></head>
 <body class="app-body">
 <div class="court-grid" aria-hidden="true"></div>
 <header th:replace="~{fragments/nav :: header}"></header>
 <main class="dashboard">
     <div class="section-head">
-        <p class="eyebrow">Paper trail</p>
-        <h1 th:text="${adminView} ? 'All reservations' : 'My reservations'">My reservations</h1>
-        <p th:if="${adminView}">Every booking across the Warsaw network, newest first.</p>
-        <p th:unless="${adminView}">Upcoming, pending, past, and cancelled sessions. Pending bookings can be cancelled until they are confirmed.</p>
-        <p class="lede">Only pending reservations can be changed.</p>
+        <p class="eyebrow">Your arrangements</p>
+        <h1>History</h1>
+        <p>Pending arrangements can be updated or cancelled. Confirmed ceremonies cannot be changed here.</p>
     </div>
     <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
     <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-    <p class="lede" th:if="${#lists.isEmpty(reservations)}">No reservations yet. Open a facility and claim a slot.</p>
+    <p class="lede" th:if="${#lists.isEmpty(reservations)}">No arrangements yet.</p>
     <div class="history-list">
         <article class="history-card" th:each="item : ${reservations}">
             <img class="history-thumb"
-                 th:src="@{${item.resource.imagePath != null ? item.resource.imagePath : item.resource.type.imagePath}}"
-                 th:alt="${item.resource.type.displayName}">
+                 th:src="@{${item.venue.resolvedImagePath}}"
+                 th:alt="${item.venue.name}">
             <div class="history-main">
-                <p class="eyebrow" th:text="${item.resource.type.displayName}">Tennis</p>
+                <p class="eyebrow" th:text="${item.serviceType.label}">Memorial service</p>
                 <h3>
-                    <span th:text="${item.resource.name}">Court</span>
+                    <span th:text="${item.venue.name}">Venue</span>
                     <span class="muted"> · </span>
-                    <span th:text="${item.resource.facility.name}">Venue</span>
+                    <span th:text="${item.venue.funeralHome.name}">Home</span>
                 </h3>
-                <p class="address-line" th:text="${item.resource.address.toDisplayString()}">Address</p>
+                <p class="address-line" th:text="${item.venue.address.toDisplayString()}">Address</p>
                 <p class="meta-label">
-                    <span th:text="${#temporals.format(item.startAt, 'yyyy-MM-dd')}">2026-08-20</span>
-                    ·
-                    <span th:text="${#temporals.format(item.startAt, 'HH:mm')}">18:00</span>
+                    Remembering
+                    <span th:text="${item.deceasedFullName}">Name</span>
+                </p>
+                <p class="meta-label">
+                    Assigned
+                    <span th:text="${#temporals.format(item.startAt, 'yyyy-MM-dd HH:mm')}">2026-08-20 10:00</span>
                     –
-                    <span th:text="${#temporals.format(item.endAt, 'HH:mm')}">19:00</span>
-                </p>
-                <p class="lede" th:if="${item.note != null}" th:text="${item.note}">Note</p>
-                <p class="meta-label">
-                    Type
-                    <span th:text="${item.kindLabel}">Individual</span>
+                    <span th:text="${#temporals.format(item.endAt, 'HH:mm')}">12:00</span>
                 </p>
                 <p class="meta-label">
-                    People
-                    <span th:text="${item.partySizeLabel}">1</span>
+                    Package
+                    <span th:text="${item.funeralPackage.label}">Classic</span>
                 </p>
-                <p class="meta-label" th:if="${item.hasExtras()}">
+                <p class="meta-label">
+                    Guests
+                    <span th:text="${item.attendees}">20</span>
+                </p>
+                <p class="meta-label" th:if="${item.extrasSummary != null and !#strings.isEmpty(item.extrasSummary)}">
                     Extras
-                    <span th:text="${item.extrasSummary}">Racket ×2</span>
+                    <span th:text="${item.extrasSummary}">Flowers</span>
                 </p>
-                <p class="meta-label" th:if="${coachRatings[item.id] != null}">
-                    Coach rating
-                    <span th:text="${'★ ' + coachRatings[item.id].stars}">★ 5</span>
-                </p>
-                <p class="lede" th:if="${coachRatings[item.id] != null and coachRatings[item.id].review != null and !#strings.isEmpty(coachRatings[item.id].review)}"
-                   th:text="${coachRatings[item.id].review}">Great session</p>
                 <p class="meta-label">
                     Payment
                     <span th:text="${item.paymentMethod.label}">Cash</span>
                 </p>
                 <p class="meta-label">
                     Amount
-                    <span th:text="${item.formattedTotalAmount}">80.00 PLN</span>
-                </p>
-                <p class="cancel-reason"
-                   th:if="${item.status.name() == 'CANCELLED' and item.cancellationReason != null and !#strings.isEmpty(item.cancellationReason)}"
-                   th:text="${'Reason: ' + item.cancellationReason}">Reason</p>
-                <p class="meta-label" th:if="${adminView}">
-                    Booked by <span th:text="${item.user.fullName}">Player</span>
-                    (<span th:text="${item.user.username}">user</span>)
+                    <span th:text="${item.formattedTotalAmount}">4200.00 PLN</span>
                 </p>
             </div>
             <div class="history-aside">
+                <span class="status-badge status-pending" th:if="${item.status.name() == 'PENDING'}">Pending</span>
+                <span class="status-badge status-confirmed" th:if="${item.status.name() == 'CONFIRMED'}">Confirmed</span>
                 <span class="status-badge status-cancelled" th:if="${item.status.name() == 'CANCELLED'}">Cancelled</span>
-                <span class="status-badge status-pending"
-                      th:if="${item.status.name() == 'PENDING'}">Pending</span>
-                <span class="status-badge status-completed"
-                      th:if="${item.status.name() == 'CONFIRMED' and !item.endAt.isAfter(now)}">Completed</span>
-                <span class="status-badge status-confirmed"
-                      th:if="${item.status.name() == 'CONFIRMED' and item.endAt.isAfter(now)}">Confirmed</span>
-                <button type="button"
-                        class="btn btn-danger js-open-cancel"
-                        th:if="${item.status.name() == 'PENDING' and item.startAt.isAfter(now)}"
-                        th:attr="data-action=@{/reservations/{id}/cancel(id=${item.id})}">Cancel</button>
-                <a class="btn btn-ghost"
-                   th:if="${editableIds != null and editableIds.contains(item.id)}"
+                <a class="btn btn-ghost" th:if="${item.status.name() == 'PENDING'}"
                    th:href="@{/reservations/{id}/edit(id=${item.id})}">Edit</a>
                 <button type="button"
-                        class="btn btn-accent js-open-rating"
-                        th:if="${rateableIds.contains(item.id)}"
-                        th:attr="data-action=@{/reservations/{id}/coach-rating(id=${item.id})}">Rate coach</button>
+                        class="btn btn-danger js-open-cancel"
+                        th:if="${item.status.name() == 'PENDING'}"
+                        th:attr="data-action=@{/reservations/{id}/cancel(id=${item.id})}">Cancel</button>
             </div>
         </article>
     </div>
-    <p class="auth-switch"><a th:href="@{/facilities}">Book another court</a></p>
 </main>
 <dialog id="cancel-dialog" class="cancel-dialog">
     <form id="cancel-dialog-form" class="cancel-dialog-form" method="post" th:action="@{/reservations}">
-        <p class="eyebrow">Cancel booking</p>
+        <p class="eyebrow">Cancel arrangement</p>
         <h2>Why are you cancelling?</h2>
-        <p class="lede">Pick a reason to finish the cancellation.</p>
+        <p class="lede">Pending arrangements only. Confirmed ceremonies cannot be cancelled here.</p>
         <fieldset class="cancel-options">
             <legend>Reason</legend>
             <label class="cancel-option" th:each="option : ${cancelReasons}">
@@ -108,7 +85,7 @@
         </fieldset>
         <div class="field" id="other-note-wrap" hidden>
             <label for="otherNote">Note <span class="optional">(optional)</span></label>
-            <textarea id="otherNote" name="otherNote" maxlength="400" rows="2" placeholder="Add a short note"></textarea>
+            <textarea id="otherNote" name="otherNote" maxlength="400" rows="2"></textarea>
         </div>
         <p class="field-error" id="cancel-reason-error" hidden>Choose a cancellation reason</p>
         <div class="dialog-actions">
@@ -117,48 +94,8 @@
         </div>
     </form>
 </dialog>
-<dialog id="rating-dialog" class="cancel-dialog">
-    <form id="rating-dialog-form" class="cancel-dialog-form" method="post" th:action="@{/reservations}">
-        <p class="eyebrow">Coach rating</p>
-        <h2>How was your coach?</h2>
-        <p class="lede">One rating per completed session. Review is optional.</p>
-        <fieldset class="cancel-options">
-            <legend>Stars</legend>
-            <label class="cancel-option">
-                <input type="radio" name="stars" value="1">
-                <span>1</span>
-            </label>
-            <label class="cancel-option">
-                <input type="radio" name="stars" value="2">
-                <span>2</span>
-            </label>
-            <label class="cancel-option">
-                <input type="radio" name="stars" value="3">
-                <span>3</span>
-            </label>
-            <label class="cancel-option">
-                <input type="radio" name="stars" value="4">
-                <span>4</span>
-            </label>
-            <label class="cancel-option">
-                <input type="radio" name="stars" value="5">
-                <span>5</span>
-            </label>
-        </fieldset>
-        <div class="field">
-            <label for="ratingReview">Review <span class="optional">(optional)</span></label>
-            <textarea id="ratingReview" name="review" maxlength="500" rows="3" placeholder="What stood out?"></textarea>
-        </div>
-        <p class="field-error" id="rating-stars-error" hidden>Choose a rating from 1 to 5 stars</p>
-        <div class="dialog-actions">
-            <button type="button" class="btn btn-ghost" id="rating-dialog-dismiss">Back</button>
-            <button class="btn btn-accent" type="submit">Submit rating</button>
-        </div>
-    </form>
-</dialog>
 <footer th:replace="~{fragments/nav :: footer}"></footer>
 <script th:src="@{/js/app.js}"></script>
 <script th:src="@{/js/cancel.js}"></script>
-<script th:src="@{/js/rate.js}"></script>
 </body>
 </html>

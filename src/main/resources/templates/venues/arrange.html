@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('Arrange a ceremony')}"></head>
+<body class="app-body">
+<div class="court-grid" aria-hidden="true"></div>
+<header th:replace="~{fragments/nav :: header}"></header>
+<main class="dashboard arrange-page">
+    <div class="section-head">
+        <p class="eyebrow" th:text="${venue.funeralHome.name}">Home</p>
+        <h1 th:text="${venue.name}">Venue</h1>
+        <p class="address-line" th:text="${venue.address.toDisplayString()}">Address</p>
+        <p class="lede">Complete the arrangement and confirm. A currently available date is assigned for you. You do not choose the time. The quoted amount stays the same after a date is assigned.</p>
+    </div>
+    <div class="arrange-layout">
+        <form id="arrange-form" class="auth-form arrange-form" th:object="${arrangementRequest}" novalidate
+              th:attr="data-preview-url=@{/venues/{id}/preview(id=${venue.id})},
+                       data-spin-url=@{/venues/{id}/spin(id=${venue.id})},
+                       data-history-url=@{/reservations},
+                       data-notices-url=@{/notifications},
+                       data-max-attendees=${venue.maxAttendees}">
+            <input type="hidden" th:field="*{venueId}">
+            <fieldset>
+                <legend>Ceremony</legend>
+                <div class="field">
+                    <label for="serviceType">Ceremony type</label>
+                    <select id="serviceType" th:field="*{serviceType}" required>
+                        <option value="">Choose</option>
+                        <option th:each="type : ${serviceTypes}" th:value="${type}" th:text="${type.label}">Burial ceremony</option>
+                    </select>
+                    <p class="field-error" data-error-for="serviceType" hidden></p>
+                </div>
+                <div class="package-grid">
+                    <label class="package-card" th:each="pack : ${packages}">
+                        <input type="radio" th:field="*{funeralPackage}" th:value="${pack}" required>
+                        <span>
+                            <strong th:text="${pack.label}">Classic</strong>
+                            <span class="meta-label" th:text="${pack.durationMinutes + ' min · ' + pack.basePrice + ' PLN'}">120 min</span>
+                            <span class="lede" th:text="${pack.description}">Description</span>
+                        </span>
+                    </label>
+                </div>
+                <p class="field-error" data-error-for="funeralPackage" hidden></p>
+            </fieldset>
+            <fieldset>
+                <legend>Person remembered</legend>
+                <div class="field">
+                    <label for="deceasedFullName">Full name</label>
+                    <input id="deceasedFullName" th:field="*{deceasedFullName}" type="text" required maxlength="120" autocomplete="off">
+                    <p class="field-error" data-error-for="deceasedFullName" hidden></p>
+                </div>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="dateOfBirth">Date of birth <span class="optional">(optional)</span></label>
+                        <input id="dateOfBirth" th:field="*{dateOfBirth}" type="date">
+                        <p class="field-error" data-error-for="dateOfBirth" hidden></p>
+                    </div>
+                    <div class="field">
+                        <label for="dateOfDeath">Date of death</label>
+                        <input id="dateOfDeath" th:field="*{dateOfDeath}" type="date" required>
+                        <p class="field-error" data-error-for="dateOfDeath" hidden></p>
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>Gathering</legend>
+                <div class="field">
+                    <label for="attendees">Guests</label>
+                    <input id="attendees" th:field="*{attendees}" type="number" min="1" th:max="${venue.maxAttendees}" required>
+                    <p class="meta-label" th:text="${'Capacity ' + venue.maxAttendees}">Capacity</p>
+                    <p class="field-error" data-error-for="attendees" hidden></p>
+                </div>
+                <div class="field" th:if="${phoneRequired}">
+                    <label for="phone">Contact phone</label>
+                    <input id="phone" th:field="*{phone}" type="tel" required maxlength="20" autocomplete="tel">
+                    <p class="field-error" data-error-for="phone" hidden></p>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>Extras</legend>
+                <label class="extra-option" th:each="extra : ${extras}"
+                       th:attr="data-required-service=${extra.requiredServiceType != null ? extra.requiredServiceType.name() : ''}">
+                    <input type="checkbox" name="extraIds" th:value="${extra.id}"
+                           th:attr="data-amount=${extra.amount}, data-mode=${extra.pricingMode.name()}">
+                    <span>
+                        <strong th:text="${extra.name}">Flowers</strong>
+                        <span class="meta-label"
+                              th:text="${extra.amount + ' PLN' + (extra.pricingMode.name() == 'PER_ATTENDEE' ? ' per guest' : '')}">450 PLN</span>
+                    </span>
+                </label>
+            </fieldset>
+            <fieldset>
+                <legend>Payment</legend>
+                <div class="field">
+                    <label for="paymentMethod">How you will pay</label>
+                    <select id="paymentMethod" th:field="*{paymentMethod}" required>
+                        <option th:each="method : ${paymentMethods}" th:value="${method}" th:text="${method.label}">Cash</option>
+                    </select>
+                    <p class="lede">Payment is recorded as a preference. There is no online gateway.</p>
+                    <p class="field-error" data-error-for="paymentMethod" hidden></p>
+                </div>
+                <div class="field">
+                    <label for="note">Private family note <span class="optional">(optional)</span></label>
+                    <textarea id="note" th:field="*{note}" maxlength="1000" rows="3"></textarea>
+                    <p class="field-error" data-error-for="note" hidden></p>
+                </div>
+            </fieldset>
+            <p class="quote-line">Quoted total <strong id="quote-amount">—</strong></p>
+            <p class="field-error" id="arrange-error" hidden></p>
+            <button class="btn btn-accent btn-block" id="confirm-btn" type="button">Confirm arrangements</button>
+            <p class="lede" id="arrange-done" hidden></p>
+        </form>
+        <img class="arrange-photo" th:src="@{${venue.resolvedImagePath}}" th:alt="${venue.name}">
+    </div>
+</main>
+<footer th:replace="~{fragments/nav :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/arrange.js}"></script>
+</body>
+</html>
