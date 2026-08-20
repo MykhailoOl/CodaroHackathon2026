@@ -5,32 +5,32 @@ This is deliberately not a booking bot, because a funeral is not a booking.
 In an ordinary reservation the person who books is the person who attends and the
 person who pays, and that person picks a date off a grid. Here all three come apart:
 the subject of the arrangement is deceased and cannot choose, the payer is a grieving
-relative acting under pressure, and nobody chooses the date at all. It is derived —
-from the death certificate's release, the observance, the statutory limit and what the
-venue has free. The backend derives that window; this bot's whole job is to collect the
-facts it needs, show the family the reasoning, and take one answer: yes, or not this.
+relative acting under pressure, and nobody chooses the date at all. The server derives
+it from the date of death, the service and what the venue has free. This bot's whole
+job is to collect the facts the server needs, show the family what came back, and take
+one answer: yes, or not this.
 
 Two things follow, and they are why the channel exists at all:
 
   * A funeral runs against a hard clock, and a clock needs to reach people rather than
-    wait to be visited. Telegram pushes; a web page cannot. Every proposal carries the
-    hour by which an answer is needed, and the bot comes back before it passes.
+    wait to be visited. Telegram pushes; a web page cannot.
 
   * The decision is not one person's. Add the bot to the family group and the whole
     family sees the same proposal, and whoever answers is named. Credentials belong to
     a person, the arrangement belongs to the chat — which is exactly the shape of a
     family where the payer, the next of kin and the executor are three different people.
 
-Talks to the same Spring Boot intent API the web app wraps.
+Talks to the same reservation-assistant API the web app's arrange page uses. That API
+authenticates with the ordinary form login and a session cookie, so the bot signs in
+the way a browser does and carries the cookie plus the CSRF token the API wants on
+every write.
 """
 
-import asyncio
 import html
 import logging
 import os
 import re
-import time
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -45,81 +45,61 @@ from telegram.ext import (
     filters,
 )
 
-API_BASE = os.getenv("API_BASE", "https://brunt-greedily-sweep.ngrok-free.dev").rstrip("/")
+API_BASE = os.getenv("API_BASE", "http://localhost:8080").rstrip("/")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-PAYMENT_METHOD = os.getenv("PAYMENT_METHOD", "INVOICE")
+# One of CASH, CARD_ON_SITE, ONLINE_TRANSFER — whatever PaymentMethod carries.
+PAYMENT_METHOD = os.getenv("PAYMENT_METHOD", "ONLINE_TRANSFER")
 
 # ---------------------------------------------------------------- pivot seams
-# Everything domain-specific is an env override so retargeting the catalogue
-# (ResourceType, seed.yml, the brand) never requires editing this file.
+# Everything domain-specific is an env override so retargeting the catalogue never
+# requires editing this file. "Label=VALUE": the label goes on the button, the value
+# is what the API's enum expects.
 
 BRAND = os.getenv("BOT_BRAND_NAME", "EverRest")
 
-# Words that mark a message as a fresh arrangement request rather than an answer
-# to the question on screen. Override with BOT_SERVICE_WORDS (comma-separated).
-DEFAULT_SERVICE_WORDS = (
-    "funeral", "service", "ceremony", "chapel", "cremation", "burial", "grave",
-    "plot", "interment", "hearse", "transport", "wake", "reception", "viewing",
-)
-_service_words_raw = os.getenv("BOT_SERVICE_WORDS")
-SERVICE_WORDS = (
-    tuple(w.strip().lower() for w in _service_words_raw.split(",") if w.strip())
-    if _service_words_raw
-    else DEFAULT_SERVICE_WORDS
-)
 
-# What the family can be arranging. "Label=phrase": the label goes on the button, the
-# phrase is appended to the request text for the backend's own parser to resolve, so
-# this file never needs to know the ResourceType enum. Override with
-# BOT_SERVICE_OPTIONS, entries separated by "|".
-DEFAULT_SERVICE_OPTIONS = (
-    "Chapel ceremony=chapel service|"
-    "Cremation=cremation|"
-    "Burial=burial plot|"
-    "Transport=hearse transport|"
-    "Reception=wake reception"
-)
-SERVICE_OPTIONS: List[Tuple[str, str]] = [
-    (part.split("=", 1)[0].strip(), part.split("=", 1)[1].strip())
-    for part in os.getenv("BOT_SERVICE_OPTIONS", DEFAULT_SERVICE_OPTIONS).split("|")
-    if "=" in part
-]
+def _options(env_name: str, default: str) -> List[Tuple[str, str]]:
+    return [
+        (part.split("=", 1)[0].strip(), part.split("=", 1)[1].strip())
+        for part in os.getenv(env_name, default).split("|")
+        if "=" in part
+    ]
 
-# Observances offered as buttons. The phrase must match a rite phrase the backend's
-# RiteProperties knows. Override with BOT_RITE_OPTIONS.
-DEFAULT_RITE_OPTIONS = (
-    "Catholic=catholic|"
-    "Orthodox=orthodox|"
-    "Jewish=jewish|"
-    "Muslim=muslim|"
-    "Protestant=protestant|"
-    "No religious service=humanist"
-)
-RITE_OPTIONS: List[Tuple[str, str]] = [
-    (part.split("=", 1)[0].strip(), part.split("=", 1)[1].strip())
-    for part in os.getenv("BOT_RITE_OPTIONS", DEFAULT_RITE_OPTIONS).split("|")
-    if "=" in part
-]
 
-EXAMPLE_INTENT = os.getenv(
-    "BOT_EXAMPLE_INTENT",
-    "my father died yesterday, orthodox service, about 40 mourners",
+SERVICE_OPTIONS = _options(
+    "BOT_SERVICE_OPTIONS",
+    "Burial ceremony=BURIAL_CEREMONY|"
+    "Cremation=CREMATION_CEREMONY|"
+    "Memorial service=MEMORIAL_SERVICE|"
+    "Farewell ceremony=FAREWELL_CEREMONY",
 )
 
-MOURNER_CHOICES = [8, 20, 40, 60, 100, 150]
+PACKAGE_OPTIONS = _options(
+    "BOT_PACKAGE_OPTIONS",
+    "Essential=ESSENTIAL|Classic=CLASSIC|Tribute=TRIBUTE",
+)
 
-# Said whenever the API stops accepting the token. It has to promise the resume: a
+ATTENDEE_CHOICES = [8, 20, 40, 60, 100, 150]
+
+# Which spaces each service can be held in. The server is the authority — it rejects a
+# mismatch on /preview — and this mirrors ServiceType.allows(VenueType) only so the
+# family is never offered a space that would then be refused.
+SERVICE_VENUE_TYPES = {
+    "BURIAL_CEREMONY": {"CHAPEL", "CEREMONY_HALL", "MEMORIAL_GARDEN"},
+    "CREMATION_CEREMONY": {"CREMATORIUM", "CHAPEL"},
+    "MEMORIAL_SERVICE": {"CHAPEL", "CEREMONY_HALL", "MEMORIAL_GARDEN", "RECEPTION_HALL"},
+    "FAREWELL_CEREMONY": {"CHAPEL", "CEREMONY_HALL", "MEMORIAL_GARDEN"},
+}
+
+CANCEL_WORDS = {"cancel", "stop", "start over", "reset"}
+
+# Said whenever the API stops accepting the session. It has to promise the resume: a
 # family that has just typed out how their father died will not do it twice.
 SIGN_IN_AGAIN = (
     "Your session has expired. Sign in again with /login — nothing you have told me "
     "is lost, and I will pick up exactly where we left off."
 )
-
-# Reminders fire at the midpoint of the remaining time, kept inside these bounds so a
-# long window does not go silent for days and a short one is not spammed.
-REMINDER_MIN_SECONDS = 15 * 60
-REMINDER_MAX_SECONDS = 12 * 3600
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s", level=logging.INFO
@@ -127,65 +107,58 @@ logging.basicConfig(
 log = logging.getLogger("everrest_bot")
 
 
-# ------------------------------------------------------------------- state
-# Credentials belong to a person; the arrangement belongs to the chat. In a private
-# chat the two coincide. In a family group they do not, and that is the point.
+# ------------------------------------------------------------------ state
 
 
 class Session:
-    """One signed-in Telegram user."""
+    """One signed-in Telegram user. The API authenticates a browser session, so what
+    we hold is the cookie jar and the CSRF token that goes with it."""
 
     def __init__(self) -> None:
         self.auth_step: Optional[str] = None  # "username" | "password" | None
         self.pending_username: Optional[str] = None
         self.username: Optional[str] = None
-        self.token: Optional[str] = None
-        self.expires_at: Optional[float] = None
         self.display_name: Optional[str] = None
+        self.cookies: httpx.Cookies = httpx.Cookies()
+        self.csrf_token: Optional[str] = None
+        self.csrf_header: str = "X-CSRF-TOKEN"
+        self.signed_in: bool = False
+        self.phone_required: bool = False
 
     def invalidate(self) -> None:
-        """The server refused the token. Our own 12h clock says it is still good — the
-        signing key changes when the API restarts — so drop it, or every later message
-        walks into the same 401. The arrangement is untouched: it belongs to the chat,
-        not to the credentials, and the family should never retype it."""
-        self.token = None
-        self.expires_at = None
+        """The server refused the session. Drop it, or every later message walks into
+        the same 401. The arrangement is untouched: it belongs to the chat, not to the
+        credentials, and the family should never retype it."""
+        self.cookies = httpx.Cookies()
+        self.csrf_token = None
+        self.signed_in = False
         self.auth_step = None
         self.pending_username = None
 
 
 class Arrangement:
-    """One family's arrangement, shared by everyone in the chat."""
+    """What this chat is arranging. Shared by everyone in the room."""
 
     def __init__(self) -> None:
-        self.intent: Optional[str] = None
-        # Facts stated so far, keyed by the gap they close. Values are phrases the
-        # backend's own parser understands, so the bot completes the family's sentence
-        # rather than inventing a structured payload of its own.
-        self.facts: Dict[str, str] = {}
-        self.mourners: Optional[int] = None
+        self.deceased: Optional[str] = None
+        self.date_of_death: Optional[str] = None  # ISO yyyy-mm-dd
+        self.service_type: Optional[str] = None
+        self.funeral_package: Optional[str] = None
+        self.attendees: Optional[int] = None
+        self.home_id: Optional[int] = None
+        self.venue_id: Optional[int] = None
+        self.venue_label: Optional[str] = None
+        self.phone: Optional[str] = None
+        self.preview: Optional[dict] = None
+        self.homes: List[dict] = []
+        self.venues: List[dict] = []
         self.asking: Optional[str] = None
-        self.spec: Optional[dict] = None
-        self.window: Optional[dict] = None
-        self.suggestions: List[dict] = []
         self.query_id: int = 0
-        self.reminder: Optional[asyncio.Task] = None
 
     def reset_request(self) -> None:
-        self.intent = None
-        self.facts = {}
-        self.mourners = None
-        self.asking = None
-        self.spec = None
-        self.window = None
-        self.suggestions = []
-        self.query_id += 1
-        self.cancel_reminder()
-
-    def cancel_reminder(self) -> None:
-        if self.reminder and not self.reminder.done():
-            self.reminder.cancel()
-        self.reminder = None
+        next_id = self.query_id + 1
+        self.__init__()
+        self.query_id = next_id
 
 
 sessions: Dict[int, Session] = {}
@@ -200,16 +173,12 @@ def get_arrangement(chat_id: int) -> Arrangement:
     return arrangements.setdefault(chat_id, Arrangement())
 
 
-def esc(text: Optional[str]) -> str:
-    return html.escape(text or "")
+def esc(text: Optional[Any]) -> str:
+    return html.escape(str(text)) if text is not None else ""
 
 
 def token_valid(se: Session) -> bool:
-    return bool(se.token) and bool(se.expires_at) and time.time() < se.expires_at
-
-
-def auth_headers(se: Session) -> Dict[str, str]:
-    return {"Content-Type": "application/json", "Authorization": f"Bearer {se.token}"}
+    return se.signed_in and se.csrf_token is not None
 
 
 def is_private(update: Update) -> bool:
@@ -226,462 +195,127 @@ def actor_name(update: Update) -> str:
     return user.full_name if user else "someone"
 
 
-# --------------------------------------------------------------------- api
-
-
-async def api_login(se: Session, username: str, password: str) -> bool:
-    try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            r = await client.post(
-                f"{API_BASE}/api/auth/token",
-                json={"username": username, "password": password},
-            )
-    except httpx.HTTPError as exc:
-        log.warning("login HTTP error: %s", exc)
-        return False
-    if r.status_code != 200:
-        return False
-    data = r.json()
-    se.token = data["token"]
-    se.display_name = data.get("displayName") or username
-    se.username = username
-    try:
-        se.expires_at = datetime.fromisoformat(data["expiresAt"]).timestamp()
-    except (KeyError, ValueError, TypeError):
-        se.expires_at = time.time() + 12 * 3600
-    se.auth_step = None
-    return True
-
-
-async def api_suggest(se: Session, text: str, mourners: Optional[int]) -> httpx.Response:
-    payload: Dict[str, Any] = {"text": text}
-    if mourners:
-        payload["partySize"] = mourners
-    async with httpx.AsyncClient(timeout=30) as client:
-        return await client.post(
-            f"{API_BASE}/api/intent/suggest", headers=auth_headers(se), json=payload
-        )
-
-
-async def api_book(se: Session, suggestion: dict, mourners: Optional[int]) -> httpx.Response:
-    payload = {
-        "resourceId": suggestion["resourceId"],
-        "start": suggestion["start"],
-        "end": suggestion["end"],
-        "partySize": mourners,
-        "paymentMethod": PAYMENT_METHOD,
-    }
-    async with httpx.AsyncClient(timeout=30) as client:
-        return await client.post(
-            f"{API_BASE}/api/intent/book", headers=auth_headers(se), json=payload
-        )
-
-
-async def api_arrangements(se: Session) -> httpx.Response:
-    async with httpx.AsyncClient(timeout=20) as client:
-        return await client.get(
-            f"{API_BASE}/api/intent/arrangements", headers=auth_headers(se)
-        )
-
-
-def error_message(body: Any, fallback: str) -> str:
-    if isinstance(body, dict):
-        return str(body.get("error") or body.get("message") or fallback)
-    return fallback
-
-
-# ------------------------------------------------------------- formatting
-
-
-def fmt_datetime(iso: str) -> str:
-    try:
-        return datetime.fromisoformat(iso).strftime("%a %d %b, %H:%M")
-    except (ValueError, TypeError):
-        return iso or "—"
-
-
-def fmt_date(value: Optional[str]) -> str:
-    if not value:
-        return "—"
-    try:
-        return datetime.fromisoformat(value).strftime("%a %d %b")
-    except ValueError:
-        return value
-
-
-def fmt_clock(iso: str) -> str:
-    try:
-        return datetime.fromisoformat(iso).strftime("%H:%M")
-    except (ValueError, TypeError):
-        return ""
-
-
-def human_delta(seconds: float) -> str:
-    if seconds <= 0:
-        return "now"
-    hours = int(seconds // 3600)
-    if hours >= 48:
-        return f"in about {hours // 24} days"
-    if hours >= 2:
-        return f"in about {hours} hours"
-    minutes = max(1, int(seconds // 60))
-    return f"in about {minutes} minutes"
-
-
-def seconds_until(iso: Optional[str]) -> Optional[float]:
-    if not iso:
-        return None
-    try:
-        return datetime.fromisoformat(iso).timestamp() - time.time()
-    except (ValueError, TypeError):
-        return None
-
-
-def relative_to_first(first: dict, other: dict) -> str:
-    """How far an alternative sits from the held proposal, in words rather than a score.
-    A family comparing funeral times needs the cost of the change, not a ranking."""
-    try:
-        a = datetime.fromisoformat(first["start"])
-        b = datetime.fromisoformat(other["start"])
-    except (ValueError, KeyError, TypeError):
-        return ""
-    day_shift = (b.date() - a.date()).days
-    if day_shift == 0:
-        hours = round((b - a).total_seconds() / 3600)
-        if hours == 0:
-            return "same time, another venue"
-        return f"same day, {abs(hours)} hours {'later' if hours > 0 else 'earlier'}"
-    if abs(day_shift) == 1:
-        return "one day later" if day_shift > 0 else "one day earlier"
-    return f"{abs(day_shift)} days {'later' if day_shift > 0 else 'earlier'}"
-
-
-# ------------------------------------------------------- gaps in the facts
-# The bot mirrors just enough of the backend's fact grammar to know what is still
-# missing. It never derives the window itself — that stays in one place, on the server,
-# where the web app and the phone intake read the same rules.
-
-_DEATH_PHRASE = re.compile(
-    r"\b(?:passed away|passed on|passed|died|death|deceased|we lost)\b"
-)
-_CERT_PHRASE = re.compile(
-    r"\b(?:certificate|coroner|post[- ]?mortem|postmortem|autopsy|inquest|prosecutor)\b"
-)
-_MOURNERS_PHRASE = re.compile(
-    r"\b\d{1,4}\s*(?:mourners|guests|attendees|people|persons|family members)\b"
-    r"|\b(?:mourners|guests|attendees|attendance)\b"
-    r"|\b(?:family only|just family|close family|immediate family)\b"
-)
-_DATE_MARKER = re.compile(
-    r"\b(?:today|yesterday|this morning|last night|overnight|\d{1,2}\s+days?\s+ago"
-    r"|monday|tuesday|wednesday|thursday|friday|saturday|sunday"
-    r"|\d{1,2}[/.]\d{1,2}"
-    r"|\d{1,2}\s*(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)"
-    r"|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2})\b"
-)
-
-
-def _stated(ar: Arrangement, key: str, pattern: re.Pattern) -> bool:
-    if key in ar.facts:
-        return True
-    return bool(pattern.search((ar.intent or "").lower()))
-
-
-def _has_death_date(ar: Arrangement) -> bool:
-    if "death" in ar.facts:
-        return True
-    lower = (ar.intent or "").lower()
-    phrase = _DEATH_PHRASE.search(lower)
-    if not phrase:
-        return False
-    return bool(_DATE_MARKER.search(lower[phrase.start(): phrase.end() + 80]))
-
-
-def _has_rite(ar: Arrangement) -> bool:
-    if "rite" in ar.facts:
-        return True
-    lower = (ar.intent or "").lower()
-    return any(re.search(rf"(?<![a-z]){re.escape(phrase)}(?![a-z])", lower)
-               for _, phrase in RITE_OPTIONS)
-
-
-def _has_service(ar: Arrangement) -> bool:
-    if "service" in ar.facts:
-        return True
-    lower = (ar.intent or "").lower()
-    return any(word in lower for word in SERVICE_WORDS)
-
-
-def missing_facts(ar: Arrangement) -> List[str]:
-    """What still has to be known, in the order it is least distressing to ask."""
-    missing = []
-    if not _has_service(ar):
-        missing.append("service")
-    if not _has_death_date(ar):
-        missing.append("death")
-    if not _has_rite(ar):
-        missing.append("rite")
-    if not _stated(ar, "certificate", _CERT_PHRASE):
-        missing.append("certificate")
-    if ar.mourners is None and not _stated(ar, "mourners", _MOURNERS_PHRASE):
-        missing.append("mourners")
-    return missing
-
-
-def build_query(ar: Arrangement) -> str:
-    """The family's own words, completed with the answers they gave to buttons."""
-    lower = (ar.intent or "").lower()
-    parts = [ar.intent or ""]
-    for key in ("service", "death", "rite", "certificate", "mourners"):
-        phrase = ar.facts.get(key)
-        if phrase and phrase.lower() not in lower:
-            parts.append(phrase)
-    return " ".join(p for p in parts if p).strip()
-
-
-def is_new_request(text: str) -> bool:
-    lower = text.strip().lower()
-    if any(word in lower for word in SERVICE_WORDS):
-        return True
-    return bool(_DEATH_PHRASE.search(lower))
-
-
-CANCEL_WORDS = ("cancel", "stop", "start over", "start again")
-
-
-# --------------------------------------------------------------- questions
-
-
 def btn(label: str, data: str) -> InlineKeyboardButton:
     return InlineKeyboardButton(label, callback_data=data)
 
 
-def current_send(update: Update):
-    if update.callback_query:
-        return update.callback_query.edit_message_text
-    return update.effective_message.reply_text
+def rows_of(options: List[Tuple[str, str]], prefix: str) -> List[List[InlineKeyboardButton]]:
+    return [[btn(label, f"{prefix}:{i}")] for i, (label, _) in enumerate(options)]
 
 
-def rows_of(pairs: List[Tuple[str, str]], prefix: str, per_row: int = 2) -> List[list]:
-    buttons = [btn(label, f"{prefix}:{i}") for i, (label, _) in enumerate(pairs)]
-    return [buttons[i: i + per_row] for i in range(0, len(buttons), per_row)]
+# --------------------------------------------------------------------- api
+
+CSRF_INPUT = re.compile(r'name="_csrf"\s+value="([^"]+)"')
+CSRF_META = re.compile(r'<meta name="_csrf" content="([^"]+)"')
+CSRF_HEADER_META = re.compile(r'<meta name="_csrf_header" content="([^"]+)"')
 
 
-QUESTIONS = {
-    "service": "What needs to be arranged?",
-    "death": "When did the death occur?",
-    "rite": "Is there an observance to follow?",
-    "certificate": "Has the death certificate been released?",
-    "mourners": "Roughly how many mourners do you expect?",
-}
-
-
-async def ask(update: Update, ar: Arrangement, field: str) -> None:
-    ar.asking = field
-    send = current_send(update)
-    cancel_row = [btn("Start over", "cancel")]
-
-    if field == "service":
-        rows = rows_of(SERVICE_OPTIONS, "service")
-    elif field == "death":
-        rows = [
-            [btn("Today", "death:0"), btn("Yesterday", "death:1")],
-            [btn("2 days ago", "death:2"), btn("3 days ago", "death:3")],
-            [btn("Longer ago", "death:more")],
-        ]
-    elif field == "rite":
-        rows = rows_of(RITE_OPTIONS, "rite")
-    elif field == "certificate":
-        rows = [
-            [btn("We have it", "cert:have")],
-            [btn("Expected in a day or two", "cert:soon")],
-            [btn("A coroner is involved", "cert:coroner")],
-            [btn("Not sure yet", "cert:unknown")],
-        ]
-    else:
-        rows = [
-            [btn(str(n), f"mourners:{n}") for n in MOURNER_CHOICES[i: i + 3]]
-            for i in range(0, len(MOURNER_CHOICES), 3)
-        ]
-
-    hint = {
-        "death": "\nYou can also type a date.",
-        "mourners": "\nAn approximate number is fine.",
-        "certificate": "\nThis sets the earliest date anything can be held.",
-    }.get(field, "")
-
-    await send(
-        esc(QUESTIONS[field]) + esc(hint),
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(rows + [cancel_row]),
-    )
-
-
-async def advance(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                  ar: Arrangement, se: Session) -> None:
-    missing = missing_facts(ar)
-    if missing:
-        await ask(update, ar, missing[0])
-        return
-    ar.asking = None
-    await propose(context, update.effective_chat.id, ar, se, current_send(update))
-
-
-# ------------------------------------------------------- the window + card
-
-
-def render_window(ar: Arrangement) -> List[str]:
-    """The derivation, shown before the proposal. A family told they cannot choose the
-    date is owed the reason, in the same breath."""
-    window = ar.window
-    if not window:
-        return []
-    lines = [
-        "<b>The dates this can fall between</b>",
-        f"Earliest   <b>{esc(fmt_date(window.get('earliest')))}</b>",
-        f"Latest     <b>{esc(fmt_date(window.get('latest')))}</b>",
-        "",
-    ]
-    for reason in window.get("derivation", []):
-        lines.append(f"· {esc(reason)}")
-    if window.get("note"):
-        lines.append(f"· {esc(window['note'])}")
-    if not window.get("feasible", True):
-        lines.append("")
-        lines.append(
-            "<b>This window cannot be met.</b> The service is placed as early as the "
-            "release allows. Please speak to the funeral director — an extension of the "
-            "statutory period has to be filed by hand."
-        )
-    lines.append("")
-    return lines
-
-
-def render_proposal(ar: Arrangement) -> Tuple[str, InlineKeyboardMarkup]:
-    held = ar.suggestions[0]
-    lines = [f"<b>{esc(BRAND)} — proposed arrangement</b>", ""]
-    lines += render_window(ar)
-    lines.append("<b>We are holding</b>")
-    lines.append(f"{esc(held.get('resourceName'))} — {esc(held.get('facilityName'))}")
-    lines.append(f"{esc(fmt_datetime(held.get('start')))} – {esc(fmt_clock(held.get('end')))}")
-    detail = []
-    if ar.mourners:
-        detail.append(f"{ar.mourners} mourners")
-    if held.get("price"):
-        detail.append(str(held["price"]))
-    if detail:
-        lines.append(esc(" · ".join(detail)))
-
-    decision_by = (ar.window or {}).get("decisionBy")
-    remaining = seconds_until(decision_by)
-    if remaining is not None:
-        lines.append("")
-        lines.append(
-            f"Please confirm by <b>{esc(fmt_datetime(decision_by))}</b> "
-            f"({esc(human_delta(remaining))}) for the venue to hold it."
-        )
-
-    rows = [[btn("Confirm this arrangement", f"confirm:{ar.query_id}:0")]]
-    if len(ar.suggestions) > 1:
-        rows.append([btn("This doesn't work", f"alts:{ar.query_id}")])
-    else:
-        rows.append([btn("This doesn't work", f"escalate:{ar.query_id}")])
-    rows.append([btn("Start over", "cancel")])
-    return "\n".join(lines), InlineKeyboardMarkup(rows)
-
-
-def render_alternatives(ar: Arrangement) -> Tuple[str, InlineKeyboardMarkup]:
-    held = ar.suggestions[0]
-    lines = ["<b>Other dates the window allows</b>", ""]
-    rows = []
-    for i, s in enumerate(ar.suggestions[1:], start=1):
-        shift = relative_to_first(held, s)
-        lines.append(
-            f"<b>{esc(s.get('resourceName'))}</b> — {esc(s.get('facilityName'))}\n"
-            f"{esc(fmt_datetime(s.get('start')))} – {esc(fmt_clock(s.get('end')))}"
-            + (f"  ({esc(shift)})" if shift else "")
-            + (f"\n{esc(str(s['price']))}" if s.get("price") else "")
-        )
-        lines.append("")
-        rows.append([btn(f"Choose {fmt_datetime(s.get('start'))}", f"confirm:{ar.query_id}:{i}")])
-    lines.append("Every one of these is inside the window; none of them can be moved outside it.")
-    rows.append([btn("None of these work", f"escalate:{ar.query_id}")])
-    rows.append([btn("Start over", "cancel")])
-    return "\n".join(lines), InlineKeyboardMarkup(rows)
-
-
-def render_escalation(ar: Arrangement) -> str:
-    window = ar.window or {}
-    lines = [
-        "<b>Nothing here fits.</b>",
-        "",
-        "A member of staff has to take this by hand. Nothing has been reserved.",
-        "When you call the funeral home, this is what we had:",
-        "",
-    ]
-    if window:
-        lines.append(f"Window: {esc(fmt_date(window.get('earliest')))} to {esc(fmt_date(window.get('latest')))}")
-        if window.get("rite"):
-            lines.append(f"Observance: {esc(str(window['rite']).title())}")
-    if ar.mourners:
-        lines.append(f"Mourners: {ar.mourners}")
-    if ar.intent:
-        lines.append(f"In your words: {esc(ar.intent)}")
-    return "\n".join(lines)
-
-
-async def propose(context: ContextTypes.DEFAULT_TYPE, chat_id: int,
-                  ar: Arrangement, se: Session, send) -> None:
-    if not token_valid(se):
-        await send(SIGN_IN_AGAIN)
-        return
-
+async def api_login(se: Session, username: str, password: str) -> bool:
+    """Sign in the way the browser does: the login form's CSRF token, then the form
+    POST, then the session cookie and the token the API expects on writes."""
     try:
-        r = await api_suggest(se, build_query(ar), ar.mourners)
+        async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+            page = await client.get(f"{API_BASE}/login")
+            form_token = CSRF_INPUT.search(page.text)
+            if not form_token:
+                log.warning("no CSRF token on the login form")
+                return False
+            resp = await client.post(
+                f"{API_BASE}/login",
+                data={
+                    "username": username,
+                    "password": password,
+                    "_csrf": form_token.group(1),
+                },
+            )
+            # A failed login redirects back to the form with ?error; a good one goes home.
+            location = resp.headers.get("location") or ""
+            if resp.status_code != 302 or "error" in location:
+                return False
+            home = await client.get(f"{API_BASE}/")
+            meta_token = CSRF_META.search(home.text)
+            meta_header = CSRF_HEADER_META.search(home.text)
+            if not meta_token:
+                log.warning("no CSRF meta tag after sign-in")
+                return False
+            se.cookies = client.cookies
+            se.csrf_token = meta_token.group(1)
+            se.csrf_header = meta_header.group(1) if meta_header else "X-CSRF-TOKEN"
     except httpx.HTTPError as exc:
-        log.warning("suggest HTTP error: %s", exc)
-        await send("We could not reach the booking service. Please try again in a moment.")
-        return
+        log.warning("login HTTP error: %s", exc)
+        return False
 
-    if r.status_code == 401:
+    se.username = username
+    se.signed_in = True
+    se.auth_step = None
+
+    session = await api_session(se)
+    if session is None:
         se.invalidate()
-        await send(SIGN_IN_AGAIN)
-        return
+        return False
+    se.display_name = session.get("username") or username
+    se.phone_required = bool(session.get("phoneRequired"))
+    return True
+
+
+def _headers(se: Session) -> Dict[str, str]:
+    return {"Content-Type": "application/json", se.csrf_header: se.csrf_token or ""}
+
+
+async def _get(se: Session, path: str) -> httpx.Response:
+    async with httpx.AsyncClient(timeout=20, cookies=se.cookies) as client:
+        return await client.get(f"{API_BASE}{path}", headers=_headers(se))
+
+
+async def _post(se: Session, path: str, payload: dict) -> httpx.Response:
+    async with httpx.AsyncClient(timeout=30, cookies=se.cookies) as client:
+        return await client.post(f"{API_BASE}{path}", headers=_headers(se), json=payload)
+
+
+async def api_session(se: Session) -> Optional[dict]:
+    try:
+        r = await _get(se, "/api/reservation-assistant/session")
+    except httpx.HTTPError as exc:
+        log.warning("session HTTP error: %s", exc)
+        return None
     if r.status_code != 200:
-        await send(
-            esc(error_message(_json_or_none(r), f"The request failed ({r.status_code}).")),
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
+        return None
     data = r.json()
-    ar.spec = data.get("spec")
-    ar.window = data.get("window")
-    if ar.window and (data.get("facts") or {}).get("mourners") and not ar.mourners:
-        ar.mourners = data["facts"]["mourners"]
-    ar.suggestions = data.get("suggestions", [])
+    return data if data.get("authenticated") else None
 
-    if not ar.suggestions:
-        lines = [f"<b>{esc(BRAND)}</b>", ""]
-        lines += render_window(ar)
-        lines.append(
-            "Nothing is free inside that window. The dates cannot be moved, so this "
-            "needs a member of staff."
-        )
-        await send(
-            "\n".join(lines),
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([
-                [btn("Show me what to tell them", f"escalate:{ar.query_id}")],
-                [btn("Start over", "cancel")],
-            ]),
-        )
-        return
 
-    text, keyboard = render_proposal(ar)
-    await send(text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
-    # The clock is the reason this lives in Telegram; attach it as the proposal goes out.
-    schedule_reminder(context.application, chat_id, ar)
+async def api_homes(se: Session) -> httpx.Response:
+    return await _get(se, "/api/reservation-assistant/homes")
+
+
+async def api_venues(se: Session, home_id: int) -> httpx.Response:
+    return await _get(se, f"/api/reservation-assistant/homes/{home_id}/venues")
+
+
+def build_request(ar: Arrangement) -> dict:
+    """The one shape both /preview and /arrangements take. No date goes in it — the
+    server derives when the service can be held."""
+    payload = {
+        "venueId": ar.venue_id,
+        "serviceType": ar.service_type,
+        "funeralPackage": ar.funeral_package,
+        "deceasedFullName": ar.deceased,
+        "dateOfDeath": ar.date_of_death,
+        "attendees": ar.attendees,
+        "paymentMethod": PAYMENT_METHOD,
+        "extraIds": [],
+    }
+    if ar.phone:
+        payload["phone"] = ar.phone
+    return payload
+
+
+async def api_preview(se: Session, ar: Arrangement) -> httpx.Response:
+    return await _post(se, "/api/reservation-assistant/preview", build_request(ar))
+
+
+async def api_create(se: Session, ar: Arrangement) -> httpx.Response:
+    return await _post(se, "/api/reservation-assistant/arrangements", build_request(ar))
 
 
 def _json_or_none(r: httpx.Response) -> Any:
@@ -691,49 +325,261 @@ def _json_or_none(r: httpx.Response) -> Any:
         return None
 
 
-# ------------------------------------------------------------- the clock
-# The reason this lives in Telegram at all: a web page waits to be visited, and a
-# funeral does not wait. One nudge, at the midpoint of the time remaining.
+def error_message(body: Any, fallback: str) -> str:
+    if isinstance(body, dict):
+        return str(body.get("message") or body.get("error") or fallback)
+    return fallback
 
 
-def schedule_reminder(app, chat_id: int, ar: Arrangement) -> None:
-    ar.cancel_reminder()
-    remaining = seconds_until((ar.window or {}).get("decisionBy"))
-    if remaining is None or remaining <= REMINDER_MIN_SECONDS:
-        return
-    delay = min(max(remaining / 2, REMINDER_MIN_SECONDS), REMINDER_MAX_SECONDS)
-    query_id = ar.query_id
-    ar.reminder = asyncio.create_task(_remind(app, chat_id, ar, query_id, delay))
+# ------------------------------------------------------------- formatting
 
 
-async def _remind(app, chat_id: int, ar: Arrangement, query_id: int, delay: float) -> None:
+def fmt_date(value: Optional[str]) -> str:
+    if not value:
+        return "—"
     try:
-        await asyncio.sleep(delay)
-    except asyncio.CancelledError:
-        return
-    # A newer request, or a confirmation, has superseded this one.
-    if ar.query_id != query_id or not ar.suggestions:
-        return
-    left = seconds_until((ar.window or {}).get("decisionBy"))
-    if left is None or left <= 0:
-        return
-    held = ar.suggestions[0]
+        return date.fromisoformat(str(value)[:10]).strftime("%a %d %b")
+    except ValueError:
+        return str(value)
+
+
+def fmt_datetime(value: Optional[str]) -> str:
+    if not value:
+        return "—"
     try:
-        await app.bot.send_message(
-            chat_id,
-            f"<b>Still waiting on an answer.</b>\n\n"
-            f"{esc(held.get('resourceName'))} — {esc(fmt_datetime(held.get('start')))}\n"
-            f"The venue holds it until {esc(fmt_datetime((ar.window or {}).get('decisionBy')))} "
-            f"({esc(human_delta(left))}). After that the slot is released and the window "
-            f"does not move.",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([
-                [btn("Confirm this arrangement", f"confirm:{query_id}:0")],
-                [btn("This doesn't work", f"alts:{query_id}")],
-            ]),
+        return datetime.fromisoformat(value).strftime("%a %d %b, %H:%M")
+    except (ValueError, TypeError):
+        return str(value)
+
+
+DAY_MONTH = re.compile(r"(\d{1,2})[./\s-]+(\d{1,2}|[a-z]{3,9})")
+MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"],
+    start=1,
+)}
+
+
+def parse_date(text: str, today: Optional[date] = None) -> Optional[str]:
+    """A typed date of death. Families type '12 August', '12/08', or 'three days ago',
+    so accept all three and hand the API an ISO date."""
+    today = today or date.today()
+    lower = text.strip().lower()
+    if "today" in lower:
+        return today.isoformat()
+    if "yesterday" in lower:
+        return (today - timedelta(days=1)).isoformat()
+    days_ago = re.search(r"(\d{1,3})\s*days?\s*ago", lower)
+    if days_ago:
+        return (today - timedelta(days=int(days_ago.group(1)))).isoformat()
+    match = DAY_MONTH.search(lower)
+    if match:
+        day = int(match.group(1))
+        raw_month = match.group(2)
+        month = int(raw_month) if raw_month.isdigit() else MONTHS.get(raw_month[:3], 0)
+        if month and 1 <= day <= 31 and 1 <= month <= 12:
+            try:
+                parsed = date(today.year, month, day)
+            except ValueError:
+                return None
+            # A date that has not happened yet this year means last year.
+            if parsed > today:
+                parsed = date(today.year - 1, month, day)
+            return parsed.isoformat()
+    return None
+
+
+# ------------------------------------------------------- questions & flow
+
+
+QUESTIONS = {
+    "deceased": "What was the full name of the person who died?",
+    "death": "When did the death occur?",
+    "service": "What kind of service is this?",
+    "package": "Which arrangement would you like?",
+    "attendees": "About how many people will attend?",
+    "home": "Which funeral home?",
+    "venue": "Which space?",
+    "phone": "A phone number the funeral home can reach you on?",
+}
+
+
+def missing_field(ar: Arrangement, se: Session) -> Optional[str]:
+    """The next thing the API still needs. Order matters: the venue list is filtered by
+    how many people are coming, so the number is asked before the space."""
+    if not ar.deceased:
+        return "deceased"
+    if not ar.date_of_death:
+        return "death"
+    if not ar.service_type:
+        return "service"
+    if not ar.funeral_package:
+        return "package"
+    if not ar.attendees:
+        return "attendees"
+    if not ar.home_id:
+        return "home"
+    if not ar.venue_id:
+        return "venue"
+    if se.phone_required and not ar.phone:
+        return "phone"
+    return None
+
+
+def venue_fits(venue: dict, ar: Arrangement) -> bool:
+    """A space is offered only if it holds the mourners and hosts this service."""
+    if ar.attendees and venue.get("maxAttendees", 0) < ar.attendees:
+        return False
+    allowed = SERVICE_VENUE_TYPES.get(ar.service_type or "")
+    return not allowed or venue.get("venueType") in allowed
+
+
+def current_send(update: Update):
+    if update.callback_query:
+        return update.callback_query.message.reply_text
+    return update.effective_message.reply_text
+
+
+async def ask(update: Update, se: Session, ar: Arrangement, field: str) -> None:
+    ar.asking = field
+    send = current_send(update)
+    cancel_row = [btn("Start over", "cancel")]
+    hint = ""
+
+    if field in ("deceased", "phone"):
+        await send(esc(QUESTIONS[field]), reply_markup=InlineKeyboardMarkup([cancel_row]))
+        return
+
+    if field == "death":
+        rows = [
+            [btn("Today", "death:0"), btn("Yesterday", "death:1")],
+            [btn("2 days ago", "death:2"), btn("3 days ago", "death:3")],
+            [btn("Longer ago", "death:more")],
+        ]
+        hint = "\nYou can also type a date."
+    elif field == "service":
+        rows = rows_of(SERVICE_OPTIONS, "service")
+    elif field == "package":
+        rows = rows_of(PACKAGE_OPTIONS, "package")
+    elif field == "attendees":
+        rows = [
+            [btn(str(n), f"attendees:{n}") for n in ATTENDEE_CHOICES[i: i + 3]]
+            for i in range(0, len(ATTENDEE_CHOICES), 3)
+        ]
+        hint = "\nAn approximate number is fine."
+    elif field == "home":
+        r = await api_homes(se)
+        if r.status_code == 401:
+            se.invalidate()
+            await send(SIGN_IN_AGAIN)
+            return
+        if r.status_code != 200:
+            await send("We could not reach the funeral homes just now. Please try again.")
+            return
+        ar.homes = r.json()
+        rows = [[btn(home["name"], f"home:{i}")] for i, home in enumerate(ar.homes)]
+    else:  # venue
+        r = await api_venues(se, ar.home_id)
+        if r.status_code == 401:
+            se.invalidate()
+            await send(SIGN_IN_AGAIN)
+            return
+        if r.status_code != 200:
+            await send("We could not reach that home's spaces just now. Please try again.")
+            return
+        ar.venues = r.json()
+        rows = [
+            [btn(f"{venue['name']} · {venue.get('venueTypeLabel') or ''} "
+                 f"· up to {venue['maxAttendees']}".replace("·  ·", "·"), f"venue:{i}")]
+            for i, venue in enumerate(ar.venues)
+            if venue_fits(venue, ar)
+        ]
+        if not rows:
+            await send(
+                "No space at that home holds this many people. Choose another home.",
+                reply_markup=InlineKeyboardMarkup(
+                    [[btn("Another home", "reask:home")], cancel_row]
+                ),
+            )
+            return
+
+    await send(
+        esc(QUESTIONS[field]) + esc(hint),
+        reply_markup=InlineKeyboardMarkup(rows + [cancel_row]),
+    )
+
+
+async def advance(update: Update, se: Session, ar: Arrangement) -> None:
+    field = missing_field(ar, se)
+    if field:
+        await ask(update, se, ar, field)
+        return
+    ar.asking = None
+    await propose(update, se, ar)
+
+
+def render_preview(ar: Arrangement) -> Tuple[str, InlineKeyboardMarkup]:
+    preview = ar.preview or {}
+    dates = preview.get("dates") or []
+    lines = [f"<b>{esc(BRAND)} — proposed arrangement</b>", ""]
+    lines.append(f"For <b>{esc(ar.deceased)}</b>")
+    lines.append(f"Died {esc(fmt_date(ar.date_of_death))}")
+    lines.append("")
+    # The date is assigned by the funeral home, not picked — the API takes no date and
+    # settles it on confirmation. Say so, and never print the candidates as if they
+    # were a menu: the assigned day can fall outside the ones sampled here.
+    if dates:
+        lines.append("<b>When it can be held</b>")
+        lines.append(
+            f"Days are open from {esc(fmt_date(dates[0]))} onwards. The funeral home "
+            "settles the exact day and hour when you confirm."
         )
-    except Exception as exc:  # network, blocked bot, deleted chat
-        log.warning("reminder failed for chat %s: %s", chat_id, exc)
+    else:
+        lines.append("<b>When it can be held</b>")
+        lines.append("The funeral home will settle the day when you confirm.")
+    lines.append("")
+    lines.append(esc(ar.venue_label))
+    detail = []
+    if ar.attendees:
+        detail.append(f"{ar.attendees} attending")
+    if preview.get("amount") is not None:
+        detail.append(f"{preview['amount']} {preview.get('currency') or ''}".strip())
+    if detail:
+        lines.append(esc(" · ".join(detail)))
+    if preview.get("notice"):
+        lines.append("")
+        lines.append(esc(preview["notice"]))
+
+    rows = [
+        [btn("Confirm this arrangement", f"confirm:{ar.query_id}")],
+        [btn("Choose a different space", "reask:home")],
+        [btn("Start over", "cancel")],
+    ]
+    return "\n".join(lines), InlineKeyboardMarkup(rows)
+
+
+async def propose(update: Update, se: Session, ar: Arrangement) -> None:
+    send = current_send(update)
+    if not token_valid(se):
+        await send(SIGN_IN_AGAIN)
+        return
+    try:
+        r = await api_preview(se, ar)
+    except httpx.HTTPError as exc:
+        log.warning("preview HTTP error: %s", exc)
+        await send("We could not reach the funeral home's system. Please try again in a moment.")
+        return
+
+    if r.status_code == 401:
+        se.invalidate()
+        await send(SIGN_IN_AGAIN)
+        return
+    if r.status_code != 200:
+        await send(esc(error_message(_json_or_none(r), f"The request failed ({r.status_code}).")))
+        return
+
+    ar.preview = r.json()
+    text, keyboard = render_preview(ar)
+    await send(text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
 
 
 # -------------------------------------------------------------- commands
@@ -745,18 +591,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text(
             f"<b>{esc(BRAND)}</b>\n\n"
             f"Signed in as {esc(se.display_name)}.\n\n"
-            "Tell me what has happened, in your own words. For example:\n"
-            f"<i>{esc(EXAMPLE_INTENT)}</i>\n\n"
-            "I will work out the dates the service can fall between and propose one.",
+            "Tell me the name of the person who died and I will take it from there.",
             parse_mode=ParseMode.HTML,
         )
         return
     await update.effective_message.reply_text(
         f"<b>{esc(BRAND)}</b>\n\n"
-        "You do not have to choose a date. Tell us the circumstances and we will work "
-        "out when the service can be held — the certificate, the observance and the law "
-        "decide that between them — then propose a time for you to approve.\n\n"
-        "Sign in with /login to begin. /help explains the rest.",
+        "You do not have to choose a date. Tell us the circumstances and the funeral "
+        "home works out when the service can be held, then holds it for you to approve."
+        "\n\nSign in with /login to begin. /help explains the rest.",
         parse_mode=ParseMode.HTML,
     )
 
@@ -772,8 +615,7 @@ async def cmd_login(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     if token_valid(se):
         await update.effective_message.reply_text(
-            f"Already signed in as <b>{esc(se.display_name)}</b> "
-            f"(until {datetime.fromtimestamp(se.expires_at):%d %b %H:%M}). "
+            f"Already signed in as <b>{esc(se.display_name)}</b>. "
             "Use /logout to change account.",
             parse_mode=ParseMode.HTML,
         )
@@ -801,16 +643,14 @@ async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.effective_message.reply_text(
         f"<b>{esc(BRAND)}</b>\n\n"
-        "Describe the circumstances and I will answer with the window the service must "
-        "fall inside, why it is that window, and one time held for you to approve.\n\n"
+        "Tell me who died and a few details, and I will come back with the dates the "
+        "funeral home can hold and what it costs, for you to approve.\n\n"
         "/login — sign in (privately)\n"
         "/logout — sign out\n"
         "/status — this arrangement and your session\n"
-        "/my_arrangements — everything you have arranged\n"
         "/cancel — clear the current arrangement\n\n"
         "You can add me to a family group. The arrangement is shared by everyone in the "
-        "chat; each person signs in privately and whoever answers is named.\n\n"
-        f"For example: <i>{esc(EXAMPLE_INTENT)}</i>",
+        "chat; each person signs in privately and whoever answers is named.",
         parse_mode=ParseMode.HTML,
     )
 
@@ -820,75 +660,19 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     ar = get_arrangement(update.effective_chat.id)
     lines = []
     if token_valid(se):
-        lines.append(f"Signed in as <b>{esc(se.display_name)}</b> ({esc(se.username)})")
-        lines.append(f"Session valid until {datetime.fromtimestamp(se.expires_at):%d %b %H:%M}.")
+        lines.append(f"Signed in as <b>{esc(se.display_name)}</b>.")
     else:
         lines.append("Not signed in. Use /login.")
-    if ar.window:
+    if ar.deceased:
         lines.append("")
-        lines.append(
-            f"Window: {esc(fmt_date(ar.window.get('earliest')))} to "
-            f"{esc(fmt_date(ar.window.get('latest')))}"
-        )
-        remaining = seconds_until(ar.window.get("decisionBy"))
-        if remaining is not None and remaining > 0:
-            lines.append(f"An answer is needed {esc(human_delta(remaining))}.")
-    elif ar.intent:
-        lines.append("")
-        lines.append("An arrangement is in progress; some details are still missing.")
-    await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
-
-
-async def cmd_my_arrangements(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Everything this person has standing, whichever chat it was arranged in. The
-    arrangement in progress belongs to the chat; what has been confirmed belongs to the
-    account that confirmed it, so this answers from the server, not from memory."""
-    se = get_session(update.effective_user.id)
-    if not token_valid(se):
-        await update.effective_message.reply_text(
-            "Please sign in with /login to see what you have arranged."
-        )
-        return
-
-    try:
-        r = await api_arrangements(se)
-    except httpx.HTTPError as exc:
-        log.warning("arrangements HTTP error: %s", exc)
-        await update.effective_message.reply_text(
-            "We could not reach the funeral home's system. Please try again in a moment."
-        )
-        return
-
-    if r.status_code == 401:
-        se.invalidate()
-        await update.effective_message.reply_text(SIGN_IN_AGAIN)
-        return
-    if r.status_code != 200:
-        await update.effective_message.reply_text(
-            esc(error_message(_json_or_none(r), f"The request failed ({r.status_code}).")),
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
-    items = r.json()
-    if not items:
-        await update.effective_message.reply_text(
-            "You have nothing arranged yet. Tell me what has happened and I will "
-            "propose a time."
-        )
-        return
-
-    lines = [f"<b>Arranged for {esc(se.display_name)}</b>", ""]
-    for item in items:
-        lines.append(
-            f"<b>{esc(item.get('resourceName'))}</b> — {esc(item.get('facilityName'))}\n"
-            f"{esc(fmt_datetime(item.get('start')))} – {esc(fmt_clock(item.get('end')))}\n"
-            f"{esc(str(item.get('status', '')).title())} · "
-            f"Reference {esc(str(item.get('reservationId')))}"
-            + (f" · {esc(str(item['totalAmount']))}" if item.get("totalAmount") else "")
-        )
-        lines.append("")
-    lines.append("Quote the reference when you call the funeral home.")
+        lines.append(f"Arranging for <b>{esc(ar.deceased)}</b>")
+        if ar.date_of_death:
+            lines.append(f"Died {esc(fmt_date(ar.date_of_death))}")
+        if ar.venue_label:
+            lines.append(esc(ar.venue_label))
+        missing = missing_field(ar, se)
+        if missing:
+            lines.append(f"Still needed: {esc(QUESTIONS[missing])}")
     await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
@@ -902,14 +686,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     # Credentials are only ever collected in a one-to-one chat.
     if se.auth_step and is_private(update):
-        await handle_auth(update, context, se, ar, text)
+        await handle_auth(update, se, ar, text)
         return
 
     if not token_valid(se):
         if is_private(update):
             await update.effective_message.reply_text(
                 "Please sign in with /login, then I will carry on from what you have "
-                "already told me." if ar.intent else
+                "already told me." if ar.deceased else
                 "Please sign in first with /login, then tell me about the arrangement."
             )
         return
@@ -924,23 +708,23 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         return
 
-    # A pending question is answered by what was typed, unless the message reads as a
-    # fresh account of the circumstances, which replaces the arrangement instead.
-    if ar.asking and not is_new_request(text):
+    if ar.asking:
         if apply_typed_answer(ar, text):
             ar.asking = None
-            await advance(update, context, ar, se)
+            await advance(update, se, ar)
         else:
-            await ask(update, ar, ar.asking)
+            await ask(update, se, ar, ar.asking)
         return
 
-    ar.reset_request()
-    ar.intent = text
-    await advance(update, context, ar, se)
+    if not ar.deceased:
+        ar.deceased = text
+        await advance(update, se, ar)
+        return
+
+    await advance(update, se, ar)
 
 
-async def handle_auth(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                      se: Session, ar: Arrangement, text: str) -> None:
+async def handle_auth(update: Update, se: Session, ar: Arrangement, text: str) -> None:
     if se.auth_step == "username":
         se.pending_username = text
         se.auth_step = "password"
@@ -949,18 +733,18 @@ async def handle_auth(update: Update, context: ContextTypes.DEFAULT_TYPE,
     ok = await api_login(se, se.pending_username or "", text)
     se.pending_username = None
     if ok:
-        if ar.intent:
+        if ar.deceased:
             # They were already part-way through when the session died. Resume on the
             # facts this chat still holds rather than making them tell it again.
             await update.effective_message.reply_text(
                 f"Signed in as <b>{esc(se.display_name)}</b>. Picking up where we left off.",
                 parse_mode=ParseMode.HTML,
             )
-            await advance(update, context, ar, se)
+            await advance(update, se, ar)
             return
         await update.effective_message.reply_text(
             f"Signed in as <b>{esc(se.display_name)}</b>.\n\n"
-            "Tell me what has happened, in your own words.",
+            "Tell me the name of the person who died.",
             parse_mode=ParseMode.HTML,
         )
     else:
@@ -971,34 +755,30 @@ async def handle_auth(update: Update, context: ContextTypes.DEFAULT_TYPE,
 
 
 def apply_typed_answer(ar: Arrangement, text: str) -> bool:
-    """A typed reply to the question on screen. Anything the backend can parse is passed
-    through verbatim; only a mourner count has to be a number here."""
+    """A typed reply to the question on screen."""
     field = ar.asking
-    lower = text.strip().lower()
-    if field == "mourners":
-        match = re.search(r"\d{1,4}", lower)
-        if not match:
-            return False
-        ar.mourners = int(match.group(0))
-        ar.facts["mourners"] = f"for {ar.mourners} mourners"
+    if field == "deceased":
+        ar.deceased = text.strip()
         return True
     if field == "death":
-        ar.facts["death"] = f"the death was {lower}"
+        parsed = parse_date(text)
+        if not parsed:
+            return False
+        ar.date_of_death = parsed
         return True
-    if field in ("service", "rite", "certificate"):
-        ar.facts[field] = lower
+    if field == "attendees":
+        match = re.search(r"\d{1,4}", text)
+        if not match:
+            return False
+        ar.attendees = int(match.group(0))
+        return True
+    if field == "phone":
+        ar.phone = text.strip()
         return True
     return False
 
 
 # -------------------------------------------------------------- callbacks
-
-
-def stale(ar: Arrangement, data: str) -> bool:
-    try:
-        return int(data.split(":")[1]) != ar.query_id
-    except (IndexError, ValueError):
-        return True
 
 
 async def require_session(update: Update) -> Optional[Session]:
@@ -1022,9 +802,11 @@ async def cb_fact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     kind, value = query.data.split(":", 1)
 
     if kind == "service":
-        ar.facts["service"] = SERVICE_OPTIONS[int(value)][1]
-    elif kind == "rite":
-        ar.facts["rite"] = RITE_OPTIONS[int(value)][1]
+        ar.service_type = SERVICE_OPTIONS[int(value)][1]
+    elif kind == "package":
+        ar.funeral_package = PACKAGE_OPTIONS[int(value)][1]
+    elif kind == "attendees":
+        ar.attendees = int(value)
     elif kind == "death":
         if value == "more":
             ar.asking = "death"
@@ -1034,47 +816,23 @@ async def cb_fact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 parse_mode=ParseMode.HTML,
             )
             return
-        days = int(value)
-        ar.facts["death"] = (
-            "the death was today" if days == 0
-            else "the death was yesterday" if days == 1
-            else f"the death was {days} days ago"
-        )
-    elif kind == "cert":
-        ar.facts["certificate"] = {
-            "have": "we have the death certificate",
-            "soon": "the certificate is not ready yet",
-            "coroner": "the coroner has the body",
-            "unknown": "the certificate is not ready yet",
-        }[value]
-    elif kind == "mourners":
-        ar.mourners = int(value)
-        ar.facts["mourners"] = f"for {ar.mourners} mourners"
+        ar.date_of_death = (date.today() - timedelta(days=int(value))).isoformat()
+    elif kind == "home":
+        ar.home_id = ar.homes[int(value)]["id"]
+        ar.venue_id = None
+        ar.venue_label = None
+    elif kind == "venue":
+        venue = ar.venues[int(value)]
+        ar.venue_id = venue["id"]
+        ar.venue_label = f"{venue['name']} — {venue.get('address') or ''}".strip(" —")
+    elif kind == "reask":
+        ar.home_id = None
+        ar.venue_id = None
+        ar.venue_label = None
+        ar.preview = None
 
     ar.asking = None
-    await advance(update, context, ar, se)
-
-
-async def cb_alts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    await query.answer()
-    ar = get_arrangement(update.effective_chat.id)
-    if stale(ar, query.data) or not ar.suggestions:
-        await query.edit_message_text("That proposal has lapsed. Please start again.")
-        return
-    text, keyboard = render_alternatives(ar)
-    await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
-
-
-async def cb_escalate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    await query.answer()
-    ar = get_arrangement(update.effective_chat.id)
-    if stale(ar, query.data):
-        await query.edit_message_text("That proposal has lapsed. Please start again.")
-        return
-    ar.cancel_reminder()
-    await query.edit_message_text(render_escalation(ar), parse_mode=ParseMode.HTML)
+    await advance(update, se, ar)
 
 
 async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1084,24 +842,19 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if se is None:
         return
     ar = get_arrangement(update.effective_chat.id)
-    if stale(ar, query.data):
+    if query.data.split(":")[1] != str(ar.query_id):
         await query.edit_message_text("That proposal has lapsed. Please start again.")
         return
-    index = int(query.data.split(":")[2])
-    if index < 0 or index >= len(ar.suggestions):
-        await query.edit_message_text("That time is no longer held. Please start again.")
-        return
 
-    suggestion = ar.suggestions[index]
     who = actor_name(update)
     await query.edit_message_text("Confirming…")
 
     try:
-        r = await api_book(se, suggestion, ar.mourners)
+        r = await api_create(se, ar)
     except httpx.HTTPError as exc:
-        log.warning("book HTTP error: %s", exc)
+        log.warning("create HTTP error: %s", exc)
         await query.edit_message_text(
-            "We could not reach the booking service. Nothing has been confirmed — "
+            "We could not reach the funeral home's system. Nothing has been confirmed — "
             "please try again in a moment."
         )
         return
@@ -1110,17 +863,16 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         se.invalidate()
         # Nothing was booked, and the hold has not moved. Put the card back with its
         # button so signing in is the only step between here and a confirmation.
-        text, keyboard = render_proposal(ar)
+        text, keyboard = render_preview(ar)
         await query.edit_message_text(
             "<b>Nothing was confirmed — your session had expired.</b>\n"
-            "Sign in again with /login, then confirm below. This is still held.\n\n"
-            + text,
+            "Sign in again with /login, then confirm below.\n\n" + text,
             parse_mode=ParseMode.HTML,
             reply_markup=keyboard,
         )
         return
 
-    if r.status_code != 200:
+    if r.status_code not in (200, 201):
         await query.edit_message_text(
             "Nothing was confirmed. "
             + esc(error_message(_json_or_none(r), f"The request failed ({r.status_code}).")),
@@ -1129,13 +881,18 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         return
 
     data = r.json()
-    ar.cancel_reminder()
-    ar.suggestions = []
+    dates = data.get("dates") or []
+    when = fmt_datetime(data["startAt"]) if data.get("startAt") else fmt_date(
+        dates[0] if dates else None
+    )
     await query.edit_message_text(
         "<b>Confirmed.</b>\n\n"
-        f"{esc(suggestion.get('resourceName'))} — {esc(suggestion.get('facilityName'))}\n"
-        f"{esc(fmt_datetime(suggestion.get('start')))} – {esc(fmt_clock(suggestion.get('end')))}\n"
-        f"Reference {esc(str(data.get('reservationId')))} · {esc(str(data.get('totalAmount')))}\n\n"
+        f"For {esc(ar.deceased)}\n"
+        f"{esc(ar.venue_label)}\n"
+        f"{esc(when)}\n"
+        f"Reference {esc(data.get('id'))} · "
+        f"{esc(data.get('formattedAmount') or data.get('amount'))}\n"
+        f"Status {esc(str(data.get('status', '')).title())}\n\n"
         f"Confirmed by {esc(who)}.\n"
         "The funeral home has been notified and will be in touch about the rest.",
         parse_mode=ParseMode.HTML,
@@ -1164,13 +921,11 @@ def main() -> None:
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("status", cmd_status))
-    app.add_handler(CommandHandler("my_arrangements", cmd_my_arrangements))
-    app.add_handler(CallbackQueryHandler(cb_fact, pattern=r"^(?:service|rite|mourners):\d+$"))
+    app.add_handler(CallbackQueryHandler(
+        cb_fact, pattern=r"^(?:service|package|attendees|home|venue):\d+$"))
     app.add_handler(CallbackQueryHandler(cb_fact, pattern=r"^death:(?:\d+|more)$"))
-    app.add_handler(CallbackQueryHandler(cb_fact, pattern=r"^cert:[a-z]+$"))
-    app.add_handler(CallbackQueryHandler(cb_alts, pattern=r"^alts:\d+$"))
-    app.add_handler(CallbackQueryHandler(cb_escalate, pattern=r"^escalate:\d+$"))
-    app.add_handler(CallbackQueryHandler(cb_confirm, pattern=r"^confirm:\d+:\d+$"))
+    app.add_handler(CallbackQueryHandler(cb_fact, pattern=r"^reask:[a-z]+$"))
+    app.add_handler(CallbackQueryHandler(cb_confirm, pattern=r"^confirm:\d+$"))
     app.add_handler(CallbackQueryHandler(cb_cancel, pattern=r"^cancel$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     log.info("%s bot polling on %s", BRAND, API_BASE)
