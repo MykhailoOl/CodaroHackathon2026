@@ -258,14 +258,14 @@ in `src/main/resources/application.yml`, or pass `--app.browser.auto-open=false`
 | `GET /api/voice/tools` | Public ElevenLabs tool catalog (placeholders) |
 | `POST /api/voice/tools/check-availability` | Voice tool: same intent suggest as `/api/intent/suggest` |
 | `POST /api/voice/tools/create-booking` | Voice tool: same intent book as `/api/intent/book`, then SMS/invite |
-| `POST /api/voice/provision` | Agent + SIP spec for ElevenLabs (keys stay in env) |
+| `POST /api/voice/provision` | Creates the ElevenLabs agent (and later SIP import). Agents: `docs/VOICE.md` prompts A/B |
 | `/voice/invite/{token}` | Caller email form, then calendar invitation (.ics) |
 
 ---
 
 ## Voice receptionist
 
-Phone booking uses the same intent engine as the chatbot. The extra loop is ElevenLabs plus SIP. Setup is in [`docs/VOICE.md`](docs/VOICE.md).
+Phone booking uses the same intent engine as the chatbot. The extra loop is ElevenLabs plus SIP. Humans and coding agents: follow [`docs/VOICE.md`](docs/VOICE.md). After merge, the teammate agent pastes prompt A (ElevenLabs key + tunnel provision). Jenya's agent pastes prompt B (spare SIP DID).
 
 ---
 
