@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -38,6 +39,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ReservationRepository reservationRepository;
     private final InventoryItemRepository inventoryItemRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SeedDataLoader seedDataLoader;
 
     public DataInitializer(
             UserRepository userRepository,
@@ -45,7 +47,8 @@ public class DataInitializer implements CommandLineRunner {
             SportResourceRepository sportResourceRepository,
             ReservationRepository reservationRepository,
             InventoryItemRepository inventoryItemRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SeedDataLoader seedDataLoader
     ) {
         this.userRepository = userRepository;
         this.facilityRepository = facilityRepository;
@@ -53,6 +56,7 @@ public class DataInitializer implements CommandLineRunner {
         this.reservationRepository = reservationRepository;
         this.inventoryItemRepository = inventoryItemRepository;
         this.passwordEncoder = passwordEncoder;
+        this.seedDataLoader = seedDataLoader;
     }
 
     @Override
@@ -87,7 +91,7 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(manager);
         }
         if (facilityRepository.count() == 0) {
-            seedWarsawNetwork();
+            seedNetwork();
         }
         backfillImagePaths();
         backfillPartySizes();
@@ -99,143 +103,36 @@ public class DataInitializer implements CommandLineRunner {
         backfillReservationFields();
     }
 
-    private void seedWarsawNetwork() {
-        Facility torwar = saveFacility(
-                "COS Torwar",
-                "Flagship indoor arena next to the National Stadium. Tennis, basketball, and a high-capacity gym.",
-                "+48 22 621 44 11",
-                address("ul. \u0141azienkowska", "6A", "00-449", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(torwar, "Tennis Court 1", ResourceType.TENNIS, address("ul. \u0141azienkowska", "6A", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(torwar, "Tennis Court 2", ResourceType.TENNIS, address("ul. \u0141azienkowska", "6B", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(torwar, "Main Basketball Hall", ResourceType.BASKETBALL, address("ul. \u0141azienkowska", "8", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(torwar, "Performance Gym", ResourceType.GYM, address("ul. \u0141azienkowska", "6A", "00-449", "\u015Ar\u00F3dmie\u015Bcie"), 18)
-        ));
-
-        Facility inflancka = saveFacility(
-                "Centrum Sportu Inflancka",
-                "City sports centre in Muran\u00F3w with a full-size hall, volleyball court, and weights room.",
-                "+48 22 831 20 91",
-                address("ul. Inflancka", "8", "00-189", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.BASKETBALL
-        );
-        saveResources(List.of(
-                resource(inflancka, "Main Hall", ResourceType.BASKETBALL, address("ul. Inflancka", "8", "00-189", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(inflancka, "Volleyball Court", ResourceType.VOLLEYBALL, address("ul. Inflancka", "10", "00-189", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(inflancka, "Studio Gym", ResourceType.GYM, address("ul. Inflancka", "8A", "00-189", "\u015Ar\u00F3dmie\u015Bcie"), 16)
-        ));
-
-        Facility awf = saveFacility(
-                "AWF Warszawa",
-                "University of Physical Education campus in Bielany. Pitches, pool lanes, and tennis.",
-                "+48 22 834 04 31",
-                address("ul. Marymoncka", "34", "01-813", "Bielany"),
-                ResourceType.FOOTBALL
-        );
-        saveResources(List.of(
-                resource(awf, "Football Pitch A", ResourceType.FOOTBALL, address("ul. Marymoncka", "34", "01-813", "Bielany"), 1),
-                resource(awf, "Tennis Court North", ResourceType.TENNIS, address("ul. Marymoncka", "34A", "01-813", "Bielany"), 1),
-                resource(awf, "Pool Lane 1", ResourceType.SWIMMING, address("ul. Marymoncka", "36", "01-813", "Bielany"), 8),
-                resource(awf, "Training Gym", ResourceType.GYM, address("ul. Marymoncka", "32", "01-813", "Bielany"), 20)
-        ));
-
-        Facility agrykola = saveFacility(
-                "O\u015Brodek Agrykola",
-                "Historic club grounds below the Ujazdowski escarpment. Clay tennis and a riverside pitch.",
-                "+48 22 621 47 41",
-                address("ul. My\u015Bliwiecka", "9", "00-459", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(agrykola, "Clay Tennis Court", ResourceType.TENNIS, address("ul. My\u015Bliwiecka", "9", "00-459", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(agrykola, "Football Pitch", ResourceType.FOOTBALL, address("ul. My\u015Bliwiecka", "11", "00-459", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(agrykola, "Outdoor Basketball", ResourceType.BASKETBALL, address("ul. My\u015Bliwiecka", "9A", "00-459", "\u015Ar\u00F3dmie\u015Bcie"), 1)
-        ));
-
-        Facility warszawianka = saveFacility(
-                "KS Warszawianka",
-                "Multi-sport club in \u015Ar\u00F3dmie\u015Bcie with tennis, squash, and a 25 m pool.",
-                "+48 22 628 80 71",
-                address("ul. Szwole\u017Cer\u00F3w", "9", "00-464", "\u015Ar\u00F3dmie\u015Bcie"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(warszawianka, "Tennis Court 1", ResourceType.TENNIS, address("ul. Szwole\u017Cer\u00F3w", "9", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(warszawianka, "Tennis Court 2", ResourceType.TENNIS, address("ul. Szwole\u017Cer\u00F3w", "11", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(warszawianka, "Squash Court A", ResourceType.SQUASH, address("ul. Szwole\u017Cer\u00F3w", "7", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 1),
-                resource(warszawianka, "Pool Lane 2", ResourceType.SWIMMING, address("ul. Szwole\u017Cer\u00F3w", "9A", "00-464", "\u015Ar\u00F3dmie\u015Bcie"), 6)
-        ));
-
-        Facility kolo = saveFacility(
-                "Hala Sportowa Ko\u0142o",
-                "Indoor halls on the Wola side of the tracks. Basketball, volleyball, and a community gym.",
-                "+48 22 632 11 80",
-                address("ul. Obozowa", "63", "01-425", "Wola"),
-                ResourceType.BASKETBALL
-        );
-        saveResources(List.of(
-                resource(kolo, "Basketball Hall", ResourceType.BASKETBALL, address("ul. Obozowa", "63", "01-425", "Wola"), 1),
-                resource(kolo, "Volleyball Hall", ResourceType.VOLLEYBALL, address("ul. Obozowa", "61", "01-425", "Wola"), 1),
-                resource(kolo, "Community Gym", ResourceType.GYM, address("ul. Obozowa", "65", "01-425", "Wola"), 14)
-        ));
-
-        Facility orlik = saveFacility(
-                "Orlik Wo\u0142oska",
-                "Neighbourhood Orlik pitches next to the hospital campus in Mokot\u00F3w.",
-                "+48 22 566 91 00",
-                address("ul. Wo\u0142oska", "4", "02-561", "Mokot\u00F3w"),
-                ResourceType.FOOTBALL
-        );
-        saveResources(List.of(
-                resource(orlik, "Football Pitch 1", ResourceType.FOOTBALL, address("ul. Wo\u0142oska", "4", "02-561", "Mokot\u00F3w"), 1),
-                resource(orlik, "Football Pitch 2", ResourceType.FOOTBALL, address("ul. Wo\u0142oska", "6", "02-561", "Mokot\u00F3w"), 1),
-                resource(orlik, "Basketball Cage", ResourceType.BASKETBALL, address("ul. Wo\u0142oska", "4A", "02-561", "Mokot\u00F3w"), 1)
-        ));
-
-        Facility szczescie = saveFacility(
-                "O\u015Brodek Szcz\u0119\u015Bliwice",
-                "Park Szcz\u0119\u015Bliwicki sports cluster in Ochota. Tennis, football, and a hillside gym.",
-                "+48 22 822 30 21",
-                address("ul. Drawska", "22", "02-202", "Ochota"),
-                ResourceType.TENNIS
-        );
-        saveResources(List.of(
-                resource(szczescie, "Park Tennis Court", ResourceType.TENNIS, address("ul. Drawska", "22", "02-202", "Ochota"), 1),
-                resource(szczescie, "Park Football Pitch", ResourceType.FOOTBALL, address("ul. Drawska", "20", "02-202", "Ochota"), 1),
-                resource(szczescie, "Hillside Gym", ResourceType.GYM, address("ul. Drawska", "24", "02-202", "Ochota"), 12)
-        ));
-
-        Facility zoliborz = saveFacility(
-                "O\u015Brodek \u017Boliborz",
-                "District centre on Potocka with indoor volleyball and a compact gym.",
-                "+48 22 839 44 50",
-                address("ul. Potocka", "1", "01-634", "\u017Boliborz"),
-                ResourceType.VOLLEYBALL
-        );
-        saveResources(List.of(
-                resource(zoliborz, "Volleyball Hall", ResourceType.VOLLEYBALL, address("ul. Potocka", "1", "01-634", "\u017Boliborz"), 1),
-                resource(zoliborz, "Tennis Court", ResourceType.TENNIS, address("ul. Potocka", "3", "01-634", "\u017Boliborz"), 1),
-                resource(zoliborz, "District Gym", ResourceType.GYM, address("ul. Potocka", "1A", "01-634", "\u017Boliborz"), 15)
-        ));
-
-        Facility praga = saveFacility(
-                "Hala Sportowa Praga",
-                "East-bank hall on Kaw\u0119czy\u0144ska. Basketball, squash, and a busy gym floor.",
-                "+48 22 818 08 92",
-                address("ul. Kaw\u0119czy\u0144ska", "36", "03-772", "Praga-P\u00F3\u0142noc"),
-                ResourceType.BASKETBALL
-        );
-        saveResources(List.of(
-                resource(praga, "Basketball Hall", ResourceType.BASKETBALL, address("ul. Kaw\u0119czy\u0144ska", "36", "03-772", "Praga-P\u00F3\u0142noc"), 1),
-                resource(praga, "Squash Court B", ResourceType.SQUASH, address("ul. Kaw\u0119czy\u0144ska", "38", "03-772", "Praga-P\u00F3\u0142noc"), 1),
-                resource(praga, "East Gym", ResourceType.GYM, address("ul. Kaw\u0119czy\u0144ska", "34", "03-772", "Praga-P\u00F3\u0142noc"), 20)
-        ));
+    private void seedNetwork() {
+        SeedData seed = seedDataLoader.load();
+        for (SeedData.SeedFacility seedFacility : seed.facilities()) {
+            saveSeedFacility(seedFacility);
+        }
     }
 
-    private Address address(String street, String buildingNumber, String postalCode, String district) {
-        return new Address(street, buildingNumber, postalCode, district);
+    private void saveSeedFacility(SeedData.SeedFacility seedFacility) {
+        Facility facility = saveFacility(
+                seedFacility.name(),
+                seedFacility.description(),
+                seedFacility.phone(),
+                toAddress(seedFacility.address()),
+                seedFacility.coverType()
+        );
+        List<SportResource> resources = new ArrayList<>();
+        for (SeedData.SeedResource seedResource : seedFacility.resources()) {
+            resources.add(resource(facility, seedResource.name(), seedResource.type(),
+                    toAddress(seedResource.address()), seedResource.capacity()));
+        }
+        saveResources(resources);
+    }
+
+    private Address toAddress(SeedData.SeedAddress seedAddress) {
+        return new Address(
+                seedAddress.street(),
+                seedAddress.buildingNumber(),
+                seedAddress.postalCode(),
+                seedAddress.district()
+        );
     }
 
     private Facility saveFacility(String name, String description, String phone, Address address, ResourceType coverType) {
@@ -366,18 +263,9 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedInventory() {
-        seedItem("Racket", "15.00", ResourceType.TENNIS);
-        seedItem("Ball basket", "12.00", ResourceType.TENNIS);
-        seedItem("Racket", "15.00", ResourceType.SQUASH);
-        seedItem("Balls", "8.00", ResourceType.SQUASH);
-        seedItem("Ball", "10.00", ResourceType.FOOTBALL);
-        seedItem("Bibs", "12.00", ResourceType.FOOTBALL);
-        seedItem("Ball", "10.00", ResourceType.BASKETBALL);
-        seedItem("Ball", "10.00", ResourceType.VOLLEYBALL);
-        seedItem("Towel", "8.00", ResourceType.GYM);
-        seedItem("Locker", "6.00", ResourceType.GYM);
-        seedItem("Towel", "8.00", ResourceType.SWIMMING);
-        seedItem("Goggles", "10.00", ResourceType.SWIMMING);
+        for (SeedData.SeedInventoryItem item : seedDataLoader.load().inventory()) {
+            seedItem(item.name(), item.price().toString(), item.type());
+        }
     }
 
     private void seedItem(String name, String price, ResourceType type) {
