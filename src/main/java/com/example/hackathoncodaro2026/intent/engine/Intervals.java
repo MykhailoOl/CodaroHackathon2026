@@ -4,17 +4,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Pure interval arithmetic: merge overlapping/touching spans, subtract busy
- * spans from a window to get free spans. No clock, no domain knowledge —
- * this is the grid-free foundation candidate generation is built on.
- */
 final class Intervals {
 
     private Intervals() {
     }
 
-    /** Merges overlapping and touching intervals, dropping zero-length ones. */
     static List<Interval> merge(List<Interval> raw) {
         List<Interval> sorted = raw.stream()
                 .filter(i -> !i.isEmpty())
@@ -37,7 +31,6 @@ final class Intervals {
         return merged;
     }
 
-    /** The free spans left inside {@code window} once {@code busy} is removed. */
     static List<Interval> subtract(Interval window, List<Interval> busy) {
         List<Interval> free = new ArrayList<>();
         LocalDateTime cursor = window.start();

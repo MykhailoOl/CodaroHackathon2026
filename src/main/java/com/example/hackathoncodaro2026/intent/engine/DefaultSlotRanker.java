@@ -13,14 +13,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * Pure grid-free ranking pipeline: generate candidates from real free-time
- * structure, filter on hard constraints, score survivors, explain the
- * scores, and walk the relaxation ladder when fewer than two candidates
- * survive. No Spring, no JPA, no clock — everything comes from
- * {@code snapshot}/{@code spec}/{@code config}, so identical inputs always
- * produce an identical result.
- */
 public final class DefaultSlotRanker implements SlotRanker {
 
     private static final int MIN_SURVIVORS = 2;

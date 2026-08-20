@@ -31,13 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * The I/O boundary for the intent pipeline: the only place in {@code intent.*}
- * that touches a repository. Builds a {@link ScheduleSnapshot} from the live
- * database, hands it to {@link IntentParser} + {@link SlotRanker}, and prices
- * the results with the existing {@link PricingService} — nothing downstream
- * of here (the ranker) ever sees an entity or a repository.
- */
 @Service
 public class IntentSchedulingService {
 
@@ -117,8 +110,6 @@ public class IntentSchedulingService {
         }
         long minutes = Duration.between(suggestion.start(), suggestion.end()).toMinutes();
         if (minutes <= 0 || minutes % 60 != 0) {
-            // The pricing model only quotes whole hours; rather than invent a
-            // number for a fractional-hour suggestion, omit the price field.
             return null;
         }
         int hours = (int) (minutes / 60);
@@ -163,11 +154,9 @@ public class IntentSchedulingService {
         );
     }
 
-    /** One ranked suggestion paired with its preformatted price, or {@code null} if pricing was awkward for it. */
     public record PricedSuggestion(Suggestion suggestion, String price) {
     }
 
-    /** Everything the web layer needs to build a {@code /api/intent/suggest} response. */
     public record SuggestOutcome(
             IntentSpec spec,
             String parserUsed,

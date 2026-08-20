@@ -16,12 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The ladder itself is pure and deterministic given spec+config alone.
- * Verifies the mandated order (widen day window, drop soft lowest-weight
- * first, drop only relaxable hard constraints, then shrink duration) and
- * that every rung records what it dropped.
- */
 class RelaxerTest {
 
     private IntentProperties config() {
@@ -55,14 +49,12 @@ class RelaxerTest {
         assertEquals(Action.DROP_HARD_CONSTRAINT, rungs.get(3).step().action());
         assertEquals(List.of("hard_relaxable"), rungs.get(3).step().droppedKeys());
 
-        // hard_locked is never relaxable -> never appears as a DROP_HARD_CONSTRAINT rung.
         boolean lockedEverDropped = rungs.stream()
                 .anyMatch(r -> r.step().action() == Action.DROP_HARD_CONSTRAINT
                         && r.step().droppedKeys().contains("hard_locked"));
         assertFalse(lockedEverDropped);
         assertTrue(rungs.get(3).state().hardKeys().contains("hard_locked"));
 
-        // remaining rungs shrink duration up to (but not exceeding) the configured cap.
         List<Relaxer.Rung> shrinkRungs = rungs.subList(4, rungs.size());
         assertFalse(shrinkRungs.isEmpty());
         for (Relaxer.Rung r : shrinkRungs) {

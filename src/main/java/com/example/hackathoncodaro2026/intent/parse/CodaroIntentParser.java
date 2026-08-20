@@ -26,25 +26,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * Optional upgrade over {@link RuleIntentParser}: sends the sentence to an
- * OpenAI-compatible chat-completions endpoint and asks it, via tool-use, to
- * emit {@link IntentSpec} fields directly.
- *
- * Never used on its own by callers — always wrapped by {@link
- * CompositeIntentParser}, which falls back to the rule parser on any
- * exception this class throws (network failure, timeout, malformed
- * response, or a result that fails validation). That is why this class is
- * allowed to throw, unlike {@link RuleIntentParser}: {@link
- * IntentParser}'s "never throw" contract is honored at the composite, the
- * only place callers actually touch.
- *
- * Configured entirely via {@code @Value} so nothing here depends on
- * application.yml being edited: {@code intent.llm.base-url},
- * {@code intent.llm.api-key}, {@code intent.llm.model}. All three default to
- * empty, and an empty base-url or api-key means "not configured" — a normal
- * operating mode, not an error.
- */
 @Component
 public class CodaroIntentParser implements IntentParser {
 
@@ -74,7 +55,6 @@ public class CodaroIntentParser implements IntentParser {
         this.objectMapper = new ObjectMapper();
     }
 
-    /** True when enough credentials are present to attempt a call. Absence is not an error. */
     public boolean isConfigured() {
         return !baseUrl.isEmpty() && !apiKey.isEmpty() && !model.isEmpty();
     }
@@ -94,7 +74,6 @@ public class CodaroIntentParser implements IntentParser {
         return new ParseResult(spec, "llm");
     }
 
-    // ------------------------------------------------------------- request
 
     private String buildRequestBody(String text, LocalDate today, int partySize) {
         List<String> hardKeys = new ArrayList<>();
@@ -201,7 +180,6 @@ public class CodaroIntentParser implements IntentParser {
         }
     }
 
-    // ------------------------------------------------------------ response
 
     private ObjectNode extractToolArguments(String responseBody) {
         try {
@@ -253,10 +231,6 @@ public class CodaroIntentParser implements IntentParser {
             }
         }
 
-        // Collect every key the model returned in either bucket, then re-bucket
-        // strictly by config's kind — never trust the model's own hard/soft
-        // placement, since mixing kinds is the one modelling error that must
-        // never happen.
         Set<String> returnedKeys = new LinkedHashSet<>();
         collectStrings(args.path("hardConstraints"), returnedKeys);
         collectStrings(args.path("softConstraints"), returnedKeys);
@@ -269,7 +243,6 @@ public class CodaroIntentParser implements IntentParser {
             } else if (validSoftKeys.contains(key)) {
                 softConstraints.add(key);
             }
-            // unknown keys are silently dropped
         }
 
         int partySize = args.path("partySize").asInt(fallbackPartySize);

@@ -16,16 +16,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Deterministic, no-network intent parser. This is what runs when the LLM is
- * unreachable or unconfigured, so it must stand on its own and never throw:
- * unparseable or ambiguous input degrades to the most conservative spec, not
- * an exception.
- *
- * All domain vocabulary (constraint keys + phrases) is read from {@link
- * IntentProperties} — nothing sport- or constraint-specific is hardcoded here
- * beyond the generic English time/duration/party-size grammar.
- */
 @Component
 public class RuleIntentParser implements IntentParser {
 
@@ -86,12 +76,6 @@ public class RuleIntentParser implements IntentParser {
         return new ParseResult(spec, "rules");
     }
 
-    /**
-     * Defensive re-check of every invariant IntentSpec's canonical constructor
-     * doesn't already enforce (duration positivity, day ordering, constraint
-     * keys actually existing in config). Falls back to safe defaults on any
-     * violation rather than propagating a broken spec.
-     */
     private IntentSpec validate(IntentSpec spec, LocalDate today) {
         int duration = spec.durationMin() > 0 ? spec.durationMin() : DEFAULT_DURATION_MIN;
 
@@ -134,7 +118,6 @@ public class RuleIntentParser implements IntentParser {
         return false;
     }
 
-    /** Substring match with word-ish boundaries so "team" doesn't hit inside "steamroller". */
     private boolean containsWordish(String haystack, String needle) {
         if (needle.isBlank()) {
             return false;
@@ -143,7 +126,6 @@ public class RuleIntentParser implements IntentParser {
         return Pattern.compile(pattern).matcher(haystack).find();
     }
 
-    // ---------------------------------------------------------------- duration
 
     private static final Pattern HOURS_MIN_PATTERN =
             Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(?:h|hr|hrs|hour|hours)\\b");
@@ -151,8 +133,6 @@ public class RuleIntentParser implements IntentParser {
             Pattern.compile("(\\d+)\\s*(?:m|min|mins|minute|minutes)\\b");
 
     private int parseDuration(String lower) {
-        // Fixed English idioms, checked before the numeric patterns since they
-        // don't contain a bare digit ("an hour and a half" has no numeral).
         if (lower.contains("hour and a half") || lower.contains("hour and half")) {
             return 90;
         }
@@ -181,7 +161,6 @@ public class RuleIntentParser implements IntentParser {
         return DEFAULT_DURATION_MIN;
     }
 
-    // --------------------------------------------------------------- day window
 
     private record DayWindow(LocalDate from, LocalDate to) {
     }
@@ -243,7 +222,6 @@ public class RuleIntentParser implements IntentParser {
         return d;
     }
 
-    /** The next occurrence of the weekday strictly after today (never today itself). */
     private LocalDate nextStrictly(LocalDate from, DayOfWeek target) {
         LocalDate d = from.plusDays(1);
         while (d.getDayOfWeek() != target) {
@@ -252,7 +230,6 @@ public class RuleIntentParser implements IntentParser {
         return d;
     }
 
-    // --------------------------------------------------------------- time of day
 
     private TimeOfDay parseTimeOfDay(String lower) {
         if (containsWordish(lower, "morning")) {
@@ -268,7 +245,6 @@ public class RuleIntentParser implements IntentParser {
         return TimeOfDay.ANY;
     }
 
-    // --------------------------------------------------------------- resource type
 
     private static final List<String[]> SYNONYMS = List.of(
             new String[]{"football", "FOOTBALL"},
@@ -297,10 +273,7 @@ public class RuleIntentParser implements IntentParser {
         return null;
     }
 
-    // --------------------------------------------------------------- party size
 
-    // The trailing noun is mandatory so "for 2 hours" (a duration) is never
-    // mistaken for a party size — only "for 2 people"/"players"/etc counts.
     private static final Pattern FOR_N_PEOPLE = Pattern.compile("for\\s+(\\d+)\\s+(?:people|person|players|ppl)\\b");
     private static final java.util.Map<String, Integer> NUMBER_WORDS = java.util.Map.ofEntries(
             java.util.Map.entry("one", 1),

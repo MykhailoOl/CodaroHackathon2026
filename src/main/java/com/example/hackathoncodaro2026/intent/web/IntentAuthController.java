@@ -17,13 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.ZoneId;
 
-/**
- * Bridges the app's existing form-login authentication (username + password
- * checked via {@link AuthenticationManager}, which delegates to the existing
- * {@code CustomUserDetailsService} and {@code PasswordEncoder} — never
- * re-implemented here) to a signed bearer token a browser app on another
- * origin can carry.
- */
 @RestController
 @RequestMapping("/api/auth")
 public class IntentAuthController {

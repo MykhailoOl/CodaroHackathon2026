@@ -5,7 +5,6 @@ import com.example.hackathoncodaro2026.intent.model.TimeOfDay;
 import java.time.LocalDate;
 import java.util.List;
 
-/** JSON view of {@link com.example.hackathoncodaro2026.intent.model.IntentSpec}. */
 public record IntentSpecDto(
         int durationMin,
         LocalDate dayFrom,

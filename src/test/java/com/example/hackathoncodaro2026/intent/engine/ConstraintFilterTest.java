@@ -16,12 +16,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * ConstraintFilter must never admit a candidate that violates a built-in
- * hard rule or a config-declared hard constraint. Deliberately uses
- * constraint keys/labels that are NOT sports vocabulary ("req_quiet" etc.)
- * to prove the filter carries no domain assumptions of its own.
- */
 class ConstraintFilterTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 8, 20, 9, 0);
@@ -124,7 +118,6 @@ class ConstraintFilterTest {
         LocalDateTime start = NOW.plusMinutes(30);
         Candidate c = new Candidate(1L, start, start.plusMinutes(60), new Interval(start, start.plusHours(2)));
 
-        // req_quiet dropped by relaxation -> not in the active key list, so it must not block anymore.
         assertTrue(ConstraintFilter.admits(c, r, snapshot(List.of()), config(), List.of(), 1));
     }
 }

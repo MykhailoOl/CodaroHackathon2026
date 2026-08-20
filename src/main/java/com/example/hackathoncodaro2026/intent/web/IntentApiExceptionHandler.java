@@ -13,16 +13,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * JSON error mapping for the {@code /api/**} controllers only. Scoped via
- * {@code assignableTypes} and given the highest precedence so it wins over
- * the app-wide {@code GlobalExceptionHandler} (which returns Thymeleaf
- * redirect view names — meaningless for a JSON client) for exceptions thrown
- * from {@link IntentController} and {@link IntentAuthController}.
- *
- * Never lets an exception escape as a raw stack trace: every branch here
- * returns a clean status code and a short JSON message.
- */
 @RestControllerAdvice(assignableTypes = {IntentController.class, IntentAuthController.class})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class IntentApiExceptionHandler {

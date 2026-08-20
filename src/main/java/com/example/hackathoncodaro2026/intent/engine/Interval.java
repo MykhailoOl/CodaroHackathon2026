@@ -3,10 +3,6 @@ package com.example.hackathoncodaro2026.intent.engine;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
-/**
- * A half-open time span {@code [start, end)}. Pure value type used only
- * inside the engine — never crosses the {@code SlotRanker} boundary.
- */
 record Interval(LocalDateTime start, LocalDateTime end) implements Comparable<Interval> {
 
     Interval {

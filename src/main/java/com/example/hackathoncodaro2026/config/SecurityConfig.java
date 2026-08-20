@@ -33,26 +33,11 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Exposes the {@link AuthenticationManager} Spring Security already
-     * assembles from {@link CustomUserDetailsService} + {@link PasswordEncoder}
-     * (the same one form login uses under the hood) so the token bridge in
-     * {@code intent.web.AuthController} can authenticate username/password
-     * without ever comparing passwords itself or bypassing the encoder.
-     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
-    /**
-     * A separate, stateless filter chain for the JSON API consumed by the
-     * Next.js frontend. Matched ONLY against {@code /api/**} (via
-     * {@code @Order(1)}, evaluated before the app-wide chain below which has
-     * no explicit order and therefore matches last), so the Thymeleaf app's
-     * form login, CSRF protection, and authorization rules for every other
-     * path are completely untouched.
-     */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(
@@ -84,7 +69,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** CORS for the frontend at localhost:3000, scoped to the JSON API only. */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();

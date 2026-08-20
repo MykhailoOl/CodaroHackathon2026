@@ -41,8 +41,6 @@ export default function ComposerPage() {
       setResponse(result.data);
       setSource(result.source);
     } catch (err) {
-      // suggestIntent already falls back to fixtures internally, so this only
-      // fires for truly unexpected errors.
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);

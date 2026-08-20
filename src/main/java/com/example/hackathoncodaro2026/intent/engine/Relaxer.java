@@ -12,14 +12,6 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-/**
- * Builds the full relaxation ladder up front, in the fixed order the
- * contract mandates: widen the day window, drop soft constraints
- * lowest-weight first, drop relaxable hard constraints (never the others),
- * then shrink duration in increments up to the configured cap. Every rung
- * is deterministic given {@code spec}/{@code config} alone — the caller
- * decides how far to walk the ladder based on how many candidates survive.
- */
 final class Relaxer {
 
     private static final double SHRINK_STEP_PCT = 0.10;
@@ -43,7 +35,6 @@ final class Relaxer {
         List<Rung> rungs = new ArrayList<>();
         State state = initial(spec);
 
-        // 1. widen the day window by +-2 days, once.
         LocalDate widenedFrom = state.dayFrom().minusDays(2);
         LocalDate widenedTo = state.dayTo().plusDays(2);
         state = new State(widenedFrom, widenedTo, state.hardKeys(), state.softKeys(), state.durationMin(),
@@ -51,7 +42,6 @@ final class Relaxer {
         rungs.add(new Rung(state, new RelaxStep(Action.WIDEN_DAY_WINDOW,
                 "widened day window to " + widenedFrom + ".." + widenedTo, List.of("day_window"))));
 
-        // 2. drop lowest-weight soft constraints, one at a time.
         List<String> softOrder = state.softKeys().stream()
                 .filter(k -> config.constraint(k) != null && !config.constraint(k).isHard())
                 .sorted(Comparator.comparingDouble(k -> config.constraint(k).weight()))
@@ -66,7 +56,6 @@ final class Relaxer {
                     "dropped soft constraint " + (rule == null ? key : rule.label()), List.of(key))));
         }
 
-        // 3. drop relaxable hard constraints, never the non-relaxable ones.
         List<String> hardOrder = state.hardKeys().stream()
                 .filter(k -> config.constraint(k) != null && config.constraint(k).isHard()
                         && config.constraint(k).relaxable())
@@ -81,7 +70,6 @@ final class Relaxer {
                     "dropped hard constraint " + (rule == null ? key : rule.label()), List.of(key))));
         }
 
-        // 4. shrink duration in fixed increments up to the configured cap.
         double maxPct = Math.max(0.0, config.shrinkDurationMaxPct());
         int originalDuration = spec.durationMin();
         double pct = 0.0;

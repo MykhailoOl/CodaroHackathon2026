@@ -19,11 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Ranks survivors handed to it by {@link ConstraintFilter}. Never filters —
- * every candidate it sees is already admissible; it only assigns weighted
- * {@link ScoreTerm}s so {@link Explainer} has real numbers to report.
- */
 final class Scorer {
 
     static final String TIME_OF_DAY_KEY = "time_of_day";

@@ -2,7 +2,6 @@ package com.example.hackathoncodaro2026.intent.model;
 
 import java.util.List;
 
-/** One rung of the relaxation ladder. Every drop is recorded — never silent. */
 public record RelaxStep(Action action, String detail, List<String> droppedKeys) {
 
     public enum Action {

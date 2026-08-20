@@ -26,12 +26,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Proves the {@code /api/**} trust boundary and the JSON booking flow end to
- * end through real HTTP: the token bridge (missing / valid / tampered /
- * expired bearer tokens) and a clean, non-500 error when {@code /api/intent/book}
- * is asked to double-book a slot.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 class IntentApiTests {
