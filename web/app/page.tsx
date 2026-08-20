@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, login } from "@/lib/api";
-import { loadAuth, saveAuth } from "@/lib/auth";
-import { DataSourceBadge } from "@/components/DataSourceBadge";
-import { DevFixtureToggle } from "@/components/DevFixtureToggle";
-import type { DataSource } from "@/lib/types";
+import { loadSession, saveSession } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,10 +11,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<DataSource | null>(null);
 
   useEffect(() => {
-    if (loadAuth()) {
+    if (loadSession()) {
       router.replace("/composer");
     }
   }, [router]);
@@ -27,9 +23,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const result = await login(username.trim(), password);
-      saveAuth(result.data);
-      setSource(result.source);
+      saveSession(await login(username.trim(), password));
       router.push("/composer");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
@@ -44,8 +38,8 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-stone-900">EverRest</h1>
           <p className="mt-2 text-sm leading-relaxed text-stone-600">
-            You do not have to choose a date. Tell us the circumstances and we work out
-            when the service can be held, then propose a time for you to approve.
+            You do not have to choose a date. Tell us the circumstances and the funeral
+            home settles when the service can be held.
           </p>
         </div>
 
@@ -94,16 +88,7 @@ export default function LoginPage() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
 
-          <div className="flex items-center justify-between pt-1">
-            <DevFixtureToggle />
-            {source && <DataSourceBadge source={source} />}
-          </div>
         </form>
-
-        <p className="mt-4 text-center text-xs text-stone-400">
-          No backend running? Check &ldquo;Use demo data&rdquo; above, or just submit — a network error
-          falls back to demo data automatically.
-        </p>
       </div>
     </main>
   );

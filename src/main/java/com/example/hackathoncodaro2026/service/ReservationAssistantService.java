@@ -16,7 +16,7 @@ import java.util.List;
 
 public interface ReservationAssistantService {
 
-    AssistantSessionDto session(User user);
+    AssistantSessionDto session(User user, String csrfToken);
 
     List<AssistantHomeDto> homes();
 

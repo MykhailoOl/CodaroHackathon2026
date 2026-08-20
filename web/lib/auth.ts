@@ -1,37 +1,26 @@
+import type { AssistantSession } from "./types";
 
-const TOKEN_KEY = "codaro.token";
-const EXPIRES_KEY = "codaro.tokenExpiresAt";
-const DISPLAY_NAME_KEY = "codaro.displayName";
+// The session itself lives in the JSESSIONID cookie the API set; this is only the
+// display copy, so the app can show who is signed in without a round trip on paint.
+const SESSION_KEY = "everrest.session";
 
-export interface StoredAuth {
-  token: string;
-  expiresAt: string;
-  displayName: string;
-}
-
-export function saveAuth(auth: StoredAuth): void {
+export function saveSession(session: AssistantSession): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(TOKEN_KEY, auth.token);
-  window.localStorage.setItem(EXPIRES_KEY, auth.expiresAt);
-  window.localStorage.setItem(DISPLAY_NAME_KEY, auth.displayName);
+  window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
-export function loadAuth(): StoredAuth | null {
+export function loadSession(): AssistantSession | null {
   if (typeof window === "undefined") return null;
-  const token = window.localStorage.getItem(TOKEN_KEY);
-  const expiresAt = window.localStorage.getItem(EXPIRES_KEY);
-  const displayName = window.localStorage.getItem(DISPLAY_NAME_KEY);
-  if (!token) return null;
-  return { token, expiresAt: expiresAt ?? "", displayName: displayName ?? "" };
+  const raw = window.sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AssistantSession;
+  } catch {
+    return null;
+  }
 }
 
-export function clearAuth(): void {
+export function clearSession(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(TOKEN_KEY);
-  window.localStorage.removeItem(EXPIRES_KEY);
-  window.localStorage.removeItem(DISPLAY_NAME_KEY);
-}
-
-export function getToken(): string | null {
-  return loadAuth()?.token ?? null;
+  window.sessionStorage.removeItem(SESSION_KEY);
 }
