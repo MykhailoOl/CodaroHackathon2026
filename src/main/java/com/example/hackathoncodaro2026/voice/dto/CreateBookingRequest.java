@@ -3,6 +3,8 @@ package com.example.hackathoncodaro2026.voice.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.time.LocalDateTime;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateBookingRequest {
 
@@ -13,6 +15,14 @@ public class CreateBookingRequest {
     private String conversationId;
 
     private String slotId;
+
+    private Long resourceId;
+
+    private LocalDateTime start;
+
+    private LocalDateTime end;
+
+    private Integer partySize;
 
     @JsonAlias({"patientName", "callerName"})
     private String playerName;
@@ -46,6 +56,38 @@ public class CreateBookingRequest {
 
     public void setSlotId(String slotId) {
         this.slotId = slotId;
+    }
+
+    public Long getResourceId() {
+        return resourceId;
+    }
+
+    public void setResourceId(Long resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    public LocalDateTime getStart() {
+        return start;
+    }
+
+    public void setStart(LocalDateTime start) {
+        this.start = start;
+    }
+
+    public LocalDateTime getEnd() {
+        return end;
+    }
+
+    public void setEnd(LocalDateTime end) {
+        this.end = end;
+    }
+
+    public Integer getPartySize() {
+        return partySize;
+    }
+
+    public void setPartySize(Integer partySize) {
+        this.partySize = partySize;
     }
 
     public String getPlayerName() {

@@ -52,7 +52,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-                        .requestMatchers("/api/auth/token").permitAll()
+                        .requestMatchers("/api/auth/token", "/api/voice/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

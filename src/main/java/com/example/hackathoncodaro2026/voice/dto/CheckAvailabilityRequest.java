@@ -9,6 +9,8 @@ public class CheckAvailabilityRequest {
     @JsonAlias({"system__agent_id", "agent_id"})
     private String agentId;
 
+    private String text;
+
     private String sport;
 
     private String preferredDay;
@@ -24,12 +26,22 @@ public class CheckAvailabilityRequest {
 
     private Integer durationHours;
 
+    private Integer partySize;
+
     public String getAgentId() {
         return agentId;
     }
 
     public void setAgentId(String agentId) {
         this.agentId = agentId;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
     }
 
     public String getSport() {
@@ -93,5 +105,35 @@ public class CheckAvailabilityRequest {
 
     public void setDurationHours(Integer durationHours) {
         this.durationHours = durationHours;
+    }
+
+    public Integer getPartySize() {
+        return partySize;
+    }
+
+    public void setPartySize(Integer partySize) {
+        this.partySize = partySize;
+    }
+
+    public String resolvedText() {
+        if (text != null && !text.isBlank()) {
+            return text.trim();
+        }
+        StringBuilder composed = new StringBuilder();
+        append(composed, sport);
+        append(composed, preferredDay);
+        append(composed, resolvedPartOfDay());
+        append(composed, preferredTime);
+        return composed.toString().trim();
+    }
+
+    private void append(StringBuilder target, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        if (!target.isEmpty()) {
+            target.append(' ');
+        }
+        target.append(value.trim());
     }
 }

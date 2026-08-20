@@ -31,7 +31,7 @@ public class VoiceToolException extends RuntimeException {
         return new VoiceToolException("slot_no_longer_available", message, 409);
     }
 
-    public static VoiceToolException internal(String message) {
-        return new VoiceToolException("internal", message, 500);
+    public static VoiceToolException remote(String message) {
+        return new VoiceToolException("elevenlabs_provision_failed", message, 502);
     }
 }

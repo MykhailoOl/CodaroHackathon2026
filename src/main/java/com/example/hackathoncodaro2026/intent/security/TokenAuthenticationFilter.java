@@ -34,7 +34,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        if (isAuthTokenRequest(request) || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
+        if (isAuthTokenRequest(request) || isVoiceToolRequest(request) || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -73,11 +73,19 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isAuthTokenRequest(HttpServletRequest request) {
+        return AUTH_TOKEN_PATH.equals(path(request));
+    }
+
+    private boolean isVoiceToolRequest(HttpServletRequest request) {
+        return path(request).startsWith("/api/voice/");
+    }
+
+    private String path(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         if (contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
             uri = uri.substring(contextPath.length());
         }
-        return AUTH_TOKEN_PATH.equals(uri);
+        return uri;
     }
 }

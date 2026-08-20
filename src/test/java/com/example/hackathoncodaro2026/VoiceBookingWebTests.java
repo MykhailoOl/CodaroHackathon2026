@@ -33,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class VoiceBookingWebTests {
 
     private static final String SECRET = "change-me-tool-webhook-secret";
+    private static final String TENNIS_EVENING = "tennis tomorrow evening";
 
     @Autowired
     private MockMvc mockMvc;
@@ -57,7 +58,7 @@ class VoiceBookingWebTests {
         mockMvc.perform(post("/api/voice/tools/check-availability")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"sport":"tennis","preferredDay":"tomorrow","partOfDay":"evening"}
+                                {"text":"tennis tomorrow evening"}
                                 """))
                 .andExpect(status().isUnauthorized());
     }
@@ -68,33 +69,36 @@ class VoiceBookingWebTests {
                         .header("Authorization", "Bearer wrong-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"sport":"tennis","preferredDay":"tomorrow","partOfDay":"evening"}
+                                {"text":"tennis tomorrow evening"}
                                 """))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void checkAvailabilityReturnsDatabaseSlotsWithoutCalendar() throws Exception {
+    void checkAvailabilityUsesSameIntentTextAsChatbot() throws Exception {
         mockMvc.perform(post("/api/voice/tools/check-availability")
                         .header("Authorization", "Bearer " + SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sport":"tennis",
-                                  "preferredDay":"tomorrow",
-                                  "partOfDay":"evening",
+                                  "text":"tennis tomorrow evening",
+                                  "partySize":2,
                                   "language":"en"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slots").isArray())
                 .andExpect(jsonPath("$.slots[0].slotId").isString())
-                .andExpect(jsonPath("$.slots[0].displayLabel").isString());
+                .andExpect(jsonPath("$.slots[0].displayLabel").isString())
+                .andExpect(jsonPath("$.slots[0].resourceId").isNumber())
+                .andExpect(jsonPath("$.slots[0].start").isString())
+                .andExpect(jsonPath("$.slots[0].end").isString())
+                .andExpect(jsonPath("$.slots[0].partySize").value(2));
     }
 
     @Test
     void createBookingPersistsToDatabaseAndLogsSms() throws Exception {
-        String slotId = firstSlotId("tennis", "tomorrow", "evening", null);
+        String slotId = firstSlotId(TENNIS_EVENING);
 
         mockMvc.perform(post("/api/voice/tools/create-booking")
                         .header("Authorization", "Bearer " + SECRET)
@@ -122,8 +126,42 @@ class VoiceBookingWebTests {
     }
 
     @Test
+    void createBookingAcceptsIntentResourceFields() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/voice/tools/check-availability")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"text":"tennis tomorrow evening","language":"en"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+        Number resourceId = JsonPath.read(body, "$.slots[0].resourceId");
+        String start = JsonPath.read(body, "$.slots[0].start");
+        String end = JsonPath.read(body, "$.slots[0].end");
+
+        mockMvc.perform(post("/api/voice/tools/create-booking")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "resourceId":%s,
+                                  "start":"%s",
+                                  "end":"%s",
+                                  "partySize":2,
+                                  "playerName":"Intent Caller",
+                                  "playerPhone":"+48 600 333 444",
+                                  "language":"en"
+                                }
+                                """.formatted(resourceId, start, end)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").isString());
+    }
+
+    @Test
     void createBookingRejectsTakenSlot() throws Exception {
-        String slotId = firstSlotId("tennis", "tomorrow", "evening", null);
+        String slotId = firstSlotId(TENNIS_EVENING);
         String body = """
                 {
                   "slotId":"%s",
@@ -148,7 +186,7 @@ class VoiceBookingWebTests {
     }
 
     @Test
-    void preferredTimeNarrowsReturnedSlots() throws Exception {
+    void composedLegacyFieldsStillReachIntent() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/voice/tools/check-availability")
                         .header("Authorization", "Bearer " + SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -156,7 +194,7 @@ class VoiceBookingWebTests {
                                 {
                                   "sport":"tennis",
                                   "preferredDay":"tomorrow",
-                                  "preferredTime":"18:00",
+                                  "partOfDay":"evening",
                                   "language":"en"
                                 }
                                 """))
@@ -165,7 +203,7 @@ class VoiceBookingWebTests {
 
         List<String> labels = JsonPath.read(result.getResponse().getContentAsString(), "$.slots[*].displayLabel");
         assertThat(labels).isNotEmpty();
-        assertThat(labels.getFirst()).contains("18:00");
+        assertThat(labels.getFirst()).containsIgnoringCase("tennis");
     }
 
     @Test
@@ -198,7 +236,7 @@ class VoiceBookingWebTests {
 
     @Test
     void phoneBookingInviteCollectsEmailAndLogsCalendarInvitation() throws Exception {
-        String slotId = firstSlotId("tennis", "tomorrow", "evening", null);
+        String slotId = firstSlotId(TENNIS_EVENING);
         MvcResult booked = mockMvc.perform(post("/api/voice/tools/create-booking")
                         .header("Authorization", "Bearer " + SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -236,18 +274,13 @@ class VoiceBookingWebTests {
                 .andExpect(content().string(containsString("BEGIN:VCALENDAR")));
     }
 
-    private String firstSlotId(String sport, String day, String partOfDay, String time) throws Exception {
-        String payload = time == null
-                ? """
-                {"sport":"%s","preferredDay":"%s","partOfDay":"%s","language":"en"}
-                """.formatted(sport, day, partOfDay)
-                : """
-                {"sport":"%s","preferredDay":"%s","preferredTime":"%s","language":"en"}
-                """.formatted(sport, day, time);
+    private String firstSlotId(String text) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/voice/tools/check-availability")
                         .header("Authorization", "Bearer " + SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
+                        .content("""
+                                {"text":"%s","language":"en"}
+                                """.formatted(text)))
                 .andExpect(status().isOk())
                 .andReturn();
         List<String> slotIds = JsonPath.read(result.getResponse().getContentAsString(), "$.slots[*].slotId");

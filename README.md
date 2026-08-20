@@ -256,47 +256,16 @@ in `src/main/resources/application.yml`, or pass `--app.browser.auto-open=false`
 | `/avatars/{userId}` | Avatar or initials placeholder |
 | `/h2-console` | H2 web console |
 | `GET /api/voice/tools` | Public ElevenLabs tool catalog (placeholders) |
-| `POST /api/voice/tools/check-availability` | Voice tool: list open slots from the database |
-| `POST /api/voice/tools/create-booking` | Voice tool: persist a booking, log SMS, return invite URL |
+| `POST /api/voice/tools/check-availability` | Voice tool: same intent suggest as `/api/intent/suggest` |
+| `POST /api/voice/tools/create-booking` | Voice tool: same intent book as `/api/intent/book`, then SMS/invite |
 | `POST /api/voice/provision` | Agent + SIP spec for ElevenLabs (keys stay in env) |
 | `/voice/invite/{token}` | Caller email form, then calendar invitation (.ics) |
 
 ---
 
-## Voice receptionist (phone as a second booking channel)
+## Voice receptionist
 
-Phone booking is an alternative to the website. Both write the **same Courtly H2 reservations**. There is no Google Calendar.
-
-Flow: caller dials the Courtly Telnyx SIP number → ElevenLabs agent → `check_availability` / `create_booking` → row in the manager queue → SMS with `/voice/invite/{token}` → caller enters email → calendar invitation (.ics). SMS is log-only until Telnyx keys are filled.
-
-Credentials stay as empty env placeholders. Split them like this:
-
-| Who | What to paste | Do not |
-|-----|----------------|--------|
-| Teammate | `ELEVENLABS_API_KEY` (and voice/agent ids after provision) | Copy receptionist ElevenLabs secrets into git |
-| You | Spare Telnyx SIP number into `SIP_FROM_NUMBER` + `SIP_USERNAME` / `SIP_PASSWORD` | Reuse the AI receptionist DID |
-| Later | Rotate Telnyx/EL keys in `.env` only | Commit rotated values |
-
-`POST /api/voice/provision` (same `TOOL_WEBHOOK_SECRET` bearer) returns the agent spec and SIP status. With empty keys it stays `placeholder`. After keys are in env, create/attach the agent in ElevenLabs using that spec and import the Telnyx number from SIP trunk `sip:sip.rtc.elevenlabs.io:5060`.
-
-Copy `.env.example` to `.env`. Default tool auth:
-
-```
-Authorization: Bearer change-me-tool-webhook-secret
-```
-
-Check slots:
-
-```bash
-curl -s -X POST http://localhost:8080/api/voice/tools/check-availability \
-  -H "Authorization: Bearer change-me-tool-webhook-secret" \
-  -H "Content-Type: application/json" \
-  -d '{"sport":"tennis","preferredDay":"tomorrow","partOfDay":"evening","preferredTime":"18:00","language":"en"}'
-```
-
-Book the returned `slotId`. The SMS body (logged) contains the email-invite link.
-
-Suggested agent flow: ask sport → ask day → `check_availability` → read `displayLabel` → on confirm `create_booking` with name + `system__caller_id`.
+Phone booking uses the same intent engine as the chatbot. The extra loop is ElevenLabs plus SIP. Setup is in [`docs/VOICE.md`](docs/VOICE.md).
 
 ---
 
