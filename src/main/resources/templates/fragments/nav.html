@@ -8,8 +8,8 @@
                 <img th:src="@{/images/brand/logo.png}" alt="" width="40" height="40">
             </span>
             <span class="brand-copy">
-                <span class="brand-name">Courtly</span>
-                <span class="brand-tag">Sports Facility Booking</span>
+                <span class="brand-name" th:text="${brand.name}">Courtly</span>
+                <span class="brand-tag" th:text="${brand.tagline}">Sports Facility Booking</span>
             </span>
         </a>
         <nav class="main-nav" aria-label="Primary">
@@ -44,7 +44,7 @@
     </div>
 </header>
 <footer class="site-footer" th:fragment="footer">
-    <p>Courtly · Track B Resource Reservation and Scheduling</p>
+    <p th:text="${brand.name} + ' · Track B Resource Reservation and Scheduling'">Courtly · Track B Resource Reservation and Scheduling</p>
 </footer>
 </body>
 </html>

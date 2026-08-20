@@ -7,7 +7,7 @@
 <main class="auth-main">
     <section class="auth-panel">
         <p class="eyebrow">Welcome back</p>
-        <h1>Sign in to Courtly</h1>
+        <h1 th:text="'Sign in to ' + ${brand.name}">Sign in to Courtly</h1>
         <p class="lede">Reserve courts, manage occupancy, and keep your facility moving.</p>
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${param.error}">Those credentials do not match our records.</div>
