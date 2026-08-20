@@ -99,69 +99,80 @@ p {
 
 .ink-shapes {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    inset: -8%;
+    width: 116%;
+    height: 116%;
     display: block;
+    animation: ink-field 72s ease-in-out infinite;
+    will-change: transform;
+}
+
+.ink-floater {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    will-change: transform;
 }
 
 .ink-blot {
     fill: #111114;
-    transform-box: fill-box;
-    transform-origin: center;
     mix-blend-mode: multiply;
 }
 
-.ink-blot-a {
-    opacity: 0.24;
-    animation: ink-drift 46s ease-in-out infinite;
-}
-
-.ink-blot-b {
-    opacity: 0.2;
-    animation: ink-drift 58s ease-in-out infinite reverse;
-}
-
-.ink-blot-c {
-    opacity: 0.22;
-    animation: ink-drift 52s ease-in-out infinite;
-    animation-delay: -18s;
-}
-
-.ink-blot-d {
-    opacity: 0.19;
-    animation: ink-drift 64s ease-in-out infinite reverse;
-    animation-delay: -12s;
-}
-
-.ink-blot-e {
-    opacity: 0.16;
-    animation: ink-drift 40s ease-in-out infinite;
-    animation-delay: -8s;
-}
-
-.ink-blot-f {
-    opacity: 0.18;
-    animation: ink-drift 36s ease-in-out infinite reverse;
-}
-
+.ink-blot-a { opacity: 0.26; }
+.ink-blot-b { opacity: 0.22; }
+.ink-blot-c { opacity: 0.24; }
+.ink-blot-d { opacity: 0.2; }
+.ink-blot-e { opacity: 0.18; }
+.ink-blot-f { opacity: 0.2; }
 .ink-blot-g,
 .ink-blot-h,
 .ink-blot-i,
-.ink-blot-j {
-    opacity: 0.28;
-    animation: ink-speckle 22s ease-in-out infinite;
+.ink-blot-j { opacity: 0.3; }
+
+.ink-floater-a {
+    animation: ink-drift 34s ease-in-out infinite;
 }
 
-.ink-blot-h {
+.ink-floater-b {
+    animation: ink-drift 42s ease-in-out infinite reverse;
+}
+
+.ink-floater-c {
+    animation: ink-drift 38s ease-in-out infinite;
+    animation-delay: -14s;
+}
+
+.ink-floater-d {
+    animation: ink-drift 46s ease-in-out infinite reverse;
+    animation-delay: -9s;
+}
+
+.ink-floater-e {
+    animation: ink-drift 30s ease-in-out infinite;
     animation-delay: -6s;
 }
 
-.ink-blot-i {
+.ink-floater-f {
+    animation: ink-drift 28s ease-in-out infinite reverse;
     animation-delay: -11s;
 }
 
-.ink-blot-j {
+.ink-floater-g {
+    animation: ink-speckle 18s ease-in-out infinite;
+}
+
+.ink-floater-h {
+    animation: ink-speckle 22s ease-in-out infinite;
+    animation-delay: -6s;
+}
+
+.ink-floater-i {
+    animation: ink-speckle 16s ease-in-out infinite;
+    animation-delay: -11s;
+}
+
+.ink-floater-j {
+    animation: ink-speckle 20s ease-in-out infinite;
     animation-delay: -3s;
 }
 
@@ -170,12 +181,13 @@ p {
     content: "";
     position: absolute;
     pointer-events: none;
-    width: 46vmax;
-    height: 38vmax;
-    filter: blur(28px);
-    opacity: 0.2;
-    background: radial-gradient(circle at 35% 35%, rgba(12, 12, 14, 0.72), rgba(18, 18, 20, 0.22) 48%, transparent 72%);
-    animation: ink-drift 52s ease-in-out infinite;
+    width: 52vmax;
+    height: 42vmax;
+    filter: blur(26px);
+    opacity: 0.28;
+    background: radial-gradient(circle at 35% 35%, rgba(12, 12, 14, 0.78), rgba(18, 18, 20, 0.24) 48%, transparent 72%);
+    animation: ink-cloud 40s ease-in-out infinite;
+    will-change: transform, border-radius;
 }
 
 .ink-veil::before {
@@ -187,12 +199,22 @@ p {
 .ink-veil::after {
     right: -16%;
     bottom: -22%;
-    width: 52vmax;
-    height: 42vmax;
+    width: 58vmax;
+    height: 46vmax;
     border-radius: 62% 38% 58% 42% / 40% 64% 36% 60%;
-    background: radial-gradient(circle at 60% 40%, rgba(10, 10, 12, 0.68), rgba(28, 28, 32, 0.18) 52%, transparent 74%);
-    animation-delay: -22s;
+    background: radial-gradient(circle at 60% 40%, rgba(10, 10, 12, 0.74), rgba(28, 28, 32, 0.2) 52%, transparent 74%);
+    animation-delay: -18s;
     animation-direction: reverse;
+}
+
+@keyframes ink-field {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(-2.8%, 2.2%, 0) scale(1.05);
+    }
 }
 
 @keyframes ink-drift {
@@ -200,11 +222,17 @@ p {
     100% {
         transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     }
-    33% {
-        transform: translate3d(4.2%, 3.2%, 0) rotate(8deg) scale(1.08);
+    20% {
+        transform: translate3d(86px, 42px, 0) rotate(10deg) scale(1.08);
     }
-    66% {
-        transform: translate3d(-3.4%, 5%, 0) rotate(-6deg) scale(0.94);
+    40% {
+        transform: translate3d(-24px, 96px, 0) rotate(-8deg) scale(1.14);
+    }
+    60% {
+        transform: translate3d(-92px, 18px, 0) rotate(7deg) scale(0.92);
+    }
+    80% {
+        transform: translate3d(48px, -56px, 0) rotate(-12deg) scale(1.05);
     }
 }
 
@@ -212,11 +240,27 @@ p {
     0%,
     100% {
         transform: translate3d(0, 0, 0) scale(1);
-        opacity: 0.18;
+        opacity: 0.22;
     }
     50% {
-        transform: translate3d(12px, -10px, 0) scale(1.35);
-        opacity: 0.28;
+        transform: translate3d(28px, -22px, 0) scale(1.45);
+        opacity: 0.34;
+    }
+}
+
+@keyframes ink-cloud {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+        border-radius: 42% 58% 36% 64% / 48% 38% 62% 52%;
+    }
+    33% {
+        transform: translate3d(7%, 5%, 0) rotate(10deg) scale(1.1);
+        border-radius: 58% 42% 62% 38% / 36% 64% 42% 58%;
+    }
+    66% {
+        transform: translate3d(-6%, 8%, 0) rotate(-8deg) scale(0.94);
+        border-radius: 36% 64% 42% 58% / 62% 38% 58% 42%;
     }
 }
 
@@ -884,6 +928,205 @@ a.btn:hover {
 .field input[type="date"]:focus {
     outline: 2px solid var(--sun);
     border-color: var(--grass);
+}
+
+.er-cal-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    clip: rect(0 0 0 0);
+}
+
+.er-cal-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.er-cal-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid rgba(20, 20, 22, 0.28);
+    background: #ffffff;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 0.85rem 0.95rem;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.er-cal-trigger::after {
+    content: "";
+    width: 0.7rem;
+    height: 0.7rem;
+    margin-left: 0.6rem;
+    border-right: 1.8px solid var(--grass);
+    border-bottom: 1.8px solid var(--grass);
+    transform: rotate(45deg) translate(-2px, -2px);
+    flex-shrink: 0;
+}
+
+.er-cal-trigger.is-empty {
+    color: var(--muted);
+}
+
+.er-cal-wrap.is-open .er-cal-trigger,
+.er-cal-trigger:focus {
+    outline: 2px solid var(--sun);
+    border-color: var(--grass);
+}
+
+input.is-invalid + .er-cal-trigger,
+.er-cal-wrap:has(input.is-invalid) .er-cal-trigger,
+[aria-invalid="true"] + .er-cal-trigger {
+    border-color: var(--danger);
+}
+
+.er-cal {
+    position: fixed;
+    z-index: 150;
+    width: 292px;
+    padding: 0.75rem;
+    border-radius: 18px;
+    background: #fbfbfc;
+    border: 1px solid var(--line);
+    box-shadow: 0 22px 48px rgba(20, 20, 22, 0.16);
+}
+
+.er-cal-head {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 0.35rem;
+    align-items: center;
+    margin-bottom: 0.55rem;
+}
+
+.er-cal-month {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 1.15rem;
+    color: var(--grass-deep);
+}
+
+.er-cal-year {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 999px;
+    padding: 0.15rem 0.4rem;
+    font: inherit;
+    font-size: 0.78rem;
+    color: var(--text);
+}
+
+.er-cal-nav {
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 999px;
+    color: var(--grass-deep);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.er-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.18rem;
+}
+
+.er-cal-dow {
+    text-align: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.2rem 0;
+}
+
+.er-cal-day {
+    height: 2rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.er-cal-day.is-empty {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.er-cal-day:hover:not(:disabled) {
+    background: rgba(196, 165, 116, 0.22);
+}
+
+.er-cal-day.is-today {
+    box-shadow: inset 0 0 0 1.5px #c4a574;
+}
+
+.er-cal-day.is-selected {
+    background: var(--grass);
+    color: #fff;
+    box-shadow: none;
+}
+
+.er-cal-day:disabled {
+    color: #c8c8cc;
+    cursor: default;
+}
+
+.er-cal.is-compact {
+    width: 248px;
+    padding: 0.55rem;
+    border-radius: 14px;
+}
+
+.er-cal.is-compact .er-cal-month {
+    font-size: 1rem;
+}
+
+.er-cal.is-compact .er-cal-year {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.28rem;
+}
+
+.er-cal.is-compact .er-cal-dow {
+    font-size: 0.6rem;
+}
+
+.er-cal.is-compact .er-cal-day {
+    height: 1.55rem;
+    font-size: 0.72rem;
+}
+
+.er-cal.is-compact .er-cal-nav {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.ca-controls .er-cal-trigger {
+    padding: 0.45rem 0.55rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+}
+
+.ca-controls .er-cal-wrap.is-compact {
+    min-width: 0;
 }
 
 .crumb {
@@ -1822,6 +2065,20 @@ a.occ-cell:hover {
 .ca-field {
     display: grid;
     gap: 0.25rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.ca-date-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+}
+
+.ca-inline-error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.78rem;
 }
 
 .ca-field input,
@@ -1891,6 +2148,8 @@ a.occ-cell:hover {
     .reveal,
     .ink-veil::before,
     .ink-veil::after,
+    .ink-shapes,
+    .ink-floater,
     .ink-blot {
         transition: none;
         animation: none;
@@ -2005,6 +2264,8 @@ a.occ-cell:hover {
     position: relative;
     z-index: 1;
     overflow: hidden;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
     box-shadow:
         inset 0 0 0 3px rgba(255, 248, 230, 0.18),
         inset 0 0 28px rgba(0, 0, 0, 0.28),
@@ -2023,6 +2284,7 @@ a.occ-cell:hover {
 }
 
 .wheel.is-spinning {
+    will-change: transform;
     box-shadow:
         inset 0 0 0 3px rgba(255, 248, 230, 0.22),
         inset 0 0 28px rgba(0, 0, 0, 0.28),
@@ -2088,9 +2350,17 @@ a.occ-cell:hover {
     position: absolute;
     left: 50%;
     top: 50%;
+    width: 3.4rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.04em;
+    line-height: 1;
     color: #FBF8F2;
     pointer-events: none;
     z-index: 2;

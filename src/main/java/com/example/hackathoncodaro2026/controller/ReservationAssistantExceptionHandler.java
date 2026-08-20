@@ -13,7 +13,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -56,6 +59,7 @@ public class ReservationAssistantExceptionHandler {
 
     @ExceptionHandler({
             MethodArgumentNotValidException.class,
+            BindException.class,
             HttpMessageNotReadableException.class,
             MissingServletRequestParameterException.class,
             MethodArgumentTypeMismatchException.class
@@ -64,13 +68,20 @@ public class ReservationAssistantExceptionHandler {
         log.warn("Assistant bad request requestId={}", requestId());
         String message = "Please check the booking details.";
         String field = null;
-        if (exception instanceof MethodArgumentNotValidException validation) {
-            FieldError fieldError = validation.getBindingResult().getFieldError();
+        BindingResult binding = bindingResult(exception);
+        if (binding != null) {
+            FieldError fieldError = binding.getFieldError();
             if (fieldError != null) {
                 field = fieldError.getField();
                 if (fieldError.getDefaultMessage() != null) {
                     message = fieldError.getDefaultMessage();
                 }
+            } else if (!binding.getGlobalErrors().isEmpty()) {
+                ObjectError global = binding.getGlobalErrors().get(0);
+                if (global.getDefaultMessage() != null) {
+                    message = global.getDefaultMessage();
+                }
+                field = "dateOfDeath";
             }
         }
         return ResponseEntity.badRequest()
@@ -88,6 +99,16 @@ public class ReservationAssistantExceptionHandler {
         log.error("Unhandled assistant exception requestId={}", requestId(), exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new AssistantErrorResponse("ERROR", "Something went wrong. Please try again."));
+    }
+
+    private BindingResult bindingResult(Exception exception) {
+        if (exception instanceof MethodArgumentNotValidException validation) {
+            return validation.getBindingResult();
+        }
+        if (exception instanceof BindException bindException) {
+            return bindException.getBindingResult();
+        }
+        return null;
     }
 
     private String requestId() {

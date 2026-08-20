@@ -11,6 +11,13 @@ public class DeceasedDatesValidator implements ConstraintValidator<DeceasedDates
         if (request == null || request.getDateOfDeath() == null || request.getDateOfBirth() == null) {
             return true;
         }
-        return !request.getDateOfDeath().isBefore(request.getDateOfBirth());
+        if (!request.getDateOfDeath().isBefore(request.getDateOfBirth())) {
+            return true;
+        }
+        context.disableDefaultConstraintViolation();
+        context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
+                .addPropertyNode("dateOfDeath")
+                .addConstraintViolation();
+        return false;
     }
 }

@@ -34,11 +34,12 @@
         <div class="field-grid">
             <div class="field">
                 <label for="dateOfBirth">Date of birth <span class="optional">(optional)</span></label>
-                <input id="dateOfBirth" th:field="*{dateOfBirth}" type="date">
+                <input id="dateOfBirth" th:field="*{dateOfBirth}" type="date" data-max-today>
+                <p class="field-error" th:if="${#fields.hasErrors('dateOfBirth')}" th:errors="*{dateOfBirth}"></p>
             </div>
             <div class="field">
                 <label for="dateOfDeath">Date of death</label>
-                <input id="dateOfDeath" th:field="*{dateOfDeath}" type="date" required>
+                <input id="dateOfDeath" th:field="*{dateOfDeath}" type="date" required data-max-today>
                 <p class="field-error" th:if="${#fields.hasErrors('dateOfDeath')}" th:errors="*{dateOfDeath}"></p>
             </div>
         </div>

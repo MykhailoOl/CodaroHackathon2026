@@ -87,7 +87,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     public ArrangementPreview preview(User user, ArrangementRequest request) {
-        Prepared prepared = prepare(user, request, false);
+        Prepared prepared = prepare(user, request, true);
         List<LocalDate> dates = dateAssignmentService.previewDates(prepared.venue(), prepared.funeralPackage());
         if (dates.isEmpty()) {
             throw fail(user, "NO_SLOTS", "No ceremony times are free in the planning window. Try another venue or package.");

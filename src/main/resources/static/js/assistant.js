@@ -328,6 +328,11 @@
         };
     }
 
+    function todayIso() {
+        var now = new Date();
+        return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+    }
+
     function firstMissing() {
         if (!draft.homeId) {
             return { step: "home", message: "Choose a funeral home." };
@@ -343,6 +348,12 @@
         }
         if (!draft.deceasedFullName || !String(draft.deceasedFullName).trim() || !draft.dateOfDeath) {
             return { step: "deceased", message: "Enter the name to remember and the date of death." };
+        }
+        if (draft.dateOfBirth && draft.dateOfBirth > todayIso()) {
+            return { step: "deceased", message: "Date of birth cannot be in the future." };
+        }
+        if (draft.dateOfDeath && draft.dateOfDeath > todayIso()) {
+            return { step: "deceased", message: "Date of death cannot be in the future." };
         }
         if (draft.dateOfBirth && draft.dateOfDeath && draft.dateOfDeath < draft.dateOfBirth) {
             return { step: "deceased", message: "Date of death cannot be earlier than date of birth." };
@@ -365,6 +376,9 @@
     }
 
     function goMissing(step, message) {
+        if (panel.hidden) {
+            openPanel();
+        }
         addBot(message);
         go(step);
     }
@@ -612,23 +626,64 @@
         name.value = draft.deceasedFullName || "";
         var birth = document.createElement("input");
         birth.type = "date";
+        birth.setAttribute("data-max-today", "");
         birth.value = draft.dateOfBirth || "";
         var death = document.createElement("input");
         death.type = "date";
+        death.setAttribute("data-max-today", "");
+        death.required = true;
         death.value = draft.dateOfDeath || "";
+        var hint = document.createElement("p");
+        hint.className = "ca-inline-error";
+        hint.hidden = true;
+        function setHint(text) {
+            hint.hidden = !text;
+            hint.textContent = text || "";
+        }
+        function liveDates() {
+            draft.dateOfBirth = birth.value;
+            draft.dateOfDeath = death.value;
+            var today = todayIso();
+            if (birth.value && birth.value > today) {
+                setHint("Date of birth cannot be in the future.");
+                return false;
+            }
+            if (death.value && death.value > today) {
+                setHint("Date of death cannot be in the future.");
+                return false;
+            }
+            if (birth.value && death.value && death.value < birth.value) {
+                setHint("Date of death cannot be earlier than date of birth.");
+                return false;
+            }
+            setHint("");
+            return true;
+        }
+        birth.addEventListener("change", liveDates);
+        death.addEventListener("change", liveDates);
+        name.addEventListener("blur", function () {
+            if (!name.value.trim()) {
+                setHint("Enter the name to remember.");
+            } else if (liveDates()) {
+                setHint("");
+            }
+        });
         var next = document.createElement("button");
         next.type = "button";
         next.className = "ca-card-btn";
         next.textContent = "Continue";
         next.addEventListener("click", function () {
-            if (!name.value.trim() || !death.value) {
-                addBot("Name and date of death are required.");
+            if (!name.value.trim()) {
+                setHint("Name and date of death are required.");
                 name.focus();
                 return;
             }
-            if (birth.value && death.value < birth.value) {
-                addBot("Date of death cannot be earlier than date of birth.");
+            if (!death.value) {
+                setHint("Enter the date of death.");
                 death.focus();
+                return;
+            }
+            if (!liveDates()) {
                 return;
             }
             draft.deceasedFullName = name.value.trim();
@@ -637,9 +692,21 @@
             addUser("Details received");
             go("attendees");
         });
+        var born = document.createElement("label");
+        born.className = "ca-field";
+        born.appendChild(document.createTextNode("Date of birth"));
+        born.appendChild(birth);
+        var died = document.createElement("label");
+        died.className = "ca-field";
+        died.appendChild(document.createTextNode("Date of death"));
+        died.appendChild(death);
+        var dates = document.createElement("div");
+        dates.className = "ca-date-row";
+        dates.appendChild(born);
+        dates.appendChild(died);
         controls.appendChild(name);
-        controls.appendChild(birth);
-        controls.appendChild(death);
+        controls.appendChild(dates);
+        controls.appendChild(hint);
         controls.appendChild(next);
         name.focus();
     }
@@ -652,22 +719,40 @@
         input.min = "1";
         input.max = String(max);
         input.value = String(draft.attendees || 1);
+        var hint = document.createElement("p");
+        hint.className = "ca-inline-error";
+        hint.hidden = true;
+        function liveGuests() {
+            var value = Number(input.value);
+            if (!input.value) {
+                hint.hidden = true;
+                return false;
+            }
+            if (!value || value < 1 || value > max) {
+                hint.hidden = false;
+                hint.textContent = "Guest count must be between 1 and " + max + ".";
+                return false;
+            }
+            hint.hidden = true;
+            return true;
+        }
+        input.addEventListener("input", liveGuests);
+        input.addEventListener("blur", liveGuests);
         var next = document.createElement("button");
         next.type = "button";
         next.className = "ca-card-btn";
         next.textContent = "Continue";
         next.addEventListener("click", function () {
-            var value = Number(input.value);
-            if (!value || value < 1 || value > max) {
-                addBot("Guest count must be between 1 and " + max + ".");
+            if (!liveGuests()) {
                 input.focus();
                 return;
             }
-            draft.attendees = value;
-            addUser(String(value) + " guests");
+            draft.attendees = Number(input.value);
+            addUser(String(draft.attendees) + " guests");
             go(phoneRequired ? "phone" : "extras");
         });
         controls.appendChild(input);
+        controls.appendChild(hint);
         controls.appendChild(next);
         input.focus();
     }
@@ -679,13 +764,45 @@
         input.maxLength = 20;
         input.autocomplete = "off";
         input.value = draft.phone || "";
+        var hint = document.createElement("p");
+        hint.className = "ca-inline-error";
+        hint.hidden = true;
+        function livePhone(requireFilled) {
+            var value = input.value.trim();
+            if (!value) {
+                if (requireFilled) {
+                    hint.hidden = false;
+                    hint.textContent = "Enter a phone number.";
+                    return false;
+                }
+                hint.hidden = true;
+                return false;
+            }
+            var digits = value.replace(/[^0-9]/g, "");
+            if (!requireFilled && digits.length < 7 && /^\+?[0-9\s().-]*$/.test(value)) {
+                hint.hidden = true;
+                return false;
+            }
+            if (!/^\+?[0-9\s().-]{7,20}$/.test(value)) {
+                hint.hidden = false;
+                hint.textContent = "Enter a valid phone number.";
+                return false;
+            }
+            hint.hidden = true;
+            return true;
+        }
+        input.addEventListener("input", function () {
+            livePhone(false);
+        });
+        input.addEventListener("blur", function () {
+            livePhone(true);
+        });
         var next = document.createElement("button");
         next.type = "button";
         next.className = "ca-card-btn";
         next.textContent = "Continue";
         next.addEventListener("click", function () {
-            if (!input.value.trim()) {
-                addBot("Enter a phone number.");
+            if (!livePhone(true)) {
                 input.focus();
                 return;
             }
@@ -694,6 +811,7 @@
             go("extras");
         });
         controls.appendChild(input);
+        controls.appendChild(hint);
         controls.appendChild(next);
         input.focus();
     }
@@ -787,26 +905,28 @@
         }
         assigning = true;
         var body = requestBody();
-        window.EverRestWheel.open({
-            copy: "Your available ceremony date is being assigned.",
-            historyUrl: historyUrl,
-            onRetry: function () {
-                resetToken();
-                assigning = false;
-                startAssignment();
-            },
-            onClose: function () {
-                assigning = false;
-            }
-        });
         api("/preview", { method: "POST", body: JSON.stringify(body) }).then(function (preview) {
             catalog.preview = preview;
-            if (window.EverRestWheel.isBusy() && preview.dates) {
+            window.EverRestWheel.open({
+                copy: "Your available ceremony date is being assigned.",
+                historyUrl: historyUrl,
+                onRetry: function () {
+                    resetToken();
+                    assigning = false;
+                    startAssignment();
+                },
+                onClose: function () {
+                    assigning = false;
+                }
+            });
+            if (preview.dates) {
                 window.EverRestWheel.setCandidates(preview.dates.map(String));
             }
-        }).catch(function () {
-        });
-        api("/arrangements", { method: "POST", body: JSON.stringify(body) }).then(function (created) {
+            return api("/arrangements", { method: "POST", body: JSON.stringify(body) });
+        }).then(function (created) {
+            if (!created || !created.id) {
+                return;
+            }
             catalog.created = created;
             window.EverRestWheel.reveal(created);
             assigning = false;
@@ -814,7 +934,9 @@
         }).catch(function (error) {
             assigning = false;
             if (error.step || error.field) {
-                window.EverRestWheel.dismiss();
+                if (window.EverRestWheel && window.EverRestWheel.isOpen()) {
+                    window.EverRestWheel.dismiss();
+                }
                 var step = error.step || ({ venueId: "venue", serviceType: "service", funeralPackage: "pack", deceasedFullName: "deceased", dateOfDeath: "deceased", dateOfBirth: "deceased", attendees: "attendees", phone: "phone", extraIds: "extras", paymentMethod: "payment", note: "note" }[error.field]);
                 goMissing(step || "review", error.message);
                 return;
@@ -823,7 +945,11 @@
             if (retry) {
                 resetToken();
             }
-            window.EverRestWheel.fail(error.message, retry);
+            if (window.EverRestWheel && window.EverRestWheel.isOpen()) {
+                window.EverRestWheel.fail(error.message, retry);
+            } else {
+                addBot(error.message);
+            }
         });
     }
 

@@ -14,7 +14,7 @@
     var COLORS = ["#1A1A1D", "#3D5C4A", "#2A2A2E", "#C4A574", "#141416", "#5C5C63"];
     var SPIN_SECONDS = 5.8;
     var SPIN_DELAY_MS = 6000;
-    var SPIN_TURNS = 9;
+    var SPIN_TURNS = 7;
     var busy = false;
     var open = false;
     var settled = false;
@@ -39,7 +39,7 @@
     function paint(dates, winner) {
         wheelEl.innerHTML = "";
         wheelEl.style.transition = "none";
-        wheelEl.style.transform = "rotate(0deg)";
+        wheelEl.style.transform = "translate3d(0, 0, 0) rotate(0deg)";
         var count = dates.length;
         if (!count) {
             wheelEl.style.background = COLORS[0];
@@ -56,7 +56,7 @@
             stops.push("#C4A574 " + (end - gap) + "deg " + end + "deg");
         });
         wheelEl.style.background = "conic-gradient(" + stops.join(",") + ")";
-        var radius = Math.max(86, Math.round((wheelEl.clientWidth || 280) * 0.34));
+        var radius = Math.max(78, Math.round((wheelEl.clientWidth || 280) * 0.29));
         dates.forEach(function (date, index) {
             var label = document.createElement("span");
             label.className = "wheel-slice-label";
@@ -64,7 +64,7 @@
                 label.classList.add("is-winner");
             }
             var angle = slice * index + slice / 2;
-            label.style.transform = "rotate(" + angle + "deg) translate(0, -" + radius + "px) rotate(" + (-angle) + "deg)";
+            label.style.transform = "translate(-50%, -50%) rotate(" + angle + "deg) translateY(-" + radius + "px) rotate(" + (-angle) + "deg)";
             label.textContent = formatDate(date);
             wheelEl.appendChild(label);
         });
@@ -198,9 +198,14 @@
             var reduce = reduced();
             var rotation = 360 * (reduce ? 0 : SPIN_TURNS) + (360 - (index * slice + slice / 2));
             wheelEl.classList.add("is-spinning");
+            wheelEl.style.transition = "none";
+            wheelEl.style.transform = "translate3d(0, 0, 0) rotate(0deg)";
+            void wheelEl.offsetWidth;
             requestAnimationFrame(function () {
-                wheelEl.style.transition = reduce ? "none" : "transform " + SPIN_SECONDS + "s cubic-bezier(0.05, 0.88, 0.08, 1)";
-                wheelEl.style.transform = "rotate(" + rotation + "deg)";
+                requestAnimationFrame(function () {
+                    wheelEl.style.transition = reduce ? "none" : "transform " + SPIN_SECONDS + "s cubic-bezier(0.22, 0.61, 0.12, 1)";
+                    wheelEl.style.transform = "translate3d(0, 0, 0) rotate(" + rotation + "deg)";
+                });
             });
             var delay = reduce ? 0 : SPIN_DELAY_MS;
             timer = window.setTimeout(function () {

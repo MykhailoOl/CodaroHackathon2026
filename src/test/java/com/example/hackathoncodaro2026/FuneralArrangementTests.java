@@ -481,6 +481,8 @@ class FuneralArrangementTests {
         assertThat(css).contains(".ink-veil");
         assertThat(css).contains(".ink-blot");
         assertThat(css).contains("@keyframes ink-drift");
+        assertThat(css).contains(".ink-floater");
+        assertThat(css).contains("@keyframes ink-cloud");
         assertThat(css).contains("pointer-events: none");
         int ink = css.indexOf(".ink-veil {");
         assertThat(ink).isGreaterThan(0);
@@ -536,17 +538,27 @@ class FuneralArrangementTests {
         String assistantJs = Files.readString(Path.of("src/main/resources/static/js/assistant.js"));
         assertThat(arrangeJs).contains("data-spin-url");
         assertThat(arrangeJs).contains("EverRestWheel.open");
+        assertThat(arrangeJs.indexOf("post(previewUrl")).isLessThan(arrangeJs.indexOf("EverRestWheel.open"));
         assertThat(arrangeJs).doesNotContain("getElementById(\"spin-btn\")");
         assertThat(arrangeJs).doesNotContain("getElementById(\"preview-btn\")");
         assertThat(wheelJs).doesNotContain("Math.random");
         assertThat(wheelJs).contains("SPIN_SECONDS = 5.8");
         assertThat(wheelJs).contains("SPIN_DELAY_MS = 6000");
+        assertThat(wheelJs).contains("translate(-50%, -50%)");
+        assertThat(wheelJs).contains("cubic-bezier(0.22, 0.61, 0.12, 1)");
         String h2Launch = Files.readString(Path.of("src/main/resources/templates/h2-launch.html"));
         assertThat(h2Launch).contains("/images/brand/mark.svg");
         assertThat(assistantJs).contains("Confirm arrangements");
         assertThat(assistantJs).doesNotContain("Spin for a date");
+        assertThat(assistantJs.indexOf("api(\"/preview\"")).isLessThan(assistantJs.indexOf("EverRestWheel.open"));
+        String calendarJs = Files.readString(Path.of("src/main/resources/static/js/calendar.js"));
+        String nav = Files.readString(Path.of("src/main/resources/templates/fragments/nav.html"));
+        assertThat(calendarJs).contains("EverRestCalendar");
+        assertThat(nav).contains("/js/calendar.js");
         String html = Files.readString(Path.of("src/main/resources/templates/venues/arrange.html"));
         assertThat(html).contains("Confirm arrangements");
+        assertThat(html).contains("type=\"date\"");
+        assertThat(html).contains("data-max-today");
         assertThat(html).doesNotContain("id=\"spin-btn\"");
         assertThat(html).doesNotContain("id=\"preview-btn\"");
     }
@@ -632,6 +644,39 @@ class FuneralArrangementTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.field").value("attendees"))
                 .andExpect(jsonPath("$.step").value("attendees"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void invalidDeathDateOnPreviewIncludesFieldAndStep() throws Exception {
+        ServiceVenue venue = chapel();
+        mockMvc.perform(post("/venues/{id}/preview", venue.getId())
+                        .param("venueId", String.valueOf(venue.getId()))
+                        .param("serviceType", ServiceType.MEMORIAL_SERVICE.name())
+                        .param("funeralPackage", FuneralPackage.ESSENTIAL.name())
+                        .param("deceasedFullName", "Memorial Name")
+                        .param("dateOfBirth", "2024-06-01")
+                        .param("dateOfDeath", "2024-02-02")
+                        .param("attendees", "2")
+                        .param("paymentMethod", PaymentMethod.CASH.name())
+                        .with(csrf())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("dateOfDeath"))
+                .andExpect(jsonPath("$.step").value("deceased"));
+        mockMvc.perform(post("/venues/{id}/preview", venue.getId())
+                        .param("venueId", String.valueOf(venue.getId()))
+                        .param("serviceType", ServiceType.MEMORIAL_SERVICE.name())
+                        .param("funeralPackage", FuneralPackage.ESSENTIAL.name())
+                        .param("deceasedFullName", "Memorial Name")
+                        .param("dateOfDeath", "2099-01-01")
+                        .param("attendees", "2")
+                        .param("paymentMethod", PaymentMethod.CASH.name())
+                        .with(csrf())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("dateOfDeath"))
+                .andExpect(jsonPath("$.step").value("deceased"));
     }
 
     @Test

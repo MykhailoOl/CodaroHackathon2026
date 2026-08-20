@@ -44,21 +44,42 @@
 <th:block th:fragment="footer">
     <div class="ink-veil" aria-hidden="true">
         <svg class="ink-shapes" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
-            <path class="ink-blot ink-blot-a" d="M186 198c-86-38-148-126-62-168 78-38 168 18 214 88 48 74-18 142-92 164-48 14-86-18-60-84 18-46 74-28 52 18-16 34-78 22-52-18z"/>
-            <path class="ink-blot ink-blot-b" d="M1288 140c72-54 168-22 154 64-12 72-86 118-162 126-92 10-128-64-86-122 28-38 92-18 70 28-16 34-70 18-48-22 18-32 70-8 48 26"/>
-            <path class="ink-blot ink-blot-c" d="M210 720c-70 48-46 148 42 168 78 18 156-42 176-118 18-70-48-112-118-98-52 10-62 64-18 78 32 10 58-28 28-46-24-14-58 8-36 36"/>
-            <path class="ink-blot ink-blot-d" d="M1180 680c86 36 64 154-28 176-80 18-168-48-176-128-8-72 70-108 132-78 46 22 36 78-10 78s-48-52-8-64c28-8 54 24 28 48"/>
-            <path class="ink-blot ink-blot-e" d="M720 80c54-28 118 8 112 66-6 52-62 78-112 70-48-8-64-54-28-78 24-16 58 4 42 28-12 18-42 8-28-12"/>
-            <path class="ink-blot ink-blot-f" d="M980 430c38-22 86 6 78 48-8 40-54 58-90 44-34-14-38-48-8-62 20-10 46 6 32 22-10 12-32 4-20-10"/>
-            <circle class="ink-blot ink-blot-g" cx="430" cy="160" r="18"/>
-            <circle class="ink-blot ink-blot-h" cx="1088" cy="300" r="11"/>
-            <circle class="ink-blot ink-blot-i" cx="340" cy="540" r="14"/>
-            <circle class="ink-blot ink-blot-j" cx="1240" cy="520" r="9"/>
+            <g class="ink-floater ink-floater-a">
+                <path class="ink-blot ink-blot-a" d="M186 198c-86-38-148-126-62-168 78-38 168 18 214 88 48 74-18 142-92 164-48 14-86-18-60-84 18-46 74-28 52 18-16 34-78 22-52-18z"/>
+            </g>
+            <g class="ink-floater ink-floater-b">
+                <path class="ink-blot ink-blot-b" d="M1288 140c72-54 168-22 154 64-12 72-86 118-162 126-92 10-128-64-86-122 28-38 92-18 70 28-16 34-70 18-48-22 18-32 70-8 48 26"/>
+            </g>
+            <g class="ink-floater ink-floater-c">
+                <path class="ink-blot ink-blot-c" d="M210 720c-70 48-46 148 42 168 78 18 156-42 176-118 18-70-48-112-118-98-52 10-62 64-18 78 32 10 58-28 28-46-24-14-58 8-36 36"/>
+            </g>
+            <g class="ink-floater ink-floater-d">
+                <path class="ink-blot ink-blot-d" d="M1180 680c86 36 64 154-28 176-80 18-168-48-176-128-8-72 70-108 132-78 46 22 36 78-10 78s-48-52-8-64c28-8 54 24 28 48"/>
+            </g>
+            <g class="ink-floater ink-floater-e">
+                <path class="ink-blot ink-blot-e" d="M720 80c54-28 118 8 112 66-6 52-62 78-112 70-48-8-64-54-28-78 24-16 58 4 42 28-12 18-42 8-28-12"/>
+            </g>
+            <g class="ink-floater ink-floater-f">
+                <path class="ink-blot ink-blot-f" d="M980 430c38-22 86 6 78 48-8 40-54 58-90 44-34-14-38-48-8-62 20-10 46 6 32 22-10 12-32 4-20-10"/>
+            </g>
+            <g class="ink-floater ink-floater-g">
+                <circle class="ink-blot ink-blot-g" cx="430" cy="160" r="18"/>
+            </g>
+            <g class="ink-floater ink-floater-h">
+                <circle class="ink-blot ink-blot-h" cx="1088" cy="300" r="11"/>
+            </g>
+            <g class="ink-floater ink-floater-i">
+                <circle class="ink-blot ink-blot-i" cx="340" cy="540" r="14"/>
+            </g>
+            <g class="ink-floater ink-floater-j">
+                <circle class="ink-blot ink-blot-j" cx="1240" cy="520" r="9"/>
+            </g>
         </svg>
     </div>
     <footer class="site-footer">
         <p>EverRest · Track B resource reservation and scheduling · Warsaw demo</p>
     </footer>
+    <script th:src="@{/js/calendar.js(v=2)}"></script>
     <th:block sec:authorize="isAuthenticated()">
         <th:block th:replace="~{fragments/assistant :: widget}"></th:block>
     </th:block>

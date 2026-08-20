@@ -53,7 +53,22 @@
         return form.querySelector("[name='" + name + "']");
     }
 
-    function revealField(name, message) {
+    function focusControl(input) {
+        if (!input) {
+            return;
+        }
+        var wrap = input.closest(".er-cal-wrap");
+        var trigger = wrap ? wrap.querySelector(".er-cal-trigger") : null;
+        var target = trigger || input;
+        if (target.scrollIntoView) {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        if (typeof target.focus === "function") {
+            target.focus();
+        }
+    }
+
+    function revealField(name, message, shouldFocus) {
         var input = controlFor(name);
         var error = form.querySelector("[data-error-for='" + name + "']");
         if (input) {
@@ -67,12 +82,8 @@
             errorEl.hidden = false;
             errorEl.textContent = message;
         }
-        var target = input || errorEl;
-        if (target && target.scrollIntoView) {
-            target.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-        if (input && typeof input.focus === "function") {
-            input.focus();
+        if (shouldFocus !== false) {
+            focusControl(input || errorEl);
         }
     }
 
@@ -153,50 +164,125 @@
         return data;
     }
 
-    function validate() {
-        clearErrors();
-        if (!form.serviceType.value) {
-            showError("serviceType", "Choose a ceremony type");
-            return false;
+    function todayIso() {
+        var now = new Date();
+        return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+    }
+
+    function clearFieldError(name) {
+        var input = controlFor(name);
+        var error = form.querySelector("[data-error-for='" + name + "']");
+        if (input) {
+            input.classList.remove("is-invalid");
+            input.removeAttribute("aria-invalid");
         }
-        if (!form.querySelector("input[name='funeralPackage']:checked")) {
-            showError("funeralPackage", "Choose a package");
-            return false;
+        if (error) {
+            error.hidden = true;
+            error.textContent = "";
         }
-        if (!form.deceasedFullName.value.trim()) {
-            showError("deceasedFullName", "Enter the name to remember");
-            return false;
+    }
+
+    function fieldIssue(name) {
+        var today = todayIso();
+        if (name === "serviceType" && !form.serviceType.value) {
+            return "Choose a ceremony type";
         }
-        if (!form.dateOfDeath.value) {
-            showError("dateOfDeath", "Enter the date of death");
-            return false;
+        if (name === "funeralPackage" && !form.querySelector("input[name='funeralPackage']:checked")) {
+            return "Choose a package";
         }
-        if (form.dateOfBirth.value && form.dateOfDeath.value && form.dateOfDeath.value < form.dateOfBirth.value) {
-            showError("dateOfDeath", "Date of death cannot be earlier than date of birth");
-            return false;
+        if (name === "deceasedFullName" && !form.deceasedFullName.value.trim()) {
+            return "Enter the name to remember";
         }
-        var attendees = Number(form.attendees.value);
-        var max = Number(form.getAttribute("data-max-attendees") || "1");
-        if (!attendees || attendees < 1 || attendees > max) {
-            showError("attendees", "Guest count must be between 1 and " + max);
-            return false;
-        }
-        if (form.phone && form.phone.required && !form.phone.value.trim()) {
-            showError("phone", "Phone is required to complete this arrangement");
-            return false;
-        }
-        if (form.phone && form.phone.value.trim()) {
-            var phoneOk = /^\+?[0-9\s().-]{7,20}$/.test(form.phone.value.trim());
-            if (!phoneOk) {
-                showError("phone", "Enter a valid phone number");
-                return false;
+        if (name === "dateOfBirth" && form.dateOfBirth.value) {
+            if (form.dateOfBirth.value > today) {
+                return "Date of birth cannot be in the future";
+            }
+            if (form.dateOfDeath.value && form.dateOfDeath.value < form.dateOfBirth.value) {
+                return "Date of birth cannot be after date of death";
             }
         }
-        if (!form.paymentMethod.value) {
-            showError("paymentMethod", "Choose a payment method");
-            return false;
+        if (name === "dateOfDeath") {
+            if (!form.dateOfDeath.value) {
+                return "Enter the date of death";
+            }
+            if (form.dateOfDeath.value > today) {
+                return "Date of death cannot be in the future";
+            }
+            if (form.dateOfBirth.value && form.dateOfDeath.value < form.dateOfBirth.value) {
+                return "Date of death cannot be earlier than date of birth";
+            }
         }
-        return true;
+        if (name === "attendees") {
+            var attendees = Number(form.attendees.value);
+            var max = Number(form.getAttribute("data-max-attendees") || "1");
+            if (!attendees || attendees < 1 || attendees > max) {
+                return "Guest count must be between 1 and " + max;
+            }
+        }
+        if (name === "phone" && form.phone) {
+            if (form.phone.required && !form.phone.value.trim()) {
+                return "Phone is required to complete this arrangement";
+            }
+            if (form.phone.value.trim() && !/^\+?[0-9\s().-]{7,20}$/.test(form.phone.value.trim())) {
+                return "Enter a valid phone number";
+            }
+        }
+        if (name === "paymentMethod" && !form.paymentMethod.value) {
+            return "Choose a payment method";
+        }
+        return null;
+    }
+
+    function validateField(name, requireFilled) {
+        if (!name) {
+            return true;
+        }
+        var message = fieldIssue(name);
+        var input = controlFor(name);
+        var empty = !input || !String(input.type === "radio" ? "" : (input.value || "")).trim();
+        if (name === "funeralPackage") {
+            empty = !form.querySelector("input[name='funeralPackage']:checked");
+        }
+        if (!message) {
+            clearFieldError(name);
+            return true;
+        }
+        if (name === "dateOfBirth" && !form.dateOfBirth.value) {
+            clearFieldError(name);
+            return true;
+        }
+        if (!requireFilled && empty) {
+            return true;
+        }
+        if (!requireFilled && name === "phone" && form.phone) {
+            var digits = form.phone.value.replace(/[^0-9]/g, "");
+            if (digits.length > 0 && digits.length < 7 && /^\+?[0-9\s().-]*$/.test(form.phone.value.trim())) {
+                return true;
+            }
+        }
+        revealField(name, message, requireFilled);
+        return false;
+    }
+
+    function validate() {
+        clearErrors();
+        var fields = ["serviceType", "funeralPackage", "deceasedFullName", "dateOfBirth", "dateOfDeath", "attendees", "phone", "paymentMethod"];
+        var first = null;
+        var i;
+        for (i = 0; i < fields.length; i++) {
+            var name = fields[i];
+            var message = fieldIssue(name);
+            if (name === "dateOfBirth" && !form.dateOfBirth.value) {
+                continue;
+            }
+            if (message) {
+                revealField(name, message, !first);
+                if (!first) {
+                    first = name;
+                }
+            }
+        }
+        return !first;
     }
 
     function post(url, body) {
@@ -245,42 +331,45 @@
         spinning = true;
         confirmBtn.disabled = true;
         var body = formBody();
-        window.EverRestWheel.open({
-            copy: "Your available ceremony date is being assigned.",
-            historyUrl: form.getAttribute("data-history-url"),
-            onRetry: function () {
-                resetToken();
-                spinning = false;
-                confirmBtn.disabled = false;
-                confirmArrangements();
-            },
-            onClose: function () {
-                if (!sessionStorage.getItem(doneKey)) {
-                    confirmBtn.disabled = false;
-                    spinning = false;
-                }
-            }
-        });
         var previewUrl = form.getAttribute("data-preview-url");
-        if (previewUrl) {
-            post(previewUrl, body).then(function (preview) {
-                if (preview.amount != null) {
-                    quoteEl.textContent = preview.amount + " " + (preview.currency || "PLN");
+        var previewPromise = previewUrl ? post(previewUrl, body) : Promise.resolve({});
+        previewPromise.then(function (preview) {
+            if (preview && preview.amount != null) {
+                quoteEl.textContent = preview.amount + " " + (preview.currency || "PLN");
+            }
+            window.EverRestWheel.open({
+                copy: "Your available ceremony date is being assigned.",
+                historyUrl: form.getAttribute("data-history-url"),
+                onRetry: function () {
+                    resetToken();
+                    spinning = false;
+                    confirmBtn.disabled = false;
+                    confirmArrangements();
+                },
+                onClose: function () {
+                    if (!sessionStorage.getItem(doneKey)) {
+                        confirmBtn.disabled = false;
+                        spinning = false;
+                    }
                 }
-                if (window.EverRestWheel.isBusy() && preview.dates) {
-                    window.EverRestWheel.setCandidates(preview.dates.map(String));
-                }
-            }).catch(function () {
             });
-        }
-        post(form.getAttribute("data-spin-url"), body).then(function (data) {
+            if (preview && preview.dates) {
+                window.EverRestWheel.setCandidates(preview.dates.map(String));
+            }
+            return post(form.getAttribute("data-spin-url"), body);
+        }).then(function (data) {
+            if (!data || !data.id) {
+                return;
+            }
             window.EverRestWheel.reveal(data);
             markDone(data);
         }).catch(function (error) {
+            spinning = false;
+            confirmBtn.disabled = false;
             if (error.field) {
-                window.EverRestWheel.dismiss();
-                spinning = false;
-                confirmBtn.disabled = false;
+                if (window.EverRestWheel && window.EverRestWheel.isOpen()) {
+                    window.EverRestWheel.dismiss();
+                }
                 revealField(error.field, error.message);
                 return;
             }
@@ -288,9 +377,12 @@
             if (retry) {
                 resetToken();
             }
-            window.EverRestWheel.fail(error.message, retry);
-            spinning = false;
-            if (!retry) {
+            if (window.EverRestWheel && window.EverRestWheel.isOpen()) {
+                window.EverRestWheel.fail(error.message, retry);
+            } else {
+                showError(null, error.message);
+            }
+            if (retry) {
                 confirmBtn.disabled = false;
             }
         });
@@ -299,6 +391,29 @@
     form.serviceType.addEventListener("change", refreshExtras);
     refreshExtras();
     confirmBtn.addEventListener("click", confirmArrangements);
+    form.addEventListener("input", function (event) {
+        if (event.target && event.target.name) {
+            validateField(event.target.name, false);
+            if (event.target.name === "dateOfBirth" || event.target.name === "dateOfDeath") {
+                validateField("dateOfBirth", false);
+                validateField("dateOfDeath", false);
+            }
+        }
+    });
+    form.addEventListener("change", function (event) {
+        if (event.target && event.target.name) {
+            validateField(event.target.name, false);
+            if (event.target.name === "dateOfBirth" || event.target.name === "dateOfDeath") {
+                validateField("dateOfBirth", false);
+                validateField("dateOfDeath", false);
+            }
+        }
+    });
+    form.addEventListener("blur", function (event) {
+        if (event.target && event.target.name) {
+            validateField(event.target.name, true);
+        }
+    }, true);
     if (sessionStorage.getItem(doneKey)) {
         confirmBtn.disabled = true;
     }
