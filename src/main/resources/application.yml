@@ -96,6 +96,16 @@ logging:
     org.hibernate.SQL: debug
     org.springframework.security: info
 
+domain:
+  brand:
+    name: Courtly
+    tagline: Sports Facility Booking
+  llm-domain-description: sports-facility
+  resource-synonyms:
+    FOOTBALL:   [football, soccer]
+    GYM:        [gym, workout]
+    SWIMMING:   [pool, swimming, swim]
+
 intent:
   granularity-min: 15
   buffer-min: 15
