@@ -19,6 +19,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,8 +46,12 @@ public class ReservationAssistantController {
     }
 
     @GetMapping("/session")
-    public AssistantSessionDto session(Authentication authentication) {
-        return reservationAssistantService.session(requireUser(authentication));
+    public AssistantSessionDto session(Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
+        CsrfToken csrf = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+        return reservationAssistantService.session(
+                requireUser(authentication),
+                csrf == null ? null : csrf.getToken()
+        );
     }
 
     @GetMapping("/homes")
