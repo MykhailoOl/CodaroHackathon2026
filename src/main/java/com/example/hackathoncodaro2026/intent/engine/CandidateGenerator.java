@@ -6,6 +6,7 @@ import com.example.hackathoncodaro2026.intent.model.ReservationSlice;
 import com.example.hackathoncodaro2026.intent.model.ResourceSlice;
 import com.example.hackathoncodaro2026.intent.model.ScheduleSnapshot;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -75,21 +76,22 @@ final class CandidateGenerator {
         LocalDateTime latestStart = fi.end().minusMinutes(duration);
 
         LinkedHashSet<LocalDateTime> starts = new LinkedHashSet<>();
-        addIfInRange(starts, fi.start(), fi.start(), latestStart);
-        addIfInRange(starts, fi.start().plusMinutes(config.bufferMin()), fi.start(), latestStart);
+        addIfInRange(starts, alignUp(resource, fi.start()), fi.start(), latestStart);
+        addIfInRange(starts, alignUp(resource, fi.start().plusMinutes(config.bufferMin())), fi.start(), latestStart);
 
         LocalDate day = fi.start().toLocalDate();
         LocalDateTime todFrom = day.atStartOfDay().plusMinutes(spec.timeOfDay().fromMin());
         LocalDateTime todTo = day.atStartOfDay().plusMinutes(spec.timeOfDay().toMin());
-        addIfInRange(starts, clamp(todFrom, fi.start(), latestStart), fi.start(), latestStart);
-        addIfInRange(starts, clamp(todTo.minusMinutes(duration), fi.start(), latestStart), fi.start(), latestStart);
+        addIfInRange(starts, alignUp(resource, clamp(todFrom, fi.start(), latestStart)), fi.start(), latestStart);
+        addIfInRange(starts, alignDown(resource, clamp(todTo.minusMinutes(duration), fi.start(), latestStart)),
+                fi.start(), latestStart);
 
-        addIfInRange(starts, latestStart, fi.start(), latestStart);
+        addIfInRange(starts, alignDown(resource, latestStart), fi.start(), latestStart);
 
         int cap = Math.max(1, config.maxCandidatesPerInterval());
         LocalDateTime cursor = fi.start();
         while (starts.size() < cap && !cursor.isAfter(latestStart)) {
-            starts.add(cursor);
+            addIfInRange(starts, alignUp(resource, cursor), fi.start(), latestStart);
             cursor = cursor.plusMinutes(Math.max(1, config.granularityMin()));
         }
 
@@ -119,5 +121,34 @@ final class CandidateGenerator {
             return hi;
         }
         return t;
+    }
+
+    /**
+     * Rounds {@code target} to the nearest slot boundary the resource actually
+     * accepts bookings on (opening time plus whole multiples of
+     * {@code slotDurationMinutes} — the same rule {@code ReservationServiceImpl.isAligned}
+     * enforces at confirm time), moving forward so the candidate never lands before
+     * the free interval it came from.
+     */
+    private static LocalDateTime alignUp(ResourceSlice resource, LocalDateTime target) {
+        LocalDateTime dayOpen = target.toLocalDate().atTime(resource.opening());
+        long minutesSinceOpen = Duration.between(dayOpen, target).toMinutes();
+        if (minutesSinceOpen <= 0) {
+            return dayOpen;
+        }
+        int slot = resource.slotDurationMinutes();
+        long remainder = minutesSinceOpen % slot;
+        return remainder == 0 ? target : target.plusMinutes(slot - remainder);
+    }
+
+    /** Same grid as {@link #alignUp}, but rounds backward. */
+    private static LocalDateTime alignDown(ResourceSlice resource, LocalDateTime target) {
+        LocalDateTime dayOpen = target.toLocalDate().atTime(resource.opening());
+        long minutesSinceOpen = Duration.between(dayOpen, target).toMinutes();
+        if (minutesSinceOpen <= 0) {
+            return dayOpen;
+        }
+        int slot = resource.slotDurationMinutes();
+        return target.minusMinutes(minutesSinceOpen % slot);
     }
 }

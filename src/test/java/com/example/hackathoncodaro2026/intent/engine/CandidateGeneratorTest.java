@@ -8,11 +8,13 @@ import com.example.hackathoncodaro2026.intent.model.ScheduleSnapshot;
 import com.example.hackathoncodaro2026.intent.model.TimeOfDay;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -99,5 +101,29 @@ class CandidateGeneratorTest {
                 spec.dayFrom(), spec.dayTo());
 
         assertTrue(candidates.isEmpty());
+    }
+
+    /**
+     * config().bufferMin() is 10 and config().granularityMin() is 15 — neither divides
+     * the resource's 60-minute slot grid, so a naive buffer/granularity walk (the old
+     * behavior) produces starts like 08:10 or 08:25 that ReservationServiceImpl.isAligned
+     * rejects at confirm time with "Start time must match a 60-minute slot". Every
+     * generated candidate must land on opening + a whole multiple of slotDurationMinutes.
+     */
+    @Test
+    void everyCandidateStartAlignsToTheResourcesSlotGrid() {
+        LocalDateTime now = LocalDateTime.of(2026, 8, 20, 7, 0);
+        ScheduleSnapshot snapshot = new ScheduleSnapshot(List.of(), List.of(), now, 1L, null);
+        IntentSpec spec = new IntentSpec(60, now.toLocalDate(), now.toLocalDate(), TimeOfDay.ANY,
+                List.of(), List.of(), "TYPE1", 1);
+
+        List<Candidate> candidates = CandidateGenerator.generate(resource(), spec, snapshot, config(),
+                spec.dayFrom(), spec.dayTo());
+
+        assertFalse(candidates.isEmpty());
+        for (Candidate c : candidates) {
+            long minutesSinceOpen = Duration.between(c.start().toLocalDate().atTime(OPENING), c.start()).toMinutes();
+            assertEquals(0, minutesSinceOpen % 60, "unaligned candidate start: " + c.start());
+        }
     }
 }
