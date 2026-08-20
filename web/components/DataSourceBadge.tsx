@@ -8,7 +8,7 @@ const LABELS: Record<DataSource, string> = {
 
 const STYLES: Record<DataSource, string> = {
   live: "bg-emerald-100 text-emerald-800",
-  fixture: "bg-slate-200 text-slate-700",
+  fixture: "bg-stone-200 text-stone-700",
   "fixture-fallback": "bg-amber-100 text-amber-800",
 };
 

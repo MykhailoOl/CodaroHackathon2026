@@ -241,7 +241,7 @@ class ReservationServiceTests {
         User player = player();
         SportResource tennis = tennisCourt();
         ReservationRequest booking = request(tennis, LocalDate.now(WARSAW).plusDays(19), tennis.getOpeningTime(), 1);
-        booking.setPartySize(5);
+        booking.setPartySize(tennis.getMaxPartySize() + 1);
         assertThatThrownBy(() -> reservationService.create(player, booking))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("between");
@@ -292,10 +292,11 @@ class ReservationServiceTests {
     void partySizeLabelUsesPlusOnGroupMax() {
         SportResource tennis = tennisCourt();
         SportResource gym = gym();
-        assertThat(tennis.getMaxPartySize()).isEqualTo(4);
+        int max = tennis.getMaxPartySize();
+        assertThat(max).isGreaterThan(1);
         assertThat(tennis.partySizeLabel(2)).isEqualTo("2");
         assertThat(tennis.partySizeLabel(3)).isEqualTo("3");
-        assertThat(tennis.partySizeLabel(4)).isEqualTo("4+");
+        assertThat(tennis.partySizeLabel(max)).isEqualTo(max + "+");
         assertThat(gym.partySizeLabel(1)).isEqualTo("1");
         assertThat(gym.requiresLessonPartySize()).isTrue();
         assertThat(gym.getLessonMinPartySize()).isEqualTo(2);
@@ -303,10 +304,10 @@ class ReservationServiceTests {
         assertThat(gym.partySizeLabel(gym.getCapacity(), ReservationKind.LESSON)).isEqualTo(String.valueOf(gym.getCapacity()));
         User player = player();
         ReservationRequest booking = request(tennis, LocalDate.now(WARSAW).plusDays(23), tennis.getOpeningTime(), 1);
-        booking.setPartySize(4);
+        booking.setPartySize(max);
         var reservation = reservationService.create(player, booking);
-        assertThat(reservation.getPartySize()).isEqualTo(4);
-        assertThat(reservation.getPartySizeLabel()).isEqualTo("4+");
+        assertThat(reservation.getPartySize()).isEqualTo(max);
+        assertThat(reservation.getPartySizeLabel()).isEqualTo(max + "+");
     }
 
     @Test
@@ -416,9 +417,9 @@ class ReservationServiceTests {
     void extrasAddPricePerPersonTimesPeople() {
         User player = player();
         SportResource tennis = tennisCourt();
-        InventoryItem racket = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.TENNIS)
+        InventoryItem racket = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.CHAPEL)
                 .stream()
-                .filter(item -> item.getName().equalsIgnoreCase("Racket"))
+                .filter(item -> item.getName().equalsIgnoreCase("Floral tribute"))
                 .findFirst()
                 .orElseThrow();
         LocalDate date = nextWeekday(LocalDate.now(WARSAW).plusDays(31));
@@ -431,16 +432,16 @@ class ReservationServiceTests {
         assertThat(quoted).isEqualByComparingTo(court.add(racket.getPricePerPerson().multiply(BigDecimal.valueOf(2))));
         var reservation = reservationService.create(player, booking);
         assertThat(reservation.getTotalAmount()).isEqualByComparingTo(quoted);
-        assertThat(reservation.getExtrasSummary()).contains("Racket ×2");
+        assertThat(reservation.getExtrasSummary()).contains("Floral tribute ×2");
     }
 
     @Test
     void tennisPartySizeThreeShowsInQueueAndMultipliesExtras() {
         User player = player();
         SportResource tennis = tennisCourt();
-        InventoryItem racket = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.TENNIS)
+        InventoryItem racket = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.CHAPEL)
                 .stream()
-                .filter(item -> item.getName().equalsIgnoreCase("Racket"))
+                .filter(item -> item.getName().equalsIgnoreCase("Floral tribute"))
                 .findFirst()
                 .orElseThrow();
         LocalDate date = nextWeekday(LocalDate.now(WARSAW).plusDays(33));
@@ -455,7 +456,7 @@ class ReservationServiceTests {
         assertThat(reservation.getPartySize()).isEqualTo(3);
         assertThat(reservation.getPartySizeLabel()).isEqualTo("3");
         assertThat(reservation.getTotalAmount()).isEqualByComparingTo(quoted);
-        assertThat(reservation.getExtrasSummary()).contains("Racket ×3");
+        assertThat(reservation.getExtrasSummary()).contains("Floral tribute ×3");
         Reservation queued = reservationService.findManagerQueue(date).stream()
                 .filter(item -> item.getId().equals(reservation.getId()))
                 .findFirst()
@@ -474,9 +475,9 @@ class ReservationServiceTests {
     void gymLessonStoresAttendeesAndStillLocksFullCapacity() {
         User player = player();
         SportResource gym = gym();
-        InventoryItem towel = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.GYM)
+        InventoryItem towel = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.TRANSPORT)
                 .stream()
-                .filter(item -> item.getName().equalsIgnoreCase("Towel"))
+                .filter(item -> item.getName().equalsIgnoreCase("Following car"))
                 .findFirst()
                 .orElseThrow();
         LocalDate date = nextWeekday(LocalDate.now(WARSAW).plusDays(34));
@@ -493,7 +494,7 @@ class ReservationServiceTests {
         assertThat(reservation.getPartySizeLabel()).isEqualTo("6");
         assertThat(reservation.getOccupancyUnits()).isEqualTo(gym.getCapacity());
         assertThat(reservation.getTotalAmount()).isEqualByComparingTo(quoted);
-        assertThat(reservation.getExtrasSummary()).contains("Towel ×6");
+        assertThat(reservation.getExtrasSummary()).contains("Following car ×6");
         assertThat(reservationRepository.countOverlapping(
                 gym.getId(),
                 ReservationStatus.occupying(),
@@ -522,13 +523,13 @@ class ReservationServiceTests {
     @Test
     void gymLessonCapacityIsHardMaxWithoutPlus() {
         User player = player();
-        SportResource gym = gymWithCapacity(20);
+        SportResource gym = gymWithCapacity(8);
         ReservationRequest lesson = request(gym, LocalDate.now(WARSAW).plusDays(36), gym.getOpeningTime(), 1);
         lesson.setKind(ReservationKind.LESSON);
-        lesson.setPartySize(20);
+        lesson.setPartySize(8);
         var reservation = reservationService.create(player, lesson);
-        assertThat(reservation.getPartySize()).isEqualTo(20);
-        assertThat(reservation.getPartySizeLabel()).isEqualTo("20");
+        assertThat(reservation.getPartySize()).isEqualTo(8);
+        assertThat(reservation.getPartySizeLabel()).isEqualTo("8");
         assertThat(reservation.getOccupancyUnits()).isEqualTo(gym.getCapacity());
         ReservationRequest over = request(gym, LocalDate.now(WARSAW).plusDays(37), gym.getOpeningTime(), 1);
         over.setKind(ReservationKind.LESSON);
@@ -677,28 +678,28 @@ class ReservationServiceTests {
 
     private SportResource tennisCourt() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.TENNIS && resource.isEnabled() && resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.CHAPEL && resource.isEnabled() && resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
 
     private SportResource gym() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.GYM && resource.isEnabled() && !resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.TRANSPORT && resource.isEnabled() && !resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
 
     private SportResource gymWithCapacity(int capacity) {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.GYM && resource.isEnabled() && resource.getCapacity() == capacity)
+                .filter(resource -> resource.getType() == ResourceType.TRANSPORT && resource.isEnabled() && resource.getCapacity() == capacity)
                 .findFirst()
                 .orElseThrow();
     }
 
     private SportResource pool() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.SWIMMING && resource.isEnabled() && resource.getCapacity() > 1)
+                .filter(resource -> resource.getType() == ResourceType.VIEWING && resource.isEnabled() && resource.getCapacity() > 1)
                 .findFirst()
                 .orElseThrow();
     }

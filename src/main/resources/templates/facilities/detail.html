@@ -7,7 +7,7 @@
 <main class="dashboard">
     <p class="crumb"><a th:href="@{/facilities}">Facilities</a> / <span th:text="${facility.name}">Venue</span></p>
     <section class="sport-banner">
-        <img th:src="@{${facility.imagePath != null ? facility.imagePath : '/images/sports/tennis.jpg'}}"
+        <img th:src="@{${facility.imagePath != null ? facility.imagePath : '/images/services/chapel.svg'}}"
              th:alt="${facility.name}">
         <div class="sport-banner-copy">
             <p class="eyebrow" th:text="${facility.address.district}">District</p>
@@ -19,7 +19,7 @@
     </section>
     <div class="section-head">
         <h2>Bookable instances</h2>
-        <p>Each court, hall, and gym keeps its own Warsaw address.</p>
+        <p>Each service, hall, and gym keeps its own Warsaw address.</p>
     </div>
     <div class="venue-grid">
         <a class="venue-card" th:each="item : ${resources}" th:href="@{/resources/{id}(id=${item.id})}">
@@ -27,8 +27,8 @@
                  th:src="@{${item.imagePath != null ? item.imagePath : item.type.imagePath}}"
                  th:alt="${item.type.displayName}">
             <div class="venue-card-body">
-                <span class="chip" th:text="${item.type.displayName}">Tennis</span>
-                <h3 th:text="${item.name}">Court 1</h3>
+                <span class="chip" th:text="${item.type.displayName}">Chapel ceremony</span>
+                <h3 th:text="${item.name}">Chapel 1</h3>
                 <p class="address-line" th:text="${item.address.toDisplayString()}">Address</p>
                 <p class="meta-label">
                     Capacity <span th:text="${item.capacity}">1</span>

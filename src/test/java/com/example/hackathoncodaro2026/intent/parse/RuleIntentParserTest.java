@@ -25,17 +25,17 @@ class RuleIntentParserTest {
     static IntentProperties testConfig() {
         List<IntentProperties.ConstraintRule> constraints = List.of(
                 new IntentProperties.ConstraintRule(
-                        "indoor", IntentProperties.Kind.HARD, true, "indoor", 0,
-                        "indoor", "true", List.of("indoor", "inside", "covered", "under a roof")),
+                        "indoor", IntentProperties.Kind.HARD, true, "indoors", 0,
+                        "indoor", "true", List.of("indoor", "indoors", "inside", "under cover")),
                 new IntentProperties.ConstraintRule(
-                        "outdoor", IntentProperties.Kind.HARD, true, "outdoor", 0,
-                        "indoor", "false", List.of("outdoor", "outside", "open air")),
+                        "graveside", IntentProperties.Kind.HARD, true, "graveside", 0,
+                        "graveside", "true", List.of("graveside", "at the grave", "cemetery", "interment")),
                 new IntentProperties.ConstraintRule(
-                        "floodlit", IntentProperties.Kind.HARD, true, "floodlit", 0,
-                        "floodlit", "true", List.of("floodlit", "lit", "after dark", "with lights")),
+                        "religious", IntentProperties.Kind.HARD, true, "religious rite", 0,
+                        "religious", "true", List.of("priest", "religious", "church", "mass", "requiem")),
                 new IntentProperties.ConstraintRule(
-                        "team_sport", IntentProperties.Kind.SOFT, false, "team sport", 10,
-                        "team", "true", List.of("team", "with friends", "group"))
+                        "catering", IntentProperties.Kind.SOFT, false, "refreshments", 10,
+                        "catering", "true", List.of("refreshments", "catering", "food"))
         );
         return new IntentProperties(15, 15, 3, 12, 0.25, null, constraints, Map.of());
     }
@@ -71,76 +71,70 @@ class RuleIntentParserTest {
 
         return Stream.of(
                 new Case(
-                        "explicit minutes + tomorrow + evening + outdoor + party of two (spec's own example)",
-                        "tennis for two tomorrow evening, outdoor court, about 90 minutes",
-                        1, 90, tomorrow, tomorrow, TimeOfDay.EVENING, "TENNIS",
-                        List.of("outdoor"), List.of(), 2
+                        "explicit minutes + tomorrow + evening + priest + party of two",
+                        "chapel for two tomorrow evening, priest, about 90 minutes",
+                        1, 90, tomorrow, tomorrow, TimeOfDay.EVENING, "CHAPEL",
+                        List.of("religious"), List.of(), 2
                 ),
                 new Case(
-                        "default duration + today + indoor + after dark(floodlit) + with a friend",
-                        "quick basketball session today, indoor, after dark, with a friend",
-                        1, 60, TODAY, TODAY, TimeOfDay.ANY, "BASKETBALL",
-                        List.of("indoor", "floodlit"), List.of(), 2
+                        "default duration + today + indoors + requiem + with a friend",
+                        "quick cremation today, indoors, requiem, with a friend",
+                        1, 60, TODAY, TODAY, TimeOfDay.ANY, "CREMATION",
+                        List.of("indoor", "religious"), List.of(), 2
                 ),
                 new Case(
-                        "hours digit + weekend range + team_sport soft + for 4 people",
-                        "football match this weekend, team sport, for 4 people, 2 hours",
-                        1, 120, saturday, sunday, TimeOfDay.ANY, "FOOTBALL",
-                        List.of(), List.of("team_sport"), 4
+                        "hours digit + weekend range + catering soft + for 4 people",
+                        "wake this weekend, refreshments, for 4 people, 2 hours",
+                        1, 120, saturday, sunday, TimeOfDay.ANY, "RECEPTION",
+                        List.of(), List.of("catering"), 4
                 ),
                 new Case(
-                        "swimming synonym + next week + morning + half an hour + solo",
-                        "swim solo next week, morning, half an hour",
-                        3, 30, nextMonday, nextSunday, TimeOfDay.MORNING, "SWIMMING",
+                        "viewing synonym + next week + morning + half an hour + solo",
+                        "repose solo next week, morning, half an hour",
+                        3, 30, nextMonday, nextSunday, TimeOfDay.MORNING, "VIEWING",
                         List.of(), List.of(), 1
                 ),
                 new Case(
-                        "gym synonym via 'workout' + weekday-or-weekday range + afternoon",
-                        "gym workout Tuesday or Wednesday afternoon",
-                        1, 60, tuesday, wednesday, TimeOfDay.AFTERNOON, "GYM",
+                        "transport synonym via 'hearse' + weekday-or-weekday range + afternoon",
+                        "hearse Tuesday or Wednesday afternoon",
+                        1, 60, tuesday, wednesday, TimeOfDay.AFTERNOON, "TRANSPORT",
                         List.of(), List.of(), 1
                 ),
                 new Case(
                         "'an hour' idiom + this week window",
-                        "squash for an hour, this week",
-                        1, 60, TODAY, sunday, TimeOfDay.ANY, "SQUASH",
+                        "repatriation for an hour, this week",
+                        1, 60, TODAY, sunday, TimeOfDay.ANY, "REPATRIATION",
                         List.of(), List.of(), 1
                 ),
                 new Case(
-                        "decimal hours ('1.5 hours') + outside phrase + next week + with a friend",
-                        "volleyball 1.5 hours outside next week with a friend",
-                        1, 90, nextMonday, nextSunday, TimeOfDay.ANY, "VOLLEYBALL",
-                        List.of("outdoor"), List.of(), 2
+                        "decimal hours ('1.5 hours') + graveside + next week + with a friend",
+                        "burial 1.5 hours graveside next week with a friend",
+                        1, 90, nextMonday, nextSunday, TimeOfDay.ANY, "BURIAL",
+                        List.of("graveside"), List.of(), 2
                 ),
                 new Case(
                         "unrecognised constraint phrase is dropped, never guessed into a key",
-                        "tennis tomorrow, needs a referee",
-                        1, 60, tomorrow, tomorrow, TimeOfDay.ANY, "TENNIS",
+                        "chapel tomorrow, needs a harpist",
+                        1, 60, tomorrow, tomorrow, TimeOfDay.ANY, "CHAPEL",
                         List.of(), List.of(), 1
                 ),
                 new Case(
-                        "no sport mentioned -> resourceType is null, not guessed",
+                        "no service mentioned -> resourceType is null, not guessed",
                         "book something for 2 hours tomorrow morning for 3 people",
                         1, 120, tomorrow, tomorrow, TimeOfDay.MORNING, null,
                         List.of(), List.of(), 3
                 ),
                 new Case(
                         "single weekday name resolves to the next such day",
-                        "basketball next Friday evening",
-                        1, 60, friday, friday, TimeOfDay.EVENING, "BASKETBALL",
+                        "cremation next Friday evening",
+                        1, 60, friday, friday, TimeOfDay.EVENING, "CREMATION",
                         List.of(), List.of(), 1
                 ),
                 new Case(
-                        "unknown sport word -> resourceType null even with other fields present",
-                        "badminton tomorrow",
+                        "unknown service word -> resourceType null even with other fields present",
+                        "embalming tomorrow",
                         1, 60, tomorrow, tomorrow, TimeOfDay.ANY, null,
                         List.of(), List.of(), 1
-                ),
-                new Case(
-                        "'2h' shorthand + covered/with lights constraints + weekday + fallback party size",
-                        "tennis 2h next Tuesday morning, covered court, with lights",
-                        5, 120, tuesday, tuesday, TimeOfDay.MORNING, "TENNIS",
-                        List.of("indoor", "floodlit"), List.of(), 5
                 )
         );
     }

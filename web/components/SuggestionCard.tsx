@@ -15,12 +15,18 @@ type BookingState =
 
 export function SuggestionCard({
   suggestion,
-  partySize,
+  mourners,
   source,
+  primary = false,
+  shift,
 }: {
   suggestion: Suggestion;
-  partySize: number;
+  mourners: number;
   source: DataSource;
+  /** The held proposal reads as the offer; alternatives read as alternatives. */
+  primary?: boolean;
+  /** How far this sits from the held time, in words rather than a score. */
+  shift?: string;
 }) {
   const [booking, setBooking] = useState<BookingState>({ status: "idle" });
 
@@ -32,15 +38,15 @@ export function SuggestionCard({
           resourceId: suggestion.resourceId,
           start: suggestion.start,
           end: suggestion.end,
-          partySize,
-          paymentMethod: "CASH",
+          partySize: mourners,
+          paymentMethod: "INVOICE",
         },
         source
       );
       setBooking({ status: "success", data: result.data });
     } catch (err) {
       const message =
-        err instanceof ApiError || err instanceof Error ? err.message : "Booking failed. Please try again.";
+        err instanceof ApiError || err instanceof Error ? err.message : "Nothing was confirmed. Please try again.";
       setBooking({ status: "error", message });
     }
   }
@@ -48,21 +54,29 @@ export function SuggestionCard({
   const hasRelaxation = suggestion.relaxed && suggestion.relaxed.length > 0;
 
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article
+      className={
+        "flex flex-col gap-3 rounded-xl bg-white p-5 shadow-sm " +
+        (primary ? "border-2 border-stone-900" : "border border-stone-300")
+      }
+    >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">{suggestion.resourceName}</h3>
-          <p className="text-sm text-slate-500">{suggestion.facilityName}</p>
+          <h3 className="text-lg font-semibold text-stone-900">{suggestion.resourceName}</h3>
+          <p className="text-sm text-stone-500">{suggestion.facilityName}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-semibold text-slate-900">{suggestion.price}</p>
-          <p className="text-xs text-slate-500">score {suggestion.score.toFixed(1)}</p>
+          <p className="text-lg font-semibold text-stone-900">{suggestion.price}</p>
+          <p className="text-xs text-stone-500">{mourners} mourners</p>
         </div>
       </header>
 
-      <p className="text-sm font-medium text-slate-700">{formatTimeRange(suggestion.start, suggestion.end)}</p>
+      <p className="text-sm font-medium text-stone-700">
+        {formatTimeRange(suggestion.start, suggestion.end)}
+        {shift && <span className="ml-2 font-normal text-stone-500">({shift})</span>}
+      </p>
 
-      <p className="rounded-lg bg-indigo-50 px-4 py-3 text-sm font-medium leading-relaxed text-indigo-900">
+      <p className="rounded-lg bg-stone-100 px-4 py-3 text-sm leading-relaxed text-stone-800">
         {suggestion.reason}
       </p>
 
@@ -70,14 +84,14 @@ export function SuggestionCard({
 
       <ReasonBreakdown terms={suggestion.terms} />
 
-      <div className="mt-2 border-t border-slate-100 pt-3">
+      <div className="mt-2 border-t border-stone-200 pt-3">
         {booking.status === "idle" && (
           <button
             type="button"
             onClick={handleConfirm}
-            className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+            className="w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700"
           >
-            Confirm booking
+            Confirm this arrangement
           </button>
         )}
 
@@ -85,7 +99,7 @@ export function SuggestionCard({
           <button
             type="button"
             disabled
-            className="w-full rounded-lg bg-slate-400 px-4 py-2.5 text-sm font-semibold text-white"
+            className="w-full rounded-lg bg-stone-400 px-4 py-2.5 text-sm font-semibold text-white"
           >
             Booking…
           </button>
@@ -93,7 +107,7 @@ export function SuggestionCard({
 
         {booking.status === "success" && (
           <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-            <p className="font-semibold">Reservation #{booking.data.reservationId} — {booking.data.status}</p>
+            <p className="font-semibold">Confirmed — reference {booking.data.reservationId}</p>
             <p className="mt-0.5">{booking.data.totalAmount}</p>
             {booking.data.message && <p className="mt-1 text-emerald-800">{booking.data.message}</p>}
           </div>
@@ -107,7 +121,7 @@ export function SuggestionCard({
             <button
               type="button"
               onClick={handleConfirm}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:bg-stone-100"
             >
               Try again
             </button>

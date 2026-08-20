@@ -55,7 +55,7 @@ class IntentApiTests {
     void suggestWithoutTokenIsRejected() throws Exception {
         mockMvc.perform(post("/api/intent/suggest")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"tennis tomorrow evening\",\"partySize\":2}"))
+                        .content("{\"text\":\"chapel tomorrow evening\",\"partySize\":2}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -67,23 +67,92 @@ class IntentApiTests {
         mockMvc.perform(post("/api/intent/suggest")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"tennis tomorrow evening\",\"partySize\":2}"))
+                        .content("{\"text\":\"chapel tomorrow evening\",\"partySize\":2}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.spec").exists())
                 .andExpect(jsonPath("$.parserUsed").exists())
                 .andExpect(jsonPath("$.suggestions").isArray());
     }
 
+
+    @Test
+    void aRequestStatingADeathCarriesTheDerivedWindow() throws Exception {
+        ensureUser("intent_api_family", "intent.api.family@example.com", "Intent Api Family");
+        String token = obtainToken("intent_api_family", "Password1");
+        LocalDate today = LocalDate.now(WARSAW);
+
+        mockMvc.perform(post("/api/intent/suggest")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"my father died yesterday, orthodox service, "
+                                + "we have the death certificate, about 40 mourners\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.facts.dateOfDeath").value(today.minusDays(1).toString()))
+                .andExpect(jsonPath("$.facts.rite").value("ORTHODOX"))
+                .andExpect(jsonPath("$.facts.mourners").value(40))
+                .andExpect(jsonPath("$.window.rite").value("ORTHODOX"))
+                .andExpect(jsonPath("$.window.feasible").value(true))
+                .andExpect(jsonPath("$.window.earliest").value(today.toString()))
+                // Orthodox: within three days of the death, which was yesterday.
+                .andExpect(jsonPath("$.window.latest").value(today.plusDays(2).toString()))
+                .andExpect(jsonPath("$.window.derivation").isNotEmpty())
+                .andExpect(jsonPath("$.window.decisionBy").exists())
+                // The derived window replaces whatever dates the text implied.
+                .andExpect(jsonPath("$.spec.dayFrom").value(today.toString()))
+                .andExpect(jsonPath("$.spec.dayTo").value(today.plusDays(2).toString()))
+                // The stated mourner count stands in for an unsent party size.
+                .andExpect(jsonPath("$.spec.partySize").value(40));
+    }
+
+    @Test
+    void aRequestStatingNoDeathBehavesExactlyAsBefore() throws Exception {
+        ensureUser("intent_api_plain", "intent.api.plain@example.com", "Intent Api Plain");
+        String token = obtainToken("intent_api_plain", "Password1");
+
+        mockMvc.perform(post("/api/intent/suggest")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"chapel tomorrow evening\",\"partySize\":2}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.window").doesNotExist())
+                .andExpect(jsonPath("$.facts").doesNotExist())
+                .andExpect(jsonPath("$.spec.dayFrom").value(LocalDate.now(WARSAW).plusDays(1).toString()));
+    }
+
+    @Test
+    void aDatePreferenceOutsideTheWindowIsOverriddenByIt() throws Exception {
+        ensureUser("intent_api_pref", "intent.api.pref@example.com", "Intent Api Pref");
+        String token = obtainToken("intent_api_pref", "Password1");
+        LocalDate today = LocalDate.now(WARSAW);
+
+        // A Jewish rite closes the window tomorrow; asking for next week cannot open it.
+        mockMvc.perform(post("/api/intent/suggest")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"mum died today, jewish, we have the death certificate, "
+                                + "chapel next week\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.window.latest").value(today.plusDays(1).toString()))
+                .andExpect(jsonPath("$.spec.dayTo").value(today.plusDays(1).toString()));
+    }
+
     @Test
     void tamperedTokenIsRejected() throws Exception {
         ensureUser("intent_api_tamper", "intent.api.tamper@example.com", "Intent Api Tamper");
         String token = obtainToken("intent_api_tamper", "Password1");
-        String tampered = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
+        // Tamper the FIRST character of the signature, not the last: base64url discards
+        // the trailing bits of the final character, so flipping it can decode to the very
+        // same bytes and leave the token valid. That made this test flake.
+        int dot = token.indexOf('.');
+        char first = token.charAt(dot + 1);
+        String tampered = token.substring(0, dot + 1)
+                + (first == 'A' ? 'B' : 'A')
+                + token.substring(dot + 2);
 
         mockMvc.perform(post("/api/intent/suggest")
                         .header("Authorization", "Bearer " + tampered)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"tennis\",\"partySize\":1}"))
+                        .content("{\"text\":\"chapel\",\"partySize\":1}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -95,7 +164,7 @@ class IntentApiTests {
         mockMvc.perform(post("/api/intent/suggest")
                         .header("Authorization", "Bearer " + issued.token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"tennis\",\"partySize\":1}"))
+                        .content("{\"text\":\"chapel\",\"partySize\":1}"))
                 .andExpect(status().isUnauthorized());
     }
 

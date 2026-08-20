@@ -98,15 +98,25 @@ logging:
 
 domain:
   brand:
-    name: Courtly
-    tagline: Sports Facility Booking
-  llm-domain-description: sports-facility
+    name: EverRest
+    tagline: Arrangements, within the time you have
+  llm-domain-description: funeral-services
   resource-synonyms:
-    FOOTBALL:   [football, soccer]
-    GYM:        [gym, workout]
-    SWIMMING:   [pool, swimming, swim]
+    CHAPEL:       [chapel, ceremony, service, funeral, mass, requiem, church]
+    CREMATION:    [cremation, cremate, crematorium, cremated]
+    BURIAL:       [burial, grave, plot, interment, inter, cemetery, bury]
+    TRANSPORT:    [hearse, transport, cortege, cortège, transfer]
+    RECEPTION:    [wake, reception, refreshments, gathering, stypa]
+    VIEWING:      [viewing, repose, vigil room, chapel of rest, visitation]
+    REPATRIATION: [repatriation, repatriate, abroad, overseas]
 
 intent:
+  # Signing key for the API tokens the Telegram bot and the web app hold. Leave it
+  # unset and TokenService falls back to a random key generated per boot, so every
+  # restart — devtools reloads included — silently invalidates every signed-in
+  # session mid-conversation.
+  auth:
+    secret: ${INTENT_AUTH_SECRET:change-me-intent-auth-secret}
   granularity-min: 15
   buffer-min: 15
   max-suggestions: 3
@@ -120,39 +130,56 @@ intent:
     resource-load: 15
     workload: 15
   resource-attributes:
-    TENNIS:      { indoor: "false", floodlit: "true",  team: "false" }
-    FOOTBALL:    { indoor: "false", floodlit: "true",  team: "true"  }
-    BASKETBALL:  { indoor: "true",  floodlit: "true",  team: "true"  }
-    VOLLEYBALL:  { indoor: "true",  floodlit: "true",  team: "true"  }
-    SWIMMING:    { indoor: "true",  floodlit: "false", team: "false" }
-    GYM:         { indoor: "true",  floodlit: "false", team: "false" }
-    SQUASH:      { indoor: "true",  floodlit: "false", team: "false" }
+    CHAPEL:       { indoor: "true",  graveside: "false", religious: "true",  catering: "false" }
+    CREMATION:    { indoor: "true",  graveside: "false", religious: "false", catering: "false" }
+    BURIAL:       { indoor: "false", graveside: "true",  religious: "true",  catering: "false" }
+    TRANSPORT:    { indoor: "false", graveside: "false", religious: "false", catering: "false" }
+    RECEPTION:    { indoor: "true",  graveside: "false", religious: "false", catering: "true"  }
+    VIEWING:      { indoor: "true",  graveside: "false", religious: "false", catering: "false" }
+    REPATRIATION: { indoor: "true",  graveside: "false", religious: "false", catering: "false" }
   constraints:
     - key: indoor
       kind: HARD
       relaxable: true
-      label: indoor
+      label: indoors
       attribute: indoor
       equals-value: "true"
-      phrases: [indoor, inside, covered, "under a roof"]
-    - key: outdoor
+      phrases: [indoor, indoors, inside, "under cover", "out of the rain"]
+    - key: graveside
       kind: HARD
       relaxable: true
-      label: outdoor
-      attribute: indoor
+      label: graveside
+      attribute: graveside
+      equals-value: "true"
+      phrases: [graveside, "at the grave", cemetery, plot, interment]
+    - key: religious
+      kind: HARD
+      relaxable: true
+      label: religious rite
+      attribute: religious
+      equals-value: "true"
+      phrases: [priest, religious, church, mass, requiem, rite, blessing]
+    - key: secular
+      kind: HARD
+      relaxable: true
+      label: no religious rite
+      attribute: religious
       equals-value: "false"
-      phrases: [outdoor, outside, "open air"]
-    - key: floodlit
-      kind: HARD
-      relaxable: true
-      label: floodlit
-      attribute: floodlit
-      equals-value: "true"
-      phrases: [floodlit, lit, "after dark", "with lights"]
-    - key: team_sport
+      phrases: [secular, humanist, "non-religious", "no religious", "no service"]
+    - key: catering
       kind: SOFT
       weight: 10
-      label: team sport
-      attribute: team
+      label: refreshments
+      attribute: catering
       equals-value: "true"
-      phrases: [team, "with friends", group]
+      phrases: [refreshments, catering, food, wake, reception, stypa]
+
+# Derived scheduling. The per-observance rules (how many days after a death each rite
+# expects the service) live in RiteProperties so the feature works with no config at
+# all; add a `rules:` map here only to override them. These scalars are the knobs worth
+# tuning per jurisdiction.
+rites:
+  statutory-days: 4          # Poland: burial within 96 hours of death
+  certificate-lead-days: 1   # usual wait for a death certificate after a natural death
+  coroner-lead-days: 4       # wait when a coroner or prosecutor must release the body
+  hold-decision-hour: 21     # evening cut-off for the family to confirm a held slot

@@ -8,7 +8,7 @@
     <p class="crumb">
         <a th:href="@{/facilities}">Facilities</a> /
         <a th:href="@{/facilities/{id}(id=${facility.id})}" th:text="${facility.name}">Venue</a> /
-        <span th:text="${resource.name}">Court</span>
+        <span th:text="${resource.name}">Chapel</span>
     </p>
     <section class="sport-banner">
         <img th:src="@{${resource.imagePath != null ? resource.imagePath : resource.type.imagePath}}"
@@ -24,7 +24,7 @@
         <div class="section-head">
             <p class="eyebrow">How will you use it?</p>
             <h2>Choose a booking type</h2>
-            <p>Pick a solo session or reserve the whole space for a lesson.</p>
+            <p>Pick a solo session or reserve the whole space for a attended.</p>
         </div>
         <div class="module-grid">
             <a class="module-card"
@@ -37,7 +37,7 @@
             <a class="module-card"
                th:href="@{/resources/{id}(id=${resource.id}, date=${selectedDate}, start=${selectedStart}, mode='LESSON')}">
                 <span class="module-icon" aria-hidden="true">02</span>
-                <h3>Lesson reservation</h3>
+                <h3>Attended reservation</h3>
                 <p>Hold the whole room for a coached session. Available only when nobody else is booked in those hours.</p>
                 <span class="chip">Private</span>
             </a>

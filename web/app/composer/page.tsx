@@ -4,25 +4,32 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, suggestIntent } from "@/lib/api";
 import { clearAuth, loadAuth } from "@/lib/auth";
-import { PartySizeControl } from "@/components/PartySizeControl";
+import { MournersControl } from "@/components/PartySizeControl";
 import { SuggestionCard } from "@/components/SuggestionCard";
 import { RelaxationNotice } from "@/components/RelaxationNotice";
+import { ServiceWindowPanel } from "@/components/ServiceWindowPanel";
 import { DataSourceBadge } from "@/components/DataSourceBadge";
 import { DevFixtureToggle } from "@/components/DevFixtureToggle";
+import { relativeToFirst } from "@/lib/format";
 import type { DataSource, IntentSuggestResponse } from "@/lib/types";
 
-const DEMO_INTENT_PLACEHOLDER = process.env.NEXT_PUBLIC_DEMO_INTENT || "tennis for two tomorrow evening, outdoor";
+const DEMO_INTENT_PLACEHOLDER =
+  process.env.NEXT_PUBLIC_DEMO_INTENT ||
+  "my father died yesterday, orthodox service, about 40 mourners";
 
 export default function ComposerPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   const [text, setText] = useState("");
-  const [partySize, setPartySize] = useState(2);
+  const [mourners, setMourners] = useState(40);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<IntentSuggestResponse | null>(null);
   const [source, setSource] = useState<DataSource | null>(null);
+  // Alternatives stay closed until the family says the held time does not work.
+  // They are not shopping; showing a grid of funerals by default is the wrong offer.
+  const [showAlternatives, setShowAlternatives] = useState(false);
 
   useEffect(() => {
     const auth = loadAuth();
@@ -38,8 +45,9 @@ export default function ComposerPage() {
     if (!text.trim()) return;
     setLoading(true);
     setError(null);
+    setShowAlternatives(false);
     try {
-      const result = await suggestIntent(text.trim(), partySize);
+      const result = await suggestIntent(text.trim(), mourners);
       setResponse(result.data);
       setSource(result.source);
     } catch (err) {
@@ -54,30 +62,41 @@ export default function ComposerPage() {
     router.push("/");
   }
 
+  const held = response?.suggestions[0] ?? null;
+  const alternatives = response?.suggestions.slice(1) ?? [];
+  const effectiveMourners = response?.spec.partySize || mourners;
+
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-4 py-10">
       <header className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Intent Booking</h1>
-          {displayName && <p className="text-sm text-slate-500">Signed in as {displayName}</p>}
+          <h1 className="text-xl font-bold tracking-tight text-stone-900">EverRest</h1>
+          {displayName && <p className="text-sm text-stone-500">Signed in as {displayName}</p>}
         </div>
         <div className="flex items-center gap-4">
           <DevFixtureToggle />
           <button
             type="button"
             onClick={handleLogout}
-            className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            className="text-sm font-medium text-stone-500 hover:text-stone-900"
           >
             Sign out
           </button>
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-xl border border-stone-300 bg-white p-6 shadow-sm"
+      >
         <div>
-          <label htmlFor="intent" className="block text-sm font-medium text-slate-700">
-            What do you want to book?
+          <label htmlFor="intent" className="block text-sm font-medium text-stone-700">
+            Tell us what has happened
           </label>
+          <p className="mt-1 text-sm text-stone-500">
+            In your own words. You do not need to choose a date — we work out when the
+            service can be held from the certificate, the observance and the law.
+          </p>
           <textarea
             id="intent"
             required
@@ -85,18 +104,18 @@ export default function ComposerPage() {
             placeholder={DEMO_INTENT_PLACEHOLDER}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="mt-1 w-full resize-none rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-500"
+            className="mt-3 w-full resize-none rounded-lg border border-stone-300 px-3 py-2.5 text-base outline-none focus:border-stone-500"
           />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <PartySizeControl value={partySize} onChange={setPartySize} />
+          <MournersControl value={mourners} onChange={setMourners} />
           <button
             type="submit"
             disabled={loading || !text.trim()}
-            className="rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+            className="rounded-lg bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
           >
-            {loading ? "Finding slots…" : "Find slots"}
+            {loading ? "Working it out…" : "Propose a time"}
           </button>
         </div>
       </form>
@@ -108,31 +127,67 @@ export default function ComposerPage() {
       )}
 
       {response && (
-        <section className="mt-8 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">
-              {response.suggestions.length} suggestion{response.suggestions.length === 1 ? "" : "s"}
-            </h2>
-            {source && <DataSourceBadge source={source} />}
-          </div>
+        <section className="mt-8 space-y-6">
+          {source && (
+            <div className="flex justify-end">
+              <DataSourceBadge source={source} />
+            </div>
+          )}
+
+          {response.window && <ServiceWindowPanel window={response.window} />}
 
           <RelaxationNotice entries={response.relaxationTrail} variant="trail" />
 
-          {response.suggestions.length === 0 ? (
-            <p className="rounded-lg border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
-              No slots matched, even after relaxing constraints. Try a wider time window or a different resource.
+          {!held ? (
+            <p className="rounded-lg border border-stone-300 bg-white px-4 py-6 text-center text-sm leading-relaxed text-stone-600">
+              {response.window
+                ? "Nothing is free inside that window. The dates cannot be moved, so this needs a member of staff — please call the funeral home."
+                : "Nothing matched. Try describing the circumstances, including when the death occurred."}
             </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {response.suggestions.map((s) => (
+            <>
+              <div>
+                <h2 className="mb-3 text-base font-semibold text-stone-900">We are holding</h2>
                 <SuggestionCard
-                  key={s.resourceId + s.start}
-                  suggestion={s}
-                  partySize={response.spec.partySize || partySize}
+                  suggestion={held}
+                  mourners={effectiveMourners}
                   source={source ?? "fixture"}
+                  primary
                 />
-              ))}
-            </div>
+              </div>
+
+              {alternatives.length > 0 && !showAlternatives && (
+                <button
+                  type="button"
+                  onClick={() => setShowAlternatives(true)}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:bg-stone-100"
+                >
+                  This doesn&rsquo;t work
+                </button>
+              )}
+
+              {alternatives.length > 0 && showAlternatives && (
+                <div>
+                  <h2 className="mb-1 text-base font-semibold text-stone-900">
+                    Other dates the window allows
+                  </h2>
+                  <p className="mb-3 text-sm text-stone-500">
+                    Every one of these is inside the window; none of them can be moved outside it.
+                  </p>
+                  <div className="space-y-4">
+                    {alternatives.map((s) => (
+                      <SuggestionCard
+                        key={s.resourceId + s.start}
+                        suggestion={s}
+                        mourners={effectiveMourners}
+                        source={source ?? "fixture"}
+                        shift={relativeToFirst(held.start, s.start)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </section>
       )}

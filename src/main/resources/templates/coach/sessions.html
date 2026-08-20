@@ -6,9 +6,9 @@
 <header th:replace="~{fragments/nav :: header}"></header>
 <main class="dashboard">
     <div class="section-head">
-        <p class="eyebrow">Coach desk</p>
+        <p class="eyebrow">Celebrant desk</p>
         <h1>My sessions</h1>
-        <p>Reservations that include you as the coach. Managers confirm these on the main queue.</p>
+        <p>Reservations that include you as the celebrant. Managers confirm these on the main queue.</p>
     </div>
     <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
     <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -19,9 +19,9 @@
                  th:src="@{${item.resource.imagePath != null ? item.resource.imagePath : item.resource.type.imagePath}}"
                  th:alt="${item.resource.type.displayName}">
             <div class="history-main">
-                <p class="eyebrow" th:text="${item.resource.type.displayName}">Tennis</p>
+                <p class="eyebrow" th:text="${item.resource.type.displayName}">Chapel ceremony</p>
                 <h3>
-                    <span th:text="${item.resource.name}">Court</span>
+                    <span th:text="${item.resource.name}">Chapel</span>
                     <span class="muted"> · </span>
                     <span th:text="${item.resource.facility.name}">Venue</span>
                 </h3>
@@ -34,7 +34,7 @@
                 </p>
                 <p class="meta-label">
                     Client
-                    <span th:text="${item.user.fullName}">Player</span>
+                    <span th:text="${item.user.fullName}">Family member</span>
                 </p>
                 <p class="meta-label">
                     Email
@@ -50,7 +50,7 @@
                 </p>
                 <p class="meta-label" th:if="${item.hasExtras()}">
                     Extras
-                    <span th:text="${item.extrasSummary}">Coach Anna Kowalska</span>
+                    <span th:text="${item.extrasSummary}">Celebrant Anna Kowalska</span>
                 </p>
                 <p class="meta-label">
                     Amount

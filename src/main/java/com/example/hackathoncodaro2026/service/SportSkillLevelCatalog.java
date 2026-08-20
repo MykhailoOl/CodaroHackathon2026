@@ -4,7 +4,6 @@ import com.example.hackathoncodaro2026.model.SportSkillLevel;
 import com.example.hackathoncodaro2026.model.enums.ResourceType;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -19,13 +18,13 @@ public class SportSkillLevelCatalog {
     private final Map<ResourceType, List<SportSkillLevel>> levelsBySport = new EnumMap<>(ResourceType.class);
 
     public SportSkillLevelCatalog() {
-        levelsBySport.put(ResourceType.TENNIS, ntrp());
-        levelsBySport.put(ResourceType.SQUASH, squashGrades());
-        levelsBySport.put(ResourceType.FOOTBALL, footballLadder());
-        levelsBySport.put(ResourceType.BASKETBALL, basketballLadder());
-        levelsBySport.put(ResourceType.VOLLEYBALL, volleyballUsav());
-        levelsBySport.put(ResourceType.GYM, gymFitness());
-        levelsBySport.put(ResourceType.SWIMMING, swimEngland());
+        levelsBySport.put(ResourceType.CHAPEL, denominations());
+        levelsBySport.put(ResourceType.BURIAL, denominations());
+        levelsBySport.put(ResourceType.CREMATION, cremationRites());
+        levelsBySport.put(ResourceType.VIEWING, cremationRites());
+        levelsBySport.put(ResourceType.RECEPTION, hostingRoles());
+        levelsBySport.put(ResourceType.TRANSPORT, bearerRoles());
+        levelsBySport.put(ResourceType.REPATRIATION, bearerRoles());
     }
 
     public List<SportSkillLevel> levelsFor(ResourceType sport) {
@@ -82,83 +81,52 @@ public class SportSkillLevelCatalog {
             return "Level";
         }
         return switch (sport) {
-            case TENNIS -> "NTRP / level";
-            case SQUASH -> "England grade";
-            case FOOTBALL -> "Playing level";
-            case BASKETBALL -> "Playing level";
-            case VOLLEYBALL -> "USAV rating";
-            case GYM -> "Fitness level";
-            case SWIMMING -> "Swim England stage";
+            case CHAPEL, BURIAL -> "Rite / denomination";
+            case CREMATION, VIEWING -> "Ceremony type";
+            case RECEPTION -> "Hosting role";
+            case TRANSPORT, REPATRIATION -> "Bearer role";
         };
     }
 
-    private List<SportSkillLevel> ntrp() {
-        List<SportSkillLevel> levels = new ArrayList<>();
-        for (int tenths = 10; tenths <= 70; tenths += 5) {
-            int whole = tenths / 10;
-            int frac = tenths % 10;
-            String code = whole + "." + frac;
-            levels.add(new SportSkillLevel(code, "NTRP " + code));
-        }
-        return List.copyOf(levels);
-    }
-
-    private List<SportSkillLevel> squashGrades() {
+    /**
+     * What a celebrant is qualified to lead. These are the "coach levels" of the old
+     * product: an officiant attaches to a service the way a coach attached to a court,
+     * and a family filters on the rite rather than on a playing standard.
+     */
+    private List<SportSkillLevel> denominations() {
         return List.of(
-                new SportSkillLevel("G", "G · beginner"),
-                new SportSkillLevel("F", "F"),
-                new SportSkillLevel("E", "E"),
-                new SportSkillLevel("D", "D"),
-                new SportSkillLevel("C", "C"),
-                new SportSkillLevel("B", "B"),
-                new SportSkillLevel("A", "A"),
-                new SportSkillLevel("OPEN", "Open")
+                new SportSkillLevel("CATHOLIC", "Roman Catholic priest"),
+                new SportSkillLevel("ORTHODOX", "Orthodox priest"),
+                new SportSkillLevel("PROTESTANT", "Protestant minister"),
+                new SportSkillLevel("JEWISH", "Rabbi"),
+                new SportSkillLevel("MUSLIM", "Imam"),
+                new SportSkillLevel("HUMANIST", "Humanist celebrant"),
+                new SportSkillLevel("CIVIL", "Civil officiant")
         );
     }
 
-    private List<SportSkillLevel> footballLadder() {
+    private List<SportSkillLevel> cremationRites() {
         return List.of(
-                new SportSkillLevel("RECREATIONAL", "Recreational"),
-                new SportSkillLevel("CLUB_AMATEUR", "Club amateur"),
-                new SportSkillLevel("COUNTY_REGIONAL", "County / regional"),
-                new SportSkillLevel("SEMI_PRO", "Semi-pro")
+                new SportSkillLevel("COMMITTAL", "Committal service"),
+                new SportSkillLevel("DIRECT", "Direct, no ceremony"),
+                new SportSkillLevel("MEMORIAL", "Memorial with ashes"),
+                new SportSkillLevel("HUMANIST", "Humanist celebrant")
         );
     }
 
-    private List<SportSkillLevel> basketballLadder() {
+    private List<SportSkillLevel> hostingRoles() {
         return List.of(
-                new SportSkillLevel("RECREATIONAL", "Recreational"),
-                new SportSkillLevel("HIGH_SCHOOL_CLUB", "High school / club"),
-                new SportSkillLevel("COLLEGIATE_AMATEUR", "Collegiate amateur"),
-                new SportSkillLevel("COMPETITIVE", "Competitive")
+                new SportSkillLevel("HOST", "Reception host"),
+                new SportSkillLevel("CATERING", "Catering manager"),
+                new SportSkillLevel("MUSIC", "Musician")
         );
     }
 
-    private List<SportSkillLevel> volleyballUsav() {
+    private List<SportSkillLevel> bearerRoles() {
         return List.of(
-                new SportSkillLevel("D", "D"),
-                new SportSkillLevel("C", "C"),
-                new SportSkillLevel("B", "B"),
-                new SportSkillLevel("A", "A"),
-                new SportSkillLevel("AA", "AA"),
-                new SportSkillLevel("OPEN", "Open")
+                new SportSkillLevel("DRIVER", "Hearse driver"),
+                new SportSkillLevel("BEARER", "Bearer"),
+                new SportSkillLevel("CONDUCTOR", "Funeral conductor")
         );
-    }
-
-    private List<SportSkillLevel> gymFitness() {
-        return List.of(
-                new SportSkillLevel("BEGINNER", "Beginner"),
-                new SportSkillLevel("INTERMEDIATE", "Intermediate"),
-                new SportSkillLevel("ADVANCED", "Advanced")
-        );
-    }
-
-    private List<SportSkillLevel> swimEngland() {
-        List<SportSkillLevel> levels = new ArrayList<>();
-        for (int stage = 1; stage <= 7; stage++) {
-            levels.add(new SportSkillLevel("STAGE_" + stage, "Stage " + stage));
-        }
-        levels.add(new SportSkillLevel("CLUB", "Club / competitive"));
-        return List.copyOf(levels);
     }
 }

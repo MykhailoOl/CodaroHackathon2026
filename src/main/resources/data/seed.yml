@@ -1,117 +1,167 @@
+# Warsaw funeral-home and cemetery network. Read at startup by SeedDataLoader, only
+# when the DB is empty.
+#
+# The cemeteries are the real Warsaw ones at their real addresses, because which ground
+# a family can be buried in is not interchangeable: the Jewish cemetery on Okopowa, the
+# Orthodox cemetery on Wolska and the Tatar cemetery on Tatarska serve exactly the rites
+# whose burial deadlines RiteProperties encodes. The funeral houses, and every phone
+# number on this page, are invented.
+#
+# `capacity` is concurrent occupancy, not attendance: a chapel holds one ceremony at a
+# time whatever its size, while a transport depot can dispatch several hearses at once.
+# Attendance is the party size, bounded per service by ResourceType.
+
 facilities:
-  - name: "COS Torwar"
-    description: "Flagship indoor arena next to the National Stadium. Tennis, basketball, and a high-capacity gym."
-    phone: "+48 22 621 44 11"
-    coverType: TENNIS
-    address: { street: "ul. Łazienkowska", buildingNumber: "6A", postalCode: "00-449", district: "Śródmieście" }
+  - name: "Dom Pogrzebowy Powązki"
+    description: "The main house, beside the old Powązki cemetery in Wola. Two chapels, a room of repose, and the cortège depot."
+    phone: "+48 22 100 20 01"
+    coverType: CHAPEL
+    address: { street: "ul. Powązkowska", buildingNumber: "14", postalCode: "01-797", district: "Wola" }
     resources:
-      - { name: "Tennis Court 1", type: TENNIS, capacity: 1 }
-      - { name: "Tennis Court 2", type: TENNIS, capacity: 1, address: { street: "ul. Łazienkowska", buildingNumber: "6B", postalCode: "00-449", district: "Śródmieście" } }
-      - { name: "Main Basketball Hall", type: BASKETBALL, capacity: 1, address: { street: "ul. Łazienkowska", buildingNumber: "8", postalCode: "00-449", district: "Śródmieście" } }
-      - { name: "Performance Gym", type: GYM, capacity: 18 }
+      - { name: "St. Barbara Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Small Chapel", type: CHAPEL, capacity: 1, address: { street: "ul. Powązkowska", buildingNumber: "14A", postalCode: "01-797", district: "Wola" } }
+      - { name: "Room of Repose", type: VIEWING, capacity: 4 }
+      - { name: "Cortège Depot", type: TRANSPORT, capacity: 8, address: { street: "ul. Powązkowska", buildingNumber: "16", postalCode: "01-797", district: "Wola" } }
 
-  - name: "Centrum Sportu Inflancka"
-    description: "City sports centre in Muranów with a full-size hall, volleyball court, and weights room."
-    phone: "+48 22 831 20 91"
-    coverType: BASKETBALL
-    address: { street: "ul. Inflancka", buildingNumber: "8", postalCode: "00-189", district: "Śródmieście" }
+  - name: "Krematorium Wólka Węglowa"
+    description: "The city crematorium on the northern edge of Bielany, with its own committal hall."
+    phone: "+48 22 100 20 02"
+    coverType: CREMATION
+    address: { street: "ul. Wóycickiego", buildingNumber: "14", postalCode: "01-938", district: "Bielany" }
     resources:
-      - { name: "Main Hall", type: BASKETBALL, capacity: 1 }
-      - { name: "Volleyball Court", type: VOLLEYBALL, capacity: 1, address: { street: "ul. Inflancka", buildingNumber: "10", postalCode: "00-189", district: "Śródmieście" } }
-      - { name: "Studio Gym", type: GYM, capacity: 16, address: { street: "ul. Inflancka", buildingNumber: "8A", postalCode: "00-189", district: "Śródmieście" } }
+      - { name: "Committal Hall", type: CREMATION, capacity: 1 }
+      - { name: "Cremator II", type: CREMATION, capacity: 1, address: { street: "ul. Wóycickiego", buildingNumber: "14B", postalCode: "01-938", district: "Bielany" } }
+      - { name: "Ashes Chapel", type: CHAPEL, capacity: 1 }
 
-  - name: "AWF Warszawa"
-    description: "University of Physical Education campus in Bielany. Pitches, pool lanes, and tennis."
-    phone: "+48 22 834 04 31"
-    coverType: FOOTBALL
-    address: { street: "ul. Marymoncka", buildingNumber: "34", postalCode: "01-813", district: "Bielany" }
+  - name: "Cmentarz Bródnowski"
+    description: "Bródno cemetery in Targówek. Graveside interment and a chapel at the main gate."
+    phone: "+48 22 100 20 03"
+    coverType: BURIAL
+    address: { street: "ul. św. Wincentego", buildingNumber: "83", postalCode: "03-530", district: "Targówek" }
     resources:
-      - { name: "Football Pitch A", type: FOOTBALL, capacity: 1 }
-      - { name: "Tennis Court North", type: TENNIS, capacity: 1, address: { street: "ul. Marymoncka", buildingNumber: "34A", postalCode: "01-813", district: "Bielany" } }
-      - { name: "Pool Lane 1", type: SWIMMING, capacity: 8, address: { street: "ul. Marymoncka", buildingNumber: "36", postalCode: "01-813", district: "Bielany" } }
-      - { name: "Training Gym", type: GYM, capacity: 20, address: { street: "ul. Marymoncka", buildingNumber: "32", postalCode: "01-813", district: "Bielany" } }
+      - { name: "Gate Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Burial Section C", type: BURIAL, capacity: 1 }
+      - { name: "Burial Section H", type: BURIAL, capacity: 1, address: { street: "ul. św. Wincentego", buildingNumber: "85", postalCode: "03-530", district: "Targówek" } }
 
-  - name: "Ośrodek Agrykola"
-    description: "Historic club grounds below the Ujazdowski escarpment. Clay tennis and a riverside pitch."
-    phone: "+48 22 621 47 41"
-    coverType: TENNIS
-    address: { street: "ul. Myśliwiecka", buildingNumber: "9", postalCode: "00-459", district: "Śródmieście" }
+  - name: "Cmentarz Południowy"
+    description: "The southern municipal cemetery at Antoninów. Large chapel, wide plots, parking for a full cortège."
+    phone: "+48 22 100 20 04"
+    coverType: BURIAL
+    address: { street: "ul. Kuropatwy", buildingNumber: "17", postalCode: "05-503", district: "Ursynów" }
     resources:
-      - { name: "Clay Tennis Court", type: TENNIS, capacity: 1 }
-      - { name: "Football Pitch", type: FOOTBALL, capacity: 1, address: { street: "ul. Myśliwiecka", buildingNumber: "11", postalCode: "00-459", district: "Śródmieście" } }
-      - { name: "Outdoor Basketball", type: BASKETBALL, capacity: 1, address: { street: "ul. Myśliwiecka", buildingNumber: "9A", postalCode: "00-459", district: "Śródmieście" } }
+      - { name: "Great Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Burial Field 4", type: BURIAL, capacity: 1 }
+      - { name: "Urn Grove", type: BURIAL, capacity: 1, address: { street: "ul. Kuropatwy", buildingNumber: "19", postalCode: "05-503", district: "Ursynów" } }
 
-  - name: "KS Warszawianka"
-    description: "Multi-sport club in Śródmieście with tennis, squash, and a 25 m pool."
-    phone: "+48 22 628 80 71"
-    coverType: TENNIS
-    address: { street: "ul. Szwoleżerów", buildingNumber: "9", postalCode: "00-464", district: "Śródmieście" }
+  - name: "Dom Pogrzebowy Służew"
+    description: "Mokotów house on the Służew parish grounds. A quiet chapel and the reception rooms families use afterwards."
+    phone: "+48 22 100 20 05"
+    coverType: CHAPEL
+    address: { street: "ul. Renety", buildingNumber: "10", postalCode: "02-797", district: "Mokotów" }
     resources:
-      - { name: "Tennis Court 1", type: TENNIS, capacity: 1 }
-      - { name: "Tennis Court 2", type: TENNIS, capacity: 1, address: { street: "ul. Szwoleżerów", buildingNumber: "11", postalCode: "00-464", district: "Śródmieście" } }
-      - { name: "Squash Court A", type: SQUASH, capacity: 1, address: { street: "ul. Szwoleżerów", buildingNumber: "7", postalCode: "00-464", district: "Śródmieście" } }
-      - { name: "Pool Lane 2", type: SWIMMING, capacity: 6, address: { street: "ul. Szwoleżerów", buildingNumber: "9A", postalCode: "00-464", district: "Śródmieście" } }
+      - { name: "Parish Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Reception Room", type: RECEPTION, capacity: 1 }
+      - { name: "Room of Repose", type: VIEWING, capacity: 3, address: { street: "ul. Renety", buildingNumber: "10A", postalCode: "02-797", district: "Mokotów" } }
 
-  - name: "Hala Sportowa Koło"
-    description: "Indoor halls on the Wola side of the tracks. Basketball, volleyball, and a community gym."
-    phone: "+48 22 632 11 80"
-    coverType: BASKETBALL
-    address: { street: "ul. Obozowa", buildingNumber: "63", postalCode: "01-425", district: "Wola" }
+  - name: "Dom Pogrzebowy Praga"
+    description: "East-bank house on Grochowska. Chapel, viewing room, and the office that handles repatriation."
+    phone: "+48 22 100 20 06"
+    coverType: CHAPEL
+    address: { street: "ul. Grochowska", buildingNumber: "194", postalCode: "04-357", district: "Praga-Południe" }
     resources:
-      - { name: "Basketball Hall", type: BASKETBALL, capacity: 1 }
-      - { name: "Volleyball Hall", type: VOLLEYBALL, capacity: 1, address: { street: "ul. Obozowa", buildingNumber: "61", postalCode: "01-425", district: "Wola" } }
-      - { name: "Community Gym", type: GYM, capacity: 14, address: { street: "ul. Obozowa", buildingNumber: "65", postalCode: "01-425", district: "Wola" } }
+      - { name: "Grochowska Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Viewing Room", type: VIEWING, capacity: 2 }
+      - { name: "Repatriation Office", type: REPATRIATION, capacity: 1, address: { street: "ul. Grochowska", buildingNumber: "196", postalCode: "04-357", district: "Praga-Południe" } }
+      - { name: "Praga Hearse", type: TRANSPORT, capacity: 4 }
 
-  - name: "Orlik Wołoska"
-    description: "Neighbourhood Orlik pitches next to the hospital campus in Mokotów."
-    phone: "+48 22 566 91 00"
-    coverType: FOOTBALL
-    address: { street: "ul. Wołoska", buildingNumber: "4", postalCode: "02-561", district: "Mokotów" }
+  - name: "Dom Stypy Żoliborz"
+    description: "Reception house on Potocka. Two rooms for the gathering after the service, with catering on site."
+    phone: "+48 22 100 20 07"
+    coverType: RECEPTION
+    address: { street: "ul. Potocka", buildingNumber: "12", postalCode: "01-634", district: "Żoliborz" }
     resources:
-      - { name: "Football Pitch 1", type: FOOTBALL, capacity: 1 }
-      - { name: "Football Pitch 2", type: FOOTBALL, capacity: 1, address: { street: "ul. Wołoska", buildingNumber: "6", postalCode: "02-561", district: "Mokotów" } }
-      - { name: "Basketball Cage", type: BASKETBALL, capacity: 1, address: { street: "ul. Wołoska", buildingNumber: "4A", postalCode: "02-561", district: "Mokotów" } }
+      - { name: "Great Room", type: RECEPTION, capacity: 1 }
+      - { name: "Small Room", type: RECEPTION, capacity: 1, address: { street: "ul. Potocka", buildingNumber: "12A", postalCode: "01-634", district: "Żoliborz" } }
+      - { name: "Żoliborz Hearse", type: TRANSPORT, capacity: 4 }
 
-  - name: "Ośrodek Szczęśliwice"
-    description: "Park Szczęśliwicki sports cluster in Ochota. Tennis, football, and a hillside gym."
-    phone: "+48 22 822 30 21"
-    coverType: TENNIS
-    address: { street: "ul. Drawska", buildingNumber: "22", postalCode: "02-202", district: "Ochota" }
+  - name: "Cmentarz Północny"
+    description: "The northern municipal cemetery at Wólka Węglowa, the largest in the city. Several burial fields and its own gate chapel."
+    phone: "+48 22 100 20 08"
+    coverType: BURIAL
+    address: { street: "ul. Wóycickiego", buildingNumber: "14", postalCode: "01-938", district: "Bielany" }
     resources:
-      - { name: "Park Tennis Court", type: TENNIS, capacity: 1 }
-      - { name: "Park Football Pitch", type: FOOTBALL, capacity: 1, address: { street: "ul. Drawska", buildingNumber: "20", postalCode: "02-202", district: "Ochota" } }
-      - { name: "Hillside Gym", type: GYM, capacity: 12, address: { street: "ul. Drawska", buildingNumber: "24", postalCode: "02-202", district: "Ochota" } }
+      - { name: "North Gate Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Burial Field W", type: BURIAL, capacity: 1 }
+      - { name: "Burial Field S", type: BURIAL, capacity: 1, address: { street: "ul. Wóycickiego", buildingNumber: "14C", postalCode: "01-938", district: "Bielany" } }
+      - { name: "Urn Field", type: BURIAL, capacity: 1 }
 
-  - name: "Ośrodek Żoliborz"
-    description: "District centre on Potocka with indoor volleyball and a compact gym."
-    phone: "+48 22 839 44 50"
-    coverType: VOLLEYBALL
-    address: { street: "ul. Potocka", buildingNumber: "1", postalCode: "01-634", district: "Żoliborz" }
+  - name: "Cmentarz Żydowski na Okopowej"
+    description: "The Jewish cemetery on Okopowa in Wola. Burial follows the Jewish rite, which allows very little time."
+    phone: "+48 22 100 20 09"
+    coverType: BURIAL
+    address: { street: "ul. Okopowa", buildingNumber: "49/51", postalCode: "01-043", district: "Wola" }
     resources:
-      - { name: "Volleyball Hall", type: VOLLEYBALL, capacity: 1 }
-      - { name: "Tennis Court", type: TENNIS, capacity: 1, address: { street: "ul. Potocka", buildingNumber: "3", postalCode: "01-634", district: "Żoliborz" } }
-      - { name: "District Gym", type: GYM, capacity: 15, address: { street: "ul. Potocka", buildingNumber: "1A", postalCode: "01-634", district: "Żoliborz" } }
+      - { name: "Bet Tahara", type: VIEWING, capacity: 1 }
+      - { name: "Burial Quarter 2", type: BURIAL, capacity: 1 }
+      - { name: "Burial Quarter 7", type: BURIAL, capacity: 1, address: { street: "ul. Okopowa", buildingNumber: "49", postalCode: "01-043", district: "Wola" } }
 
-  - name: "Hala Sportowa Praga"
-    description: "East-bank hall on Kawęczyńska. Basketball, squash, and a busy gym floor."
-    phone: "+48 22 818 08 92"
-    coverType: BASKETBALL
-    address: { street: "ul. Kawęczyńska", buildingNumber: "36", postalCode: "03-772", district: "Praga-Północ" }
+  - name: "Cmentarz Prawosławny na Woli"
+    description: "The Orthodox cemetery on Wolska, with the chapel of St. John Climacus. Orthodox rite, within three days."
+    phone: "+48 22 100 20 10"
+    coverType: BURIAL
+    address: { street: "ul. Wolska", buildingNumber: "138/140", postalCode: "01-258", district: "Wola" }
     resources:
-      - { name: "Basketball Hall", type: BASKETBALL, capacity: 1 }
-      - { name: "Squash Court B", type: SQUASH, capacity: 1, address: { street: "ul. Kawęczyńska", buildingNumber: "38", postalCode: "03-772", district: "Praga-Północ" } }
-      - { name: "East Gym", type: GYM, capacity: 20, address: { street: "ul. Kawęczyńska", buildingNumber: "34", postalCode: "03-772", district: "Praga-Północ" } }
+      - { name: "Orthodox Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Orthodox Burial Section", type: BURIAL, capacity: 1 }
+
+  - name: "Muzułmański Cmentarz Tatarski"
+    description: "The Tatar Muslim cemetery on Tatarska in Wola. Burial as soon as the release allows."
+    phone: "+48 22 100 20 11"
+    coverType: BURIAL
+    address: { street: "ul. Tatarska", buildingNumber: "8", postalCode: "01-131", district: "Wola" }
+    resources:
+      - { name: "Ghusl Room", type: VIEWING, capacity: 1 }
+      - { name: "Tatar Burial Section", type: BURIAL, capacity: 1 }
+
+  - name: "Cmentarz Ewangelicko-Augsburski"
+    description: "The Lutheran cemetery on Młynarska in Wola, with a brick chapel inside the gate."
+    phone: "+48 22 100 20 12"
+    coverType: BURIAL
+    address: { street: "ul. Młynarska", buildingNumber: "54/58", postalCode: "01-171", district: "Wola" }
+    resources:
+      - { name: "Lutheran Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Lutheran Burial Section", type: BURIAL, capacity: 1 }
+
+  - name: "Cmentarz Wojskowy na Powązkach"
+    description: "The military cemetery in Żoliborz. Ceremonial burials with bearers and a full cortège."
+    phone: "+48 22 100 20 13"
+    coverType: BURIAL
+    address: { street: "ul. Powązkowska", buildingNumber: "43/45", postalCode: "01-797", district: "Żoliborz" }
+    resources:
+      - { name: "Military Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Honour Section A", type: BURIAL, capacity: 1 }
+      - { name: "Military Cortège", type: TRANSPORT, capacity: 4 }
+
+  - name: "Cmentarz Wilanowski"
+    description: "The small parish cemetery beside the Wilanów church, on the southern edge of the city."
+    phone: "+48 22 100 20 14"
+    coverType: BURIAL
+    address: { street: "ul. Wiertnicza", buildingNumber: "1", postalCode: "02-952", district: "Wilanów" }
+    resources:
+      - { name: "Wilanów Parish Chapel", type: CHAPEL, capacity: 1 }
+      - { name: "Wilanów Burial Section", type: BURIAL, capacity: 1 }
 
 inventory:
-  - { name: "Racket", price: "15.00", type: TENNIS }
-  - { name: "Ball basket", price: "12.00", type: TENNIS }
-  - { name: "Racket", price: "15.00", type: SQUASH }
-  - { name: "Balls", price: "8.00", type: SQUASH }
-  - { name: "Ball", price: "10.00", type: FOOTBALL }
-  - { name: "Bibs", price: "12.00", type: FOOTBALL }
-  - { name: "Ball", price: "10.00", type: BASKETBALL }
-  - { name: "Ball", price: "10.00", type: VOLLEYBALL }
-  - { name: "Towel", price: "8.00", type: GYM }
-  - { name: "Locker", price: "6.00", type: GYM }
-  - { name: "Towel", price: "8.00", type: SWIMMING }
-  - { name: "Goggles", price: "10.00", type: SWIMMING }
+  - { name: "Order of service booklets", price: "120.00", type: CHAPEL }
+  - { name: "Floral tribute", price: "250.00", type: CHAPEL }
+  - { name: "Organist", price: "300.00", type: CHAPEL }
+  - { name: "Memorial urn", price: "480.00", type: CREMATION }
+  - { name: "Ashes casket", price: "350.00", type: CREMATION }
+  - { name: "Graveside canopy", price: "200.00", type: BURIAL }
+  - { name: "Casket spray", price: "320.00", type: BURIAL }
+  - { name: "Additional bearers", price: "260.00", type: TRANSPORT }
+  - { name: "Following car", price: "340.00", type: TRANSPORT }
+  - { name: "Refreshments per guest", price: "45.00", type: RECEPTION }
+  - { name: "Memorial book", price: "90.00", type: RECEPTION }
+  - { name: "Candles", price: "60.00", type: VIEWING }
+  - { name: "Consular paperwork", price: "550.00", type: REPATRIATION }

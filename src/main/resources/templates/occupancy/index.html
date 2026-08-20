@@ -8,7 +8,7 @@
     <div class="section-head">
         <p class="eyebrow">Capacity board</p>
         <h1>Occupancy</h1>
-        <p>Confirmed bookings versus capacity for every hour. Open a free cell to book that court.</p>
+        <p>Confirmed bookings versus capacity for every hour. Open a free cell to book that service.</p>
     </div>
     <form id="occupancy-filter" class="occ-filters" method="get" th:action="@{/occupancy}">
         <div class="field">
@@ -35,21 +35,21 @@
         <li><span class="occ-swatch occ-full"></span> Full</li>
         <li><span class="occ-swatch occ-past"></span> Past / closed</li>
     </ul>
-    <p class="lede" th:if="${grid == null or #lists.isEmpty(grid.rows)}">No bookable courts for this filter.</p>
+    <p class="lede" th:if="${grid == null or #lists.isEmpty(grid.rows)}">No bookable services for this filter.</p>
     <div class="occ-wrap" th:if="${grid != null and !#lists.isEmpty(grid.rows)}">
         <table class="occ-table">
             <thead>
             <tr>
-                <th class="occ-resource">Court</th>
+                <th class="occ-resource">Chapel</th>
                 <th th:each="hour : ${grid.hours}" th:text="${#temporals.format(hour, 'HH:mm')}">07:00</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="row : ${grid.rows}">
                 <th class="occ-resource">
-                    <span class="occ-name" th:text="${row.resourceName}">Court</span>
+                    <span class="occ-name" th:text="${row.resourceName}">Chapel</span>
                     <span class="occ-meta" th:text="${row.facilityName}">Venue</span>
-                    <span class="occ-meta" th:text="${row.sport}">Tennis</span>
+                    <span class="occ-meta" th:text="${row.sport}">Chapel ceremony</span>
                 </th>
                 <td th:each="cell : ${row.cells}">
                     <a th:if="${cell.bookable}"

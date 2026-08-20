@@ -92,13 +92,13 @@ class CoachOfferingRatingAndWebTests {
     void offeringRejectsZeroPriceDuplicateSportAndForeignOwnership() {
         User coach = createCoach("own_coach", "own.coach@example.com");
         User other = createCoach("other_coach", "other.coach@example.com");
-        CoachOfferingRequest create = offering(ResourceType.TENNIS, Set.of("3.0"), "80.00");
+        CoachOfferingRequest create = offering(ResourceType.CHAPEL, Set.of("CATHOLIC"), "80.00");
         CoachOffering saved = coachOfferingService.save(coach, create);
-        CoachOfferingRequest duplicate = offering(ResourceType.TENNIS, Set.of("3.5"), "90.00");
+        CoachOfferingRequest duplicate = offering(ResourceType.CHAPEL, Set.of("ORTHODOX"), "90.00");
         assertThatThrownBy(() -> coachOfferingService.save(coach, duplicate))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("already have");
-        CoachOfferingRequest free = offering(ResourceType.GYM, Set.of("BEGINNER"), "0.00");
+        CoachOfferingRequest free = offering(ResourceType.TRANSPORT, Set.of("DRIVER"), "0.00");
         assertThatThrownBy(() -> coachOfferingService.save(coach, free))
                 .isInstanceOf(ReservationException.class)
                 .hasMessageContaining("price");
@@ -111,23 +111,23 @@ class CoachOfferingRatingAndWebTests {
     @Test
     void coachWrongSportIsRejectedAndAdjacentSlotsAreAllowed() {
         User coach = createCoach("span_coach", "span.coach@example.com");
-        saveOffering(coach, ResourceType.TENNIS, Set.of("3.0"), "80.00");
+        saveOffering(coach, ResourceType.CHAPEL, Set.of("CATHOLIC"), "80.00");
         User player = player("span_player", "span.player@example.com");
         SportResource tennis = tennisCourt();
         SportResource gym = gym();
         ReservationRequest gymHire = booking(gym, LocalDate.now(WARSAW).plusDays(56), gym.getOpeningTime());
         gymHire.setKind(ReservationKind.INDIVIDUAL);
         gymHire.setCoachId(coach.getId());
-        gymHire.setSkillLevel("BEGINNER");
+        gymHire.setSkillLevel("DRIVER");
         assertThatThrownBy(() -> reservationService.create(player, gymHire))
                 .isInstanceOf(ReservationException.class);
         LocalDate date = LocalDate.now(WARSAW).plusDays(57);
         ReservationRequest first = booking(tennis, date, tennis.getOpeningTime());
         first.setCoachId(coach.getId());
-        first.setSkillLevel("3.0");
+        first.setSkillLevel("CATHOLIC");
         ReservationRequest second = booking(tennis, date, tennis.getOpeningTime().plusHours(1));
         second.setCoachId(coach.getId());
-        second.setSkillLevel("3.0");
+        second.setSkillLevel("CATHOLIC");
         Reservation a = reservationService.create(player, first);
         Reservation b = reservationService.create(player, second);
         assertThat(a.getEndAt()).isEqualTo(b.getStartAt());
@@ -138,7 +138,7 @@ class CoachOfferingRatingAndWebTests {
     @Test
     void ratingRejectsInvalidStarsLongReviewMissingCoachAndOutOfRange() {
         User coach = createCoach("rate_edge", "rate.edge@example.com");
-        saveOffering(coach, ResourceType.TENNIS, Set.of("3.0"), "80.00");
+        saveOffering(coach, ResourceType.CHAPEL, Set.of("CATHOLIC"), "80.00");
         User owner = player("rate_owner", "rate.owner@example.com");
         SportResource tennis = tennisCourt();
         LocalDateTime now = LocalDateTime.now(WARSAW);
@@ -182,7 +182,7 @@ class CoachOfferingRatingAndWebTests {
     @Test
     void coachPagesAndCoreRoutesRenderForAllowedRoles() throws Exception {
         User coach = createCoach("web_coach", "web.coach@example.com");
-        saveOffering(coach, ResourceType.TENNIS, Set.of("3.0"), "80.00");
+        saveOffering(coach, ResourceType.CHAPEL, Set.of("CATHOLIC"), "80.00");
         User player = player("web_player", "web.player@example.com");
         SportResource tennis = tennisCourt();
         mockMvc.perform(get("/facilities").with(user("web_player").roles("USER")))
@@ -199,7 +199,7 @@ class CoachOfferingRatingAndWebTests {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/coach/offerings").with(user("web_coach").roles("COACH")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Tennis")));
+                .andExpect(content().string(containsString("Chapel ceremony")));
         mockMvc.perform(get("/coach/sessions").with(user("web_coach").roles("COACH")))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/").with(user("web_player").roles("USER")))
@@ -298,14 +298,14 @@ class CoachOfferingRatingAndWebTests {
 
     private SportResource tennisCourt() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.TENNIS && resource.isEnabled() && resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.CHAPEL && resource.isEnabled() && resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
 
     private SportResource gym() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.GYM && resource.isEnabled() && !resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.TRANSPORT && resource.isEnabled() && !resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
@@ -342,7 +342,7 @@ class CoachOfferingRatingAndWebTests {
         reservation.setUser(user);
         reservation.setResource(court);
         reservation.setCoach(coach);
-        reservation.setSkillLevel(coach == null ? null : "3.0");
+        reservation.setSkillLevel(coach == null ? null : "CATHOLIC");
         reservation.setStartAt(startAt);
         reservation.setEndAt(endAt);
         reservation.setStatus(status);

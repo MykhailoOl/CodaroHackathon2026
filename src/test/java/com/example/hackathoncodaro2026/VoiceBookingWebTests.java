@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class VoiceBookingWebTests {
 
     private static final String SECRET = "change-me-tool-webhook-secret";
-    private static final String TENNIS_EVENING = "tennis tomorrow evening";
+    private static final String CHAPEL_EVENING = "chapel tomorrow evening";
 
     @Autowired
     private MockMvc mockMvc;
@@ -58,7 +58,7 @@ class VoiceBookingWebTests {
         mockMvc.perform(post("/api/voice/tools/check-availability")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"text":"tennis tomorrow evening"}
+                                {"text":"chapel tomorrow evening"}
                                 """))
                 .andExpect(status().isUnauthorized());
     }
@@ -69,7 +69,7 @@ class VoiceBookingWebTests {
                         .header("Authorization", "Bearer wrong-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"text":"tennis tomorrow evening"}
+                                {"text":"chapel tomorrow evening"}
                                 """))
                 .andExpect(status().isUnauthorized());
     }
@@ -81,7 +81,7 @@ class VoiceBookingWebTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "text":"tennis tomorrow evening",
+                                  "text":"chapel tomorrow evening",
                                   "partySize":2,
                                   "language":"en"
                                 }
@@ -98,7 +98,7 @@ class VoiceBookingWebTests {
 
     @Test
     void createBookingPersistsToDatabaseAndLogsSms() throws Exception {
-        String slotId = firstSlotId(TENNIS_EVENING);
+        String slotId = firstSlotId(CHAPEL_EVENING);
 
         mockMvc.perform(post("/api/voice/tools/create-booking")
                         .header("Authorization", "Bearer " + SECRET)
@@ -131,7 +131,7 @@ class VoiceBookingWebTests {
                         .header("Authorization", "Bearer " + SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"text":"tennis tomorrow evening","language":"en"}
+                                {"text":"chapel tomorrow evening","language":"en"}
                                 """))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -161,7 +161,7 @@ class VoiceBookingWebTests {
 
     @Test
     void createBookingRejectsTakenSlot() throws Exception {
-        String slotId = firstSlotId(TENNIS_EVENING);
+        String slotId = firstSlotId(CHAPEL_EVENING);
         String body = """
                 {
                   "slotId":"%s",
@@ -192,7 +192,7 @@ class VoiceBookingWebTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sport":"tennis",
+                                  "sport":"chapel",
                                   "preferredDay":"tomorrow",
                                   "partOfDay":"evening",
                                   "language":"en"
@@ -203,7 +203,7 @@ class VoiceBookingWebTests {
 
         List<String> labels = JsonPath.read(result.getResponse().getContentAsString(), "$.slots[*].displayLabel");
         assertThat(labels).isNotEmpty();
-        assertThat(labels.getFirst()).containsIgnoringCase("tennis");
+        assertThat(labels.getFirst()).containsIgnoringCase("chapel");
     }
 
     @Test
@@ -236,7 +236,7 @@ class VoiceBookingWebTests {
 
     @Test
     void phoneBookingInviteCollectsEmailAndLogsCalendarInvitation() throws Exception {
-        String slotId = firstSlotId(TENNIS_EVENING);
+        String slotId = firstSlotId(CHAPEL_EVENING);
         MvcResult booked = mockMvc.perform(post("/api/voice/tools/create-booking")
                         .header("Authorization", "Bearer " + SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -291,6 +291,6 @@ class VoiceBookingWebTests {
     private boolean occupyingTennisForAnna(Reservation reservation) {
         return reservation.getStatus() == ReservationStatus.PENDING
                 && reservation.getUser().getFullName().contains("Anna")
-                && reservation.getResource().getType().name().equals("TENNIS");
+                && reservation.getResource().getType().name().equals("CHAPEL");
     }
 }

@@ -42,13 +42,16 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Intent Booking</h1>
-          <p className="mt-1 text-sm text-slate-500">Sign in to describe what you want to book.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-stone-900">EverRest</h1>
+          <p className="mt-2 text-sm leading-relaxed text-stone-600">
+            You do not have to choose a date. Tell us the circumstances and we work out
+            when the service can be held, then propose a time for you to approve.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-stone-300 bg-white p-6 shadow-sm">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="username" className="block text-sm font-medium text-stone-700">
               Username
             </label>
             <input
@@ -58,12 +61,12 @@ export default function LoginPage() {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="password" className="block text-sm font-medium text-stone-700">
               Password
             </label>
             <input
@@ -73,7 +76,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
           </div>
 
@@ -86,7 +89,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
@@ -97,7 +100,7 @@ export default function LoginPage() {
           </div>
         </form>
 
-        <p className="mt-4 text-center text-xs text-slate-400">
+        <p className="mt-4 text-center text-xs text-stone-400">
           No backend running? Check &ldquo;Use demo data&rdquo; above, or just submit — a network error
           falls back to demo data automatically.
         </p>

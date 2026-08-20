@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { Term } from "@/lib/types";
-import { formatSignedDelta } from "@/lib/format";
 
 export function ReasonBreakdown({ terms }: { terms: Term[] }) {
   const [open, setOpen] = useState(false);
@@ -12,15 +11,15 @@ export function ReasonBreakdown({ terms }: { terms: Term[] }) {
   const sorted = [...terms].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 
   return (
-    <div className="mt-3 border-t border-slate-200 pt-3">
+    <div className="mt-3 border-t border-stone-200 pt-3">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+        className="flex items-center gap-1 text-sm font-medium text-stone-600 hover:text-stone-900"
       >
         <span className={`inline-block transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
-        {open ? "Hide score breakdown" : "Show score breakdown"}
+        {open ? "Hide the reasoning" : "Why this time"}
       </button>
 
       {open && (
@@ -31,22 +30,23 @@ export function ReasonBreakdown({ terms }: { terms: Term[] }) {
             return (
               <li
                 key={term.key}
-                className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-3 rounded-md bg-stone-50 px-3 py-1.5 text-sm"
               >
-                <span className="text-slate-700">
+                <span className="text-stone-700">
                   {term.label}
                   {!term.satisfied && (
                     <span className="ml-2 text-xs uppercase tracking-wide text-amber-600">unmet</span>
                   )}
                 </span>
+                {/* The numeric score is an internal ranking artefact; a family is
+                    owed the reason, not the arithmetic. */}
                 <span
+                  aria-hidden="true"
                   className={
-                    "shrink-0 font-mono font-semibold tabular-nums " +
-                    (positive ? "text-emerald-600" : negative ? "text-rose-600" : "text-slate-500")
+                    "h-2 w-2 shrink-0 rounded-full " +
+                    (positive ? "bg-emerald-500" : negative ? "bg-rose-500" : "bg-stone-300")
                   }
-                >
-                  {formatSignedDelta(term.delta)}
-                </span>
+                />
               </li>
             );
           })}

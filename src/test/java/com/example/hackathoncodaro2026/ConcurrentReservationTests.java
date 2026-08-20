@@ -117,7 +117,7 @@ class ConcurrentReservationTests {
         User first = ensureUser("racer_three", "racer.three@example.com", "Racer Three");
         User second = ensureUser("racer_four", "racer.four@example.com", "Racer Four");
         SportResource gym = sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.GYM && resource.getCapacity() > 1 && resource.isEnabled())
+                .filter(resource -> resource.getType() == ResourceType.TRANSPORT && resource.getCapacity() > 1 && resource.isEnabled())
                 .findFirst()
                 .orElseThrow();
         LocalDate date = LocalDate.now(WARSAW).plusDays(32);
@@ -158,7 +158,7 @@ class ConcurrentReservationTests {
         User first = ensureUser("coach_racer_a", "coach.racer.a@example.com", "Coach Racer A");
         User second = ensureUser("coach_racer_b", "coach.racer.b@example.com", "Coach Racer B");
         List<SportResource> courts = sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.TENNIS && resource.isEnabled() && resource.getCapacity() == 1)
+                .filter(resource -> resource.getType() == ResourceType.CHAPEL && resource.isEnabled() && resource.getCapacity() == 1)
                 .limit(2)
                 .toList();
         assertThat(courts).hasSize(2);
@@ -169,7 +169,7 @@ class ConcurrentReservationTests {
         userRepository.findByUsernameIgnoreCase("race_lock_coach").ifPresent(this::removeCommittedCoach);
         User coach = createCoach("race_lock_coach", "race.lock.coach@example.com");
         try {
-            saveOffering(coach, ResourceType.TENNIS, Set.of("3.0"), "80.00");
+            saveOffering(coach, ResourceType.CHAPEL, Set.of("CATHOLIC"), "80.00");
             CountDownLatch ready = new CountDownLatch(2);
             CountDownLatch gate = new CountDownLatch(1);
             CountDownLatch done = new CountDownLatch(2);
@@ -185,7 +185,7 @@ class ConcurrentReservationTests {
                     firstCourt.getMinPartySize(),
                     ReservationKind.STANDARD,
                     coach.getId(),
-                    "3.0",
+                    "CATHOLIC",
                     ready,
                     gate,
                     done,
@@ -201,7 +201,7 @@ class ConcurrentReservationTests {
                     secondCourt.getMinPartySize(),
                     ReservationKind.STANDARD,
                     coach.getId(),
-                    "3.0",
+                    "CATHOLIC",
                     ready,
                     gate,
                     done,

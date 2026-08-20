@@ -23,12 +23,12 @@ class CompositeIntentParserTest {
         CompositeIntentParser composite = new CompositeIntentParser(unconfigured, ruleParser);
 
         IntentParser.ParseResult result = composite.parse(
-                "tennis for two tomorrow evening, outdoor court, about 90 minutes", TODAY, 1);
+                "chapel for two tomorrow evening, priest, about 90 minutes", TODAY, 1);
 
         assertThat(result.parserUsed()).isEqualTo("rules");
         IntentSpec spec = result.spec();
         assertThat(spec.durationMin()).isEqualTo(90);
-        assertThat(spec.resourceType()).isEqualTo("TENNIS");
+        assertThat(spec.resourceType()).isEqualTo("CHAPEL");
     }
 
     @Test
@@ -36,7 +36,7 @@ class CompositeIntentParserTest {
         CodaroIntentParser unconfigured = new CodaroIntentParser(null, null, null, config, DomainProperties.defaults());
         CompositeIntentParser composite = new CompositeIntentParser(unconfigured, new RuleIntentParser(config, DomainProperties.defaults()));
 
-        assertThatCode(() -> composite.parse("gym tomorrow", TODAY, 1)).doesNotThrowAnyException();
+        assertThatCode(() -> composite.parse("hearse tomorrow", TODAY, 1)).doesNotThrowAnyException();
     }
 
     @Test
@@ -55,10 +55,10 @@ class CompositeIntentParserTest {
         };
         CompositeIntentParser composite = new CompositeIntentParser(configuredButBroken, new RuleIntentParser(config, DomainProperties.defaults()));
 
-        IntentParser.ParseResult result = composite.parse("squash tomorrow", TODAY, 1);
+        IntentParser.ParseResult result = composite.parse("repatriation tomorrow", TODAY, 1);
 
         assertThat(result.parserUsed()).isEqualTo("rules");
-        assertThat(result.spec().resourceType()).isEqualTo("SQUASH");
+        assertThat(result.spec().resourceType()).isEqualTo("REPATRIATION");
     }
 
     @Test
@@ -77,9 +77,9 @@ class CompositeIntentParserTest {
         };
         CompositeIntentParser composite = new CompositeIntentParser(configuredButInvalid, new RuleIntentParser(config, DomainProperties.defaults()));
 
-        IntentParser.ParseResult result = composite.parse("basketball next Friday evening", TODAY, 1);
+        IntentParser.ParseResult result = composite.parse("cremation next Friday evening", TODAY, 1);
 
         assertThat(result.parserUsed()).isEqualTo("rules");
-        assertThat(result.spec().resourceType()).isEqualTo("BASKETBALL");
+        assertThat(result.spec().resourceType()).isEqualTo("CREMATION");
     }
 }

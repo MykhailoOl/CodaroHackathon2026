@@ -98,17 +98,18 @@ class FacilityOccupancyAndReservationRuleTests {
         }
         assertThat(resources.stream().map(SportResource::getType).distinct())
                 .contains(
-                        ResourceType.TENNIS,
-                        ResourceType.FOOTBALL,
-                        ResourceType.BASKETBALL,
-                        ResourceType.VOLLEYBALL,
-                        ResourceType.SWIMMING,
-                        ResourceType.GYM,
-                        ResourceType.SQUASH
+                        ResourceType.CHAPEL,
+                        ResourceType.RECEPTION,
+                        ResourceType.CREMATION,
+                        ResourceType.BURIAL,
+                        ResourceType.VIEWING,
+                        ResourceType.TRANSPORT,
+                        ResourceType.REPATRIATION
                 );
-        SportResource tennis = tennisCourt();
-        assertThat(tennis.getMinPartySize()).isEqualTo(2);
-        assertThat(tennis.getMaxPartySize()).isEqualTo(4);
+        SportResource chapel = tennisCourt();
+        assertThat(chapel.getMinPartySize()).isEqualTo(ResourceType.CHAPEL.getMinPartySize());
+        assertThat(chapel.getMaxPartySize()).isEqualTo(ResourceType.CHAPEL.getMaxPartySize());
+        assertThat(chapel.requiresPartySize()).isTrue();
         SportResource gym = gym();
         assertThat(gym.requiresBookingMode()).isTrue();
         assertThat(gym.getMinPartySize()).isEqualTo(1);
@@ -252,9 +253,9 @@ class FacilityOccupancyAndReservationRuleTests {
     void extrasDeduplicateIdsAndIndividualUsesOneHeadcount() {
         User player = player("extra_once", "extra.once@example.com");
         SportResource gym = gym();
-        InventoryItem towel = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.GYM)
+        InventoryItem towel = inventoryItemRepository.findByResourceTypeAndEnabledTrueOrderByNameAsc(ResourceType.TRANSPORT)
                 .stream()
-                .filter(item -> item.getName().equalsIgnoreCase("Towel"))
+                .filter(item -> item.getName().equalsIgnoreCase("Following car"))
                 .findFirst()
                 .orElseThrow();
         LocalDate date = LocalDate.now(WARSAW).plusDays(49);
@@ -345,13 +346,13 @@ class FacilityOccupancyAndReservationRuleTests {
     }
 
     @Test
-    void footballPartyRangeAndGymIndividualStayOne() {
+    void receptionCarriesMournersAndTransportStaysIndividual() {
         SportResource football = sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.FOOTBALL && resource.isEnabled())
+                .filter(resource -> resource.getType() == ResourceType.RECEPTION && resource.isEnabled())
                 .findFirst()
                 .orElseThrow();
-        assertThat(football.getMinPartySize()).isEqualTo(2);
-        assertThat(football.getMaxPartySize()).isEqualTo(22);
+        assertThat(football.getMinPartySize()).isEqualTo(ResourceType.RECEPTION.getMinPartySize());
+        assertThat(football.getMaxPartySize()).isEqualTo(ResourceType.RECEPTION.getMaxPartySize());
         User player = player("party_fb", "party.fb@example.com");
         ReservationRequest tooSmall = booking(football, LocalDate.now(WARSAW).plusDays(54));
         tooSmall.setPartySize(1);
@@ -398,14 +399,14 @@ class FacilityOccupancyAndReservationRuleTests {
 
     private SportResource tennisCourt() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.TENNIS && resource.isEnabled() && resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.CHAPEL && resource.isEnabled() && resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }
 
     private SportResource gym() {
         return sportResourceRepository.findAll().stream()
-                .filter(resource -> resource.getType() == ResourceType.GYM && resource.isEnabled() && !resource.requiresPartySize())
+                .filter(resource -> resource.getType() == ResourceType.TRANSPORT && resource.isEnabled() && !resource.requiresPartySize())
                 .findFirst()
                 .orElseThrow();
     }

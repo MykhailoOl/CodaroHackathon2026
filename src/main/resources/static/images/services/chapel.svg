@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="chapel">
+  <rect width="120" height="120" fill="#f4f2ef"/>
+  <g fill="none" stroke="#5b5750" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 26 L88 50 V96 H32 V50 Z" /><path d="M60 14 V32 M52 22 H68" /><path d="M52 96 V72 a8 8 0 0 1 16 0 V96" />
+  </g>
+</svg>
