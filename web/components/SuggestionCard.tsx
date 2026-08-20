@@ -62,7 +62,6 @@ export function SuggestionCard({
 
       <p className="text-sm font-medium text-slate-700">{formatTimeRange(suggestion.start, suggestion.end)}</p>
 
-      {/* The reason string is the one thing this card must never omit. */}
       <p className="rounded-lg bg-indigo-50 px-4 py-3 text-sm font-medium leading-relaxed text-indigo-900">
         {suggestion.reason}
       </p>

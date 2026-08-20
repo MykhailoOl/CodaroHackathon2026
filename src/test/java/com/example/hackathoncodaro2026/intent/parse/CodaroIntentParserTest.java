@@ -10,13 +10,6 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Plain JUnit 5, no Spring context, no network — these tests only exercise
- * configuration detection and the "not configured" short-circuit. Any test
- * that would need a real HTTP call is out of scope here by design: the
- * two-second-timeout network path is covered indirectly through {@link
- * CompositeIntentParserTest}, which never lets it run for real either.
- */
 class CodaroIntentParserTest {
 
     private final IntentProperties config = RuleIntentParserTest.testConfig();

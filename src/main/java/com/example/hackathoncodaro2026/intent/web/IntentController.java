@@ -20,11 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * The intent-based booking JSON API consumed by the Next.js frontend.
- * Everything under {@code /api/intent/**} requires a bearer token — see
- * {@code intent.security.TokenAuthenticationFilter} and {@code SecurityConfig}.
- */
 @RestController
 @RequestMapping("/api/intent")
 public class IntentController {

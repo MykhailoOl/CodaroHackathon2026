@@ -1,6 +1,3 @@
-// Hand-written fixtures matching the agreed API response shapes.
-// The whole UI can be driven from these without the Spring Boot backend
-// ever running — see lib/api.ts for how/when they're used.
 
 import type { BookResponse, IntentSuggestResponse, TokenResponse } from "./types";
 
@@ -96,13 +93,6 @@ export const FIXTURE_SUGGEST_RESPONSE: IntentSuggestResponse = {
 let fixtureReservationCounter = 41;
 const fixtureBookedSlots = new Set<string>();
 
-/**
- * Simulates POST /api/intent/book against fixture data so the full
- * demo flow (login -> composer -> results -> book) works with zero
- * backend involvement. Booking the exact same resource+start twice
- * simulates the "slot taken in the meantime" race the real API can
- * also return, so the booking error state is reachable in the demo too.
- */
 export async function fixtureBook(resourceId: number, start: string): Promise<BookResponse> {
   await new Promise((resolve) => setTimeout(resolve, 500));
 

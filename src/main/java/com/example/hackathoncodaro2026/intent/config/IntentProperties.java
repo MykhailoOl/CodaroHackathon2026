@@ -5,13 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.List;
 import java.util.Map;
 
-/**
- * THE PIVOT SEAM. Every domain-shaped value lives here and in application.yml,
- * never as a literal inside the engine. Changing the domain — different sports,
- * different constraints, different weighting — is a YAML edit plus a test run.
- *
- * The engine reads constraints by key from this config and never hardcodes one.
- */
 @ConfigurationProperties(prefix = "intent")
 public record IntentProperties(
         int granularityMin,
@@ -35,15 +28,10 @@ public record IntentProperties(
         resourceAttributes = resourceAttributes == null ? Map.of() : Map.copyOf(resourceAttributes);
     }
 
-    /**
-     * Attributes each resource type carries, declared in YAML so that adding a
-     * sport or changing what counts as "indoor" never touches Java.
-     */
     public Map<String, String> attributesFor(String typeKey) {
         return resourceAttributes.getOrDefault(typeKey, Map.of());
     }
 
-    /** Relative importance of each scoring term. Tune here, never in code. */
     public record Weights(
             double timeOfDay,
             double dayProximity,
@@ -59,17 +47,6 @@ public record IntentProperties(
 
     public enum Kind { HARD, SOFT }
 
-    /**
-     * A single constraint, declared in YAML.
-     *
-     * HARD constraints admit or reject in the filter stage; SOFT constraints
-     * only rank survivors. Never both — mixing them is the one modelling error
-     * this design exists to prevent.
-     *
-     * {@code attribute} + {@code equals} test a {@link
-     * com.example.hackathoncodaro2026.intent.model.ResourceSlice} attribute.
-     * {@code phrases} are what the parser matches in user text.
-     */
     public record ConstraintRule(
             String key,
             Kind kind,

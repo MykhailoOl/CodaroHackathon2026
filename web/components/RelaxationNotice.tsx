@@ -1,10 +1,5 @@
 import type { RelaxationTrailEntry } from "@/lib/types";
 
-/**
- * Shows exactly what was widened or dropped to produce a result, using the
- * server's `detail` text. Never rendered as if a relaxed result were an
- * exact match — this notice must appear whenever there's anything to say.
- */
 export function RelaxationNotice({
   entries,
   variant = "trail",

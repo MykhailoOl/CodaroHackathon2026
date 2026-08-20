@@ -3,12 +3,6 @@
 import { useEffect, useState } from "react";
 import { getDevFixtureToggle, setDevFixtureToggle } from "@/lib/api";
 
-/**
- * Visible dev switch that forces fixture data on, independent of whether the
- * live API is reachable. Useful for demoing without a network at all. When
- * NEXT_PUBLIC_USE_FIXTURES=true is set, fixtures are already forced and the
- * switch is shown as locked-on.
- */
 export function DevFixtureToggle() {
   const [checked, setChecked] = useState(false);
   const envForced = process.env.NEXT_PUBLIC_USE_FIXTURES === "true";

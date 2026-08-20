@@ -1,6 +1,5 @@
 package com.example.hackathoncodaro2026.intent.model;
 
-/** Coarse time-of-day preference. ANY means the user expressed none. */
 public enum TimeOfDay {
     ANY(0, 24 * 60),
     MORNING(6 * 60, 12 * 60),

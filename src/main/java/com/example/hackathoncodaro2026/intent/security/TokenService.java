@@ -14,24 +14,6 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
 
-/**
- * Issues and verifies HMAC-SHA256 signed bearer tokens for the {@code /api/**}
- * surface. The app's own auth is a server-side session via form login, which
- * a browser app on another origin cannot use — this is the bridge.
- *
- * Token shape: {@code base64url(username|expiryEpochSeconds).base64url(hmac)}.
- * The payload is not secret (it is just a username and a timestamp); only its
- * integrity matters, which is why the whole scheme is one HMAC check. This is
- * a real trust boundary — {@link #verify(String)} rejects anything unsigned,
- * tampered, or expired, and compares the signature with {@link MessageDigest#isEqual}
- * so a timing attack can't be used to guess it byte by byte.
- *
- * The secret comes from {@code intent.auth.secret}; if that property is unset
- * a random one is generated at startup. That means tokens do not survive an
- * app restart in the default configuration — acceptable for a hackathon
- * build, and a one-property fix (set {@code intent.auth.secret} in
- * application.yml) to make it stable across restarts.
- */
 @Component
 public class TokenService {
 
@@ -52,16 +34,10 @@ public class TokenService {
         return bytes;
     }
 
-    /** Issues a token for {@code username}, valid for the default 12 hour TTL. */
     public IssuedToken issue(String username) {
         return issue(username, Instant.now().plus(DEFAULT_TTL));
     }
 
-    /**
-     * Issues a token for {@code username} with an explicit expiry. Exposed
-     * (rather than hardcoding the TTL in one method) so tests can construct
-     * an already-expired token without any bypass of the signing path.
-     */
     public IssuedToken issue(String username, Instant expiresAt) {
         String payload = username + "|" + expiresAt.getEpochSecond();
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
@@ -70,7 +46,6 @@ public class TokenService {
         return new IssuedToken(token, expiresAt);
     }
 
-    /** Verifies signature and expiry. Empty means "reject" — caller returns 401, never a stack trace. */
     public Optional<VerifiedToken> verify(String token) {
         if (token == null || token.isBlank()) {
             return Optional.empty();

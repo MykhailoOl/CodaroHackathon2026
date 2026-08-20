@@ -22,12 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * End-to-end pipeline tests for {@link DefaultSlotRanker}. Deliberately uses
- * constraint keys/labels that are not sports vocabulary ("req_quiet",
- * "pref_view", "req_locked") to prove the ranking pipeline carries no
- * domain assumptions — only YAML-declared config drives behaviour.
- */
 class DefaultSlotRankerTest {
 
     private static final LocalTime OPENING = LocalTime.of(8, 0);
@@ -113,9 +107,6 @@ class DefaultSlotRankerTest {
 
     @Test
     void relaxationWidensTheDayWindowAndTagsSuggestionsAsRelaxed() {
-        // A single resource, single requested day, with only one 60-minute gap free
-        // (8:00-19:00 booked, 19:00-20:00 free). That is exactly 1 candidate, below
-        // the 2-survivor threshold, so the ladder must widen the day window.
         LocalDateTime now = LocalDateTime.of(2026, 8, 20, 7, 0);
         LocalDate day = LocalDate.of(2026, 8, 25);
         ResourceSlice r = resource(1L, "Room A", Map.of());
@@ -137,10 +128,6 @@ class DefaultSlotRankerTest {
 
     @Test
     void neverReturnsEmptySuggestionsWithAnEmptyRelaxationTrail() {
-        // req_locked is HARD and NOT relaxable, and the only resource never
-        // satisfies it -> the entire ladder runs and still finds nothing. The
-        // trail must record that the ladder was tried; it must never be empty
-        // when suggestions come back empty.
         LocalDateTime now = LocalDateTime.of(2026, 8, 20, 7, 0);
         LocalDate day = now.toLocalDate();
         ResourceSlice r = resource(1L, "Room A", Map.of("locked", "no"));

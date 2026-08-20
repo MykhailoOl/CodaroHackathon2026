@@ -6,11 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Renders one sentence from the top-|delta| score terms. The reason is a
- * byproduct of the numbers the {@link Scorer} produced — never prose
- * invented after the fact. Labels come from config/snapshot data only.
- */
 final class Explainer {
 
     private Explainer() {

@@ -7,11 +7,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Pure interval arithmetic — no Spring, no clock. Covers the required
- * subtraction cases: separated reservations, exactly-touching reservations,
- * a zero-length reservation, and one that fully covers the window.
- */
 class IntervalsTest {
 
     private static LocalDateTime at(int hour, int minute) {

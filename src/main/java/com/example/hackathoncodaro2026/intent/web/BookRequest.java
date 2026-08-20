@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 
-/** {@code POST /api/intent/book} request body. */
 public record BookRequest(
         @NotNull Long resourceId,
         @NotNull LocalDateTime start,

@@ -11,13 +11,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
-/**
- * Bridges the JSON {@code /api/intent/book} request to the existing booking
- * path. Deliberately does no persistence of its own: {@link ReservationService#create}
- * holds the overlap check and the pessimistic lock that make concurrent
- * booking safe, and rewriting any of that here would reintroduce the race
- * this app already closed.
- */
 @Service
 public class IntentBookingService {
 

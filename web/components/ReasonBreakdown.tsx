@@ -4,11 +4,6 @@ import { useState } from "react";
 import type { Term } from "@/lib/types";
 import { formatSignedDelta } from "@/lib/format";
 
-/**
- * Renders exactly what the API sent for `terms` — never re-derived or
- * re-worded client-side. Sorted by |delta| descending so the biggest
- * factors (positive or negative) surface first.
- */
 export function ReasonBreakdown({ terms }: { terms: Term[] }) {
   const [open, setOpen] = useState(false);
 

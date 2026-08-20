@@ -14,20 +14,13 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Plain JUnit 5, no Spring context, no network. {@link RuleIntentParser} is
- * deterministic, so every case is resolved against a fixed {@code today}
- * (Monday 2024-06-03) rather than {@link LocalDate#now()} — that's what makes
- * these assertions stable.
- */
 class RuleIntentParserTest {
 
-    private static final LocalDate TODAY = LocalDate.of(2024, 6, 3); // Monday
+    private static final LocalDate TODAY = LocalDate.of(2024, 6, 3);
 
     private final IntentProperties config = testConfig();
     private final RuleIntentParser parser = new RuleIntentParser(config);
 
-    /** Mirrors the constraint rules declared under `intent.constraints` in application.yml. */
     static IntentProperties testConfig() {
         List<IntentProperties.ConstraintRule> constraints = List.of(
                 new IntentProperties.ConstraintRule(
@@ -169,8 +162,6 @@ class RuleIntentParserTest {
                 .containsExactlyInAnyOrderElementsOf(c.expectedSoft());
         assertThat(spec.partySize()).as("partySize").isEqualTo(c.expectedPartySize());
 
-        // Domain invariant: every emitted key must exist in config, and a key
-        // must never appear as both hard and soft.
         List<String> validKeys = config.constraints().stream().map(IntentProperties.ConstraintRule::key).toList();
         assertThat(validKeys).containsAll(spec.hardConstraints());
         assertThat(validKeys).containsAll(spec.softConstraints());

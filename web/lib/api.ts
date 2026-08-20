@@ -10,7 +10,6 @@ import type {
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
-/** Force fixtures for every call, regardless of whether the API is reachable. */
 const FORCE_FIXTURES_ENV = process.env.NEXT_PUBLIC_USE_FIXTURES === "true";
 
 const DEV_TOGGLE_KEY = "codaro.devUseFixtures";
@@ -25,7 +24,6 @@ export function setDevFixtureToggle(value: boolean): void {
   window.localStorage.setItem(DEV_TOGGLE_KEY, value ? "true" : "false");
 }
 
-/** True when the caller has explicitly opted into fixtures (env var or dev switch). */
 export function fixturesForced(): boolean {
   return FORCE_FIXTURES_ENV || getDevFixtureToggle();
 }
@@ -45,7 +43,6 @@ async function readErrorMessage(res: Response, fallback: string): Promise<string
     if (typeof body?.message === "string" && body.message.trim()) return body.message;
     if (typeof body?.error === "string" && body.error.trim()) return body.error;
   } catch {
-    // body wasn't JSON (or was empty) — fall through to the plain fallback
   }
   return fallback;
 }
@@ -55,23 +52,12 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// ---------------------------------------------------------------------------
-// POST /api/auth/token
-// ---------------------------------------------------------------------------
 
 export interface LoginResult {
   data: TokenResponse;
   source: DataSource;
 }
 
-/**
- * Logs in against the real API. If fixtures are forced (env var or dev
- * switch), or the API is unreachable (network error — the backend isn't
- * running yet), falls back to a mock token so the rest of the demo flow
- * (composer -> results -> book) is always reachable. A real 401 from a
- * *live* backend is never swallowed — that's a genuine bad-credentials
- * error and is surfaced as-is.
- */
 export async function login(username: string, password: string): Promise<LoginResult> {
   if (fixturesForced()) {
     return {
@@ -88,8 +74,6 @@ export async function login(username: string, password: string): Promise<LoginRe
       body: JSON.stringify({ username, password }),
     });
   } catch {
-    // Network-level failure (backend not running, CORS, offline, ...) — degrade
-    // to fixtures rather than leaving the user stuck on a dead login screen.
     return {
       data: { ...FIXTURE_TOKEN_RESPONSE, displayName: username || FIXTURE_TOKEN_RESPONSE.displayName },
       source: "fixture-fallback",
@@ -108,22 +92,12 @@ export async function login(username: string, password: string): Promise<LoginRe
   return { data, source: "live" };
 }
 
-// ---------------------------------------------------------------------------
-// POST /api/intent/suggest
-// ---------------------------------------------------------------------------
 
 export interface SuggestResult {
   data: IntentSuggestResponse;
   source: DataSource;
 }
 
-/**
- * Fetches ranked suggestions for a natural-language intent. Falls back to
- * fixtures when fixtures are forced, or when the live call fails for any
- * reason (network error or non-2xx) — a network hiccup during the demo
- * degrades to a working, clearly-labeled fixture screen instead of a blank
- * one.
- */
 export async function suggestIntent(text: string, partySize: number): Promise<SuggestResult> {
   if (fixturesForced()) {
     return { data: FIXTURE_SUGGEST_RESPONSE, source: "fixture" };
@@ -145,23 +119,12 @@ export async function suggestIntent(text: string, partySize: number): Promise<Su
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /api/intent/book
-// ---------------------------------------------------------------------------
 
 export interface BookResult {
   data: BookResponse;
   source: DataSource;
 }
 
-/**
- * Confirms a booking. When the suggestion being booked came from fixtures
- * (forced or fallback), booking is simulated client-side too — otherwise a
- * fixture-only demo could never reach the booking success/error states,
- * since a real backend call against fixture resourceIds would always fail.
- * When the suggestion came from a live call, this always calls the real API
- * and surfaces its message verbatim on error (e.g. "slot taken").
- */
 export async function bookSlot(payload: BookRequest, suggestionSource: DataSource): Promise<BookResult> {
   if (suggestionSource !== "live") {
     const data = await fixtureBook(payload.resourceId, payload.start);

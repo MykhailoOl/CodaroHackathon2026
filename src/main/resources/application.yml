@@ -65,9 +65,6 @@ logging:
     org.hibernate.SQL: debug
     org.springframework.security: info
 
-# --- Intent-based scheduling. THE PIVOT SEAM: domain vocabulary lives here,
-# --- never as a literal in the engine. Adding a sport or redefining a
-# --- constraint is a YAML edit plus `./gradlew test`.
 intent:
   granularity-min: 15
   buffer-min: 15

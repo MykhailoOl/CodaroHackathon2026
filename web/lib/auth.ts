@@ -1,5 +1,3 @@
-// Thin localStorage wrapper for the auth token. No cookies/session — this is
-// a hackathon MVP, per CLAUDE.md ("Auth: skip... localStorage").
 
 const TOKEN_KEY = "codaro.token";
 const EXPIRES_KEY = "codaro.tokenExpiresAt";
