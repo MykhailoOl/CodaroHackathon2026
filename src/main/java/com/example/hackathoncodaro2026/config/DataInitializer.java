@@ -52,12 +52,22 @@ public class DataInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         ensureUser("admin", "admin@everrest.example", "Admin123!", "EverRest Administrator", "+48 22 100 2001", Role.ADMIN);
         ensureUser("manager", "manager@everrest.example", "Manager123!", "EverRest Manager", "+48 22 100 2002", Role.MANAGER);
+        ensureUser("everrest_demo", "demo@everrest.example", "Demo123!", "Anna Kowalska", "+48 22 100 2003", Role.USER);
         seedHomes();
         seedExtras();
     }
 
     private void ensureUser(String username, String email, String password, String fullName, String phone, Role role) {
-        if (userRepository.existsByUsernameIgnoreCase(username)) {
+        // An account with no phone cannot complete an arrangement, and registration
+        // leaves the field optional — so fill it in rather than leaving a demo account
+        // that only fails at the last step.
+        var existing = userRepository.findByUsernameIgnoreCase(username);
+        if (existing.isPresent()) {
+            User user = existing.get();
+            if (user.getPhone() == null || user.getPhone().isBlank()) {
+                user.setPhone(phone);
+                userRepository.save(user);
+            }
             return;
         }
         User user = new User();
