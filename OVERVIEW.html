@@ -1,0 +1,433 @@
+<title>Courtly Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground: #eef1f5;
+    --surface: #ffffff;
+    --line: #d3d9e2;
+    --line-soft: #e4e8ee;
+    --ink: #141920;
+    --ink-soft: #5b6472;
+    --accent: #14589c;
+    --accent-soft: #e6eef7;
+    --flag: #8a5510;
+    --flag-soft: #f6eddf;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0d1218;
+      --surface: #151b23;
+      --line: #2a333f;
+      --line-soft: #212932;
+      --ink: #e5eaf1;
+      --ink-soft: #97a2b1;
+      --accent: #74aee8;
+      --accent-soft: #172736;
+      --flag: #d7a35f;
+      --flag-soft: #2a2318;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0d1218;
+    --surface: #151b23;
+    --line: #2a333f;
+    --line-soft: #212932;
+    --ink: #e5eaf1;
+    --ink-soft: #97a2b1;
+    --accent: #74aee8;
+    --accent-soft: #172736;
+    --flag: #d7a35f;
+    --flag-soft: #2a2318;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 52px;
+  }
+
+  h1, h2, h3, .eyebrow, .chip, th {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  h1 {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.005em;
+  }
+
+  p { margin: 0; max-width: 66ch; }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  section { display: flex; flex-direction: column; gap: 18px; }
+
+  .lede { font-size: 19px; color: var(--ink-soft); max-width: 60ch; }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .meta li {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 3px 8px;
+  }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card p { font-size: 15.5px; color: var(--ink-soft); }
+
+  .layers { display: flex; flex-direction: column; gap: 6px; }
+
+  .layer {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 14px;
+  }
+
+  .layer b {
+    font-family: Archivo, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 132px;
+    letter-spacing: 0.01em;
+  }
+
+  .layer span {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .pipeline li {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--line-soft);
+    padding: 6px 10px;
+  }
+
+  pre {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+
+  pre .c { color: var(--ink-soft); }
+
+  code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.87em;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+
+  th, td {
+    text-align: left;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    white-space: nowrap;
+  }
+
+  th {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.mono, td code { font-family: "JetBrains Mono", monospace; }
+
+  ol.try { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; counter-reset: t; }
+
+  ol.try li {
+    counter-increment: t;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  ol.try li::before {
+    content: counter(t, decimal-leading-zero);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  ol.try p { font-size: 15.5px; }
+  ol.try h3 { margin-bottom: 3px; }
+
+  .note {
+    background: var(--flag-soft);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--flag);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .note p { font-size: 15px; }
+
+  ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+  ul.plain li { font-size: 15.5px; color: var(--ink-soft); max-width: 64ch; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  a { color: var(--accent); }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 30px; }
+    .cards { grid-template-columns: 1fr; }
+    .page { padding: 36px 18px 64px; gap: 42px; }
+  }
+</style>
+
+<div class="page">
+
+  <header style="display:flex; flex-direction:column; gap:16px;">
+    <p class="eyebrow">Codaro × GDG · Track B · Reservation &amp; Scheduling</p>
+    <h1>Courtly</h1>
+    <p class="lede">A Warsaw sports-facility booking app, plus an intent layer that turns a sentence like “tennis for two tomorrow evening, outdoor” into ranked, bookable slots with the reasoning attached.</p>
+    <ul class="meta">
+      <li>Java 21</li>
+      <li>Spring Boot 4.1</li>
+      <li>Thymeleaf</li>
+      <li>Spring Security</li>
+      <li>H2 file DB</li>
+      <li>Next.js 14</li>
+    </ul>
+  </header>
+
+  <section>
+    <h2>What already works</h2>
+    <div class="cards">
+      <article class="card">
+        <h3>The booking app <span style="color:var(--ink-soft); font-weight:500;">/ server-rendered</span></h3>
+        <p>Register and sign in, browse venues and courts, pick a date + start hour + 1–4 hours, add extras and a coach, and get a PLN quote before submitting. Players create pending bookings; managers confirm them from a day queue. Live occupancy board, cancellation with a reason, dynamic evening/weekend pricing, coach offerings and ratings.</p>
+      </article>
+      <article class="card">
+        <h3>The intent layer <span style="color:var(--ink-soft); font-weight:500;">/ JSON API + Next.js</span></h3>
+        <p>One sentence in, up to three ranked suggestions out — each with a price, a per-term score breakdown, and a plain-English reason. When nothing fits, it relaxes the request one rung at a time and tells you what it gave up. Book straight from a suggestion.</p>
+      </article>
+    </div>
+    <p>Both share one database, one security config, and one pricing service. The intent API reuses the same reservation rules — including the pessimistic lock that stops two people taking the last free slot.</p>
+  </section>
+
+  <section>
+    <h2>How it fits together</h2>
+    <div class="layers">
+      <div class="layer"><b>Browsers</b><span>Thymeleaf pages :8080 · Next.js app :3000</span></div>
+      <div class="layer"><b>Web</b><span>controller/ (MVC) · intent/web/ (REST, bearer token)</span></div>
+      <div class="layer"><b>Services</b><span>Reservation · Pricing · Coach · Notification · Intent</span></div>
+      <div class="layer"><b>Intent engine</b><span>pure Java — no Spring, no JPA, no clock</span></div>
+      <div class="layer"><b>Data</b><span>Spring Data JPA → H2 file at ./data/</span></div>
+    </div>
+    <p>The intent engine is deliberately sealed off: <code>IntentSchedulingService</code> is the only class in <code>intent/*</code> that touches a repository. It loads a snapshot of resources and reservations, hands it to the ranker, and prices the winners. Everything downstream is a pure function of its inputs, so the same request always ranks the same way.</p>
+    <p class="eyebrow" style="margin-top:6px;">The pipeline</p>
+    <ul class="pipeline">
+      <li>parse</li>
+      <li>snapshot</li>
+      <li>candidates</li>
+      <li>filter (hard)</li>
+      <li>score (soft)</li>
+      <li>explain</li>
+      <li>relax if &lt; 2 survive</li>
+    </ul>
+    <p>Sports, constraints (indoor, outdoor, floodlit, team), and scoring weights are declared in <code>application.yml</code> under <code>intent:</code> — never as literals in the engine. Adding a sport or reweighting the ranking is a YAML edit and a test run.</p>
+  </section>
+
+  <section>
+    <h2>Run it</h2>
+    <p class="eyebrow">1 · Backend — from the repo root</p>
+    <pre>./gradlew bootRun          <span class="c"># Windows: .\gradlew.bat bootRun</span>
+<span class="c"># → http://localhost:8080  (seeds venues, courts, extras, staff logins)</span></pre>
+    <p>On startup it tries to open Firefox at <code>/login</code> and <code>/h2-console</code>. Turn that off with <code>--app.browser.auto-open=false</code>.</p>
+
+    <p class="eyebrow" style="margin-top:10px;">2 · Intent frontend — optional, in a second terminal</p>
+    <pre>cd web &amp;&amp; npm install &amp;&amp; npm run dev
+<span class="c"># → http://localhost:3000</span></pre>
+    <p>It calls the API at <code>localhost:8080</code> and falls back to bundled demo data if the backend isn’t up, so it demos either way. A badge on each screen tells you which you’re looking at.</p>
+
+    <p class="eyebrow" style="margin-top:10px;">3 · Tests</p>
+    <pre>./gradlew test             <span class="c"># 24 test classes: overlap, capacity, pricing,</span>
+                           <span class="c"># parsing, ranking, relaxation, intent API</span></pre>
+  </section>
+
+  <section>
+    <h2>Sign in with</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Username</th><th>Password</th><th>Role</th><th>Gets you</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">admin</td><td class="mono">Admin123!</td><td>Admin</td><td>Everything, plus staff creation</td></tr>
+          <tr><td class="mono">manager</td><td class="mono">Manager123!</td><td>Manager</td><td>The confirm/cancel queue</td></tr>
+          <tr><td colspan="4" style="white-space:normal; color:var(--ink-soft);">No player or coach is seeded — register one at <code>/register</code>, or have <span class="mono">admin</span> create a coach at <code>/admin/users</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Poke at it</h2>
+    <ol class="try">
+      <li>
+        <div>
+          <h3>Book something</h3>
+          <p><code>/facilities</code> → a venue → a court. Pick a date, an hour, a duration, party size, extras. The total updates before you submit. Your booking lands as <em>pending</em>.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Confirm it as staff</h3>
+          <p>Sign in as <span class="mono">manager</span> and open <code>/manager/reservations</code>. Confirm the booking; the coach extra on it confirms too. Try cancelling a confirmed one — it won’t let you.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Watch the board fill</h3>
+          <p><code>/occupancy</code> shows every court hour by hour. Click a free hour and it drops you into that booking form with the hour preselected.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Talk to the scheduler</h3>
+          <p>At <code>localhost:3000</code>, sign in and type an intent. Try <em>“squash for two tomorrow morning”</em>, <em>“football with friends this weekend, outdoor, 2 hours”</em>, or something impossible like <em>“outdoor swimming tonight”</em> to watch the relaxation trail explain what it dropped.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Or hit the API directly</h3>
+          <pre>curl -X POST localhost:8080/api/auth/token \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"Admin123!"}'
+
+curl -X POST localhost:8080/api/intent/suggest \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer &lt;token&gt;' \
+  -d '{"text":"tennis tomorrow evening, outdoor","partySize":2}'</pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Look underneath</h3>
+          <p><code>/h2-console</code> with <span class="mono">sa</span> / <span class="mono">sportsbooking</span> and the JDBC URL from <code>application.yml</code>. Business and security events also land in <code>logs/courtly-audit.log</code>.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Where the edges are</h2>
+    <div class="note">
+      <p><b>Payments are recorded, not taken.</b> Cash / card / transfer is stored on the reservation. Nothing is charged and no coach is paid out.</p>
+      <p><b>The LLM parser is optional and off.</b> <code>CodaroIntentParser</code> calls an OpenAI-compatible endpoint when <code>intent.llm.base-url</code> and <code>api-key</code> are set; unset, every request falls through to the rule-based parser, which handles the demo phrases on its own.</p>
+      <p><b>Coach hire is an extra on a place booking</b> — not a standalone marketplace, and not available on group lessons.</p>
+    </div>
+  </section>
+
+  <footer>README.md · full behaviour, pricing tables, and skill-level systems</footer>
+
+</div>

@@ -42,11 +42,35 @@ export interface Suggestion {
   relaxed: RelaxationTrailEntry[];
 }
 
+/**
+ * The dates a service may fall between, derived from the facts about the deceased
+ * rather than chosen by anyone. Null when the request stated no date of death, in
+ * which case the app behaves as an ordinary booking.
+ */
+export interface ServiceWindow {
+  earliest: string;
+  latest: string;
+  rite: string | null;
+  derivation: string[];
+  decisionBy: string;
+  feasible: boolean;
+  note: string | null;
+}
+
+export interface ArrangementFacts {
+  dateOfDeath: string | null;
+  rite: string | null;
+  certificateReadyOn: string | null;
+  mourners: number | null;
+}
+
 export interface IntentSuggestResponse {
   spec: IntentSpec;
   parserUsed: string;
   suggestions: Suggestion[];
   relaxationTrail: RelaxationTrailEntry[];
+  window: ServiceWindow | null;
+  facts: ArrangementFacts | null;
 }
 
 export interface IntentSuggestRequest {

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="burial">
+  <rect width="120" height="120" fill="#f4f2ef"/>
+  <g fill="none" stroke="#5b5750" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 30 a18 18 0 0 1 18 18 V88 H42 V48 A18 18 0 0 1 60 30 Z" /><path d="M60 44 V72 M50 54 H70" /><path d="M28 98 H92" />
+  </g>
+</svg>

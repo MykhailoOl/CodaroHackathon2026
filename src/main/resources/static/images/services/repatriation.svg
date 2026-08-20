@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="repatriation">
+  <rect width="120" height="120" fill="#f4f2ef"/>
+  <g fill="none" stroke="#5b5750" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="60" cy="60" r="30" /><path d="M30 60 h60 M60 30 c12 12 12 48 0 60 c-12 -12 -12 -48 0 -60" /><path d="M38 42 c14 8 30 8 44 0 M38 78 c14 -8 30 -8 44 0" />
+  </g>
+</svg>

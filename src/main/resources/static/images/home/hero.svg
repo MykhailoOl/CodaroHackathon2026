@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="A chapel at dusk">
+  <rect width="640" height="400" fill="#efece7"/>
+  <g fill="none" stroke="#6b6660" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M120 300 V190 L200 130 L280 190 V300 Z"/>
+    <path d="M200 96 V132 M186 112 H214"/>
+    <path d="M186 300 V236 a14 14 0 0 1 28 0 V300"/>
+    <path d="M150 214 h22 v26 h-22 Z M228 214 h22 v26 h-22 Z"/>
+    <path d="M360 300 V214 a22 22 0 0 1 44 0 V300 Z M382 236 v40 M368 250 h28"/>
+    <path d="M448 300 V226 a20 20 0 0 1 40 0 V300 Z M468 246 v38 M456 258 h24"/>
+    <path d="M60 300 H580"/>
+    <path d="M92 300 c30 -6 54 -6 84 0 M404 300 c26 -5 46 -5 72 0" opacity="0.5"/>
+  </g>
+  <circle cx="500" cy="120" r="26" fill="none" stroke="#9a938a" stroke-width="2.5"/>
+</svg>

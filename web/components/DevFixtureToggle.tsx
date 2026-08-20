@@ -12,7 +12,7 @@ export function DevFixtureToggle() {
   }, [envForced]);
 
   return (
-    <label className="flex items-center gap-2 text-xs text-slate-500 select-none">
+    <label className="flex items-center gap-2 text-xs text-stone-500 select-none">
       <input
         type="checkbox"
         checked={checked}
@@ -21,7 +21,7 @@ export function DevFixtureToggle() {
           setDevFixtureToggle(e.target.checked);
           setChecked(e.target.checked);
         }}
-        className="h-3.5 w-3.5 rounded border-slate-300"
+        className="h-3.5 w-3.5 rounded border-stone-300"
       />
       Use demo data{envForced ? " (forced by env)" : ""}
     </label>
