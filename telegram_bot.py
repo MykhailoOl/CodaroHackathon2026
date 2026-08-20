@@ -38,7 +38,9 @@ PARTY_CHOICES = [1, 2, 3, 4, 6, 8, 10, 12]
 
 # Typical party-size ranges per resource type (README), used to explain why a
 # search came back empty and to steer the user toward a fixable constraint.
-SPORT_PARTY_RANGES = {
+# THE PIVOT SEAM: override with BOT_PARTY_RANGES (JSON, "TYPE": [min, max])
+# when retargeting to a non-sports niche.
+DEFAULT_SPORT_PARTY_RANGES = {
     "TENNIS": (2, 4),
     "SQUASH": (2, 4),
     "FOOTBALL": (2, 22),
@@ -47,6 +49,13 @@ SPORT_PARTY_RANGES = {
     "GYM": (1, 12),
     "SWIMMING": (1, 8),
 }
+SPORT_PARTY_RANGES = DEFAULT_SPORT_PARTY_RANGES
+_bot_party_ranges_raw = os.getenv("BOT_PARTY_RANGES")
+if _bot_party_ranges_raw:
+    import json as _json
+
+    _parsed_ranges = _json.loads(_bot_party_ranges_raw)
+    SPORT_PARTY_RANGES = {k: tuple(v) for k, v in _parsed_ranges.items()}
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s", level=logging.INFO
@@ -222,10 +231,22 @@ def _has_party(lower: str) -> bool:
     )
 
 
-RESOURCE_WORDS = (
+# Words that mark a message as a fresh booking request. THE PIVOT SEAM:
+# override with BOT_RESOURCE_WORDS (comma-separated) for a non-sports niche.
+DEFAULT_RESOURCE_WORDS = (
     "tennis", "squash", "football", "soccer", "basketball", "volleyball",
     "badminton", "gym", "workout", "swim", "swimming", "pool", "court", "slot",
 )
+_bot_resource_words_raw = os.getenv("BOT_RESOURCE_WORDS")
+RESOURCE_WORDS = (
+    tuple(w.strip() for w in _bot_resource_words_raw.split(",") if w.strip())
+    if _bot_resource_words_raw
+    else DEFAULT_RESOURCE_WORDS
+)
+
+# Example phrase shown in /start, /help, and the "different sport" flow.
+# THE PIVOT SEAM: override with BOT_EXAMPLE_INTENT for a non-sports niche.
+EXAMPLE_INTENT = os.getenv("BOT_EXAMPLE_INTENT", "tennis for two tomorrow evening, outdoor")
 
 NEW_REQUEST_HINTS = (
     "instead", "different", "actually", "rather", "change", "another", "other",
@@ -473,7 +494,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text(
             f"👋 Welcome back, <b>{esc(st.display_name)}</b>!\n\n"
             "Just describe what you want to book, e.g.\n"
-            "<i>tennis for two tomorrow evening, outdoor</i>\n\n"
+            f"<i>{esc(EXAMPLE_INTENT)}</i>\n\n"
             "Or /login to switch account, /logout to sign out, /help for help.",
             parse_mode=ParseMode.HTML,
         )
@@ -532,7 +553,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/logout — sign out\n"
         "/status — current account and token expiry\n"
         "/cancel — clear the current request\n\n"
-        "Then describe what you want, e.g. <i>football for 10 on Saturday</i>.",
+        "Then describe what you want, e.g. <i>"
+        f"{esc(EXAMPLE_INTENT)}</i>.",
         parse_mode=ParseMode.HTML,
     )
 
@@ -921,7 +943,7 @@ async def cb_fix_sport(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     st.suggestions = []
     await current_send(update)(
         "No problem — what would you like to book instead?\n"
-        "e.g. <i>football on saturday for 10</i>",
+        f"e.g. <i>{esc(EXAMPLE_INTENT)}</i>",
         parse_mode=ParseMode.HTML,
     )
 

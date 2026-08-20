@@ -11,6 +11,8 @@ import { DataSourceBadge } from "@/components/DataSourceBadge";
 import { DevFixtureToggle } from "@/components/DevFixtureToggle";
 import type { DataSource, IntentSuggestResponse } from "@/lib/types";
 
+const DEMO_INTENT_PLACEHOLDER = process.env.NEXT_PUBLIC_DEMO_INTENT || "tennis for two tomorrow evening, outdoor";
+
 export default function ComposerPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export default function ComposerPage() {
             id="intent"
             required
             rows={3}
-            placeholder="e.g. tennis for two tomorrow evening, outdoor"
+            placeholder={DEMO_INTENT_PLACEHOLDER}
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="mt-1 w-full resize-none rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-500"

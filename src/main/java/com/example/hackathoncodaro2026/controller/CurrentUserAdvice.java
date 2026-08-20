@@ -1,5 +1,6 @@
 package com.example.hackathoncodaro2026.controller;
 
+import com.example.hackathoncodaro2026.config.DomainProperties;
 import com.example.hackathoncodaro2026.model.User;
 import com.example.hackathoncodaro2026.service.NotificationService;
 import com.example.hackathoncodaro2026.service.UserService;
@@ -13,10 +14,18 @@ public class CurrentUserAdvice {
 
     private final UserService userService;
     private final NotificationService notificationService;
+    private final DomainProperties domain;
 
-    public CurrentUserAdvice(UserService userService, NotificationService notificationService) {
+    public CurrentUserAdvice(UserService userService, NotificationService notificationService,
+                             DomainProperties domain) {
         this.userService = userService;
         this.notificationService = notificationService;
+        this.domain = domain;
+    }
+
+    @ModelAttribute("brand")
+    public DomainProperties.Brand brand() {
+        return domain.brand();
     }
 
     @ModelAttribute("currentUser")
