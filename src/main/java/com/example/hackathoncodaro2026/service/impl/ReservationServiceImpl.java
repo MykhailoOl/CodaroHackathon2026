@@ -5,6 +5,9 @@ import com.example.hackathoncodaro2026.dto.ArrangementPreview;
 import com.example.hackathoncodaro2026.dto.ArrangementRequest;
 import com.example.hackathoncodaro2026.dto.PriceQuote;
 import com.example.hackathoncodaro2026.dto.ReservationUpdateResult;
+import com.example.hackathoncodaro2026.intent.derive.ArrangementFacts;
+import com.example.hackathoncodaro2026.intent.derive.BurialWindowService;
+import com.example.hackathoncodaro2026.intent.derive.ServiceWindow;
 import com.example.hackathoncodaro2026.exception.ReservationException;
 import com.example.hackathoncodaro2026.model.ArrangementExtra;
 import com.example.hackathoncodaro2026.model.Reservation;
@@ -51,7 +54,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     private static final ZoneId WARSAW = ZoneId.of("Europe/Warsaw");
     private static final Pattern PHONE = Pattern.compile("^[+]?[0-9\\s().-]{7,20}$");
-    private static final String NOTICE = "Dates stay open for others until a time is assigned. Availability is confirmed when a time is assigned.";
+    private static final String NOTICE = "The earliest free chapel hour inside the legal window is assigned. Dates stay open for others until a manager confirms.";
 
     private final ServiceVenueRepository serviceVenueRepository;
     private final ReservationRepository reservationRepository;
@@ -62,6 +65,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final UserService userService;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
+    private final BurialWindowService burialWindowService;
 
     public ReservationServiceImpl(
             ServiceVenueRepository serviceVenueRepository,
@@ -72,7 +76,8 @@ public class ReservationServiceImpl implements ReservationService {
             PricingService pricingService,
             UserService userService,
             AuditLogService auditLogService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            BurialWindowService burialWindowService
     ) {
         this.serviceVenueRepository = serviceVenueRepository;
         this.reservationRepository = reservationRepository;
@@ -83,12 +88,17 @@ public class ReservationServiceImpl implements ReservationService {
         this.userService = userService;
         this.auditLogService = auditLogService;
         this.notificationService = notificationService;
+        this.burialWindowService = burialWindowService;
     }
 
     @Override
     public ArrangementPreview preview(User user, ArrangementRequest request) {
         Prepared prepared = prepare(user, request, true);
-        List<LocalDate> dates = dateAssignmentService.previewDates(prepared.venue(), prepared.funeralPackage());
+        ServiceWindow window = windowFor(request);
+        List<LocalDate> dates = clipToWindow(
+                dateAssignmentService.previewDates(prepared.venue(), prepared.funeralPackage()),
+                window
+        );
         if (dates.isEmpty()) {
             throw fail(user, "NO_SLOTS", "No ceremony times are free in the planning window. Try another venue or package.");
         }
@@ -161,6 +171,7 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setTotalAmount(prepared.amount());
         reservation.setNote(blankToNull(request.getNote()));
         reservation.setSubmissionToken(token);
+        reservation.setBookingSource(blankToNull(request.getBookingSource()));
         attachExtras(reservation, prepared.extras(), prepared.attendees());
         try {
             Reservation saved = reservationRepository.saveAndFlush(reservation);
@@ -189,7 +200,37 @@ public class ReservationServiceImpl implements ReservationService {
         if (requested != null) {
             return requested;
         }
-        return dateAssignmentService.chooseStart(venue, funeralPackage);
+        ServiceWindow window = windowFor(request);
+        if (window == null) {
+            return dateAssignmentService.chooseStart(venue, funeralPackage);
+        }
+        return dateAssignmentService.chooseStart(venue, funeralPackage, window.earliest(), window.latest());
+    }
+
+    private ServiceWindow windowFor(ArrangementRequest request) {
+        if (request == null || request.getDateOfDeath() == null) {
+            return null;
+        }
+        ArrangementFacts facts = new ArrangementFacts(
+                request.getDateOfDeath(),
+                null,
+                null,
+                request.getAttendees()
+        );
+        return burialWindowService.derive(facts, LocalDateTime.now(WARSAW)).orElse(null);
+    }
+
+    private List<LocalDate> clipToWindow(List<LocalDate> dates, ServiceWindow window) {
+        if (window == null) {
+            return dates;
+        }
+        List<LocalDate> clipped = new ArrayList<>();
+        for (LocalDate date : dates) {
+            if (!date.isBefore(window.earliest()) && !date.isAfter(window.latest())) {
+                clipped.add(date);
+            }
+        }
+        return clipped;
     }
 
     @Override

@@ -20,7 +20,7 @@ There is no coach role and no sports, lessons, or skill levels.
 2. Choose a funeral home and a **service venue** (chapel, ceremony hall, cremation suite, memorial garden, or reception hall).
 3. Choose ceremony type, package, extras, guests, payment preference, and private details.
 4. Confirm the arrangement. The quoted amount is exact and does **not** change with the assigned date.
-5. Confirming opens a full-screen wheel while the server locks the venue, recomputes free slots, picks a date uniformly, then a compatible time on that date (`SecureRandom`), and stores the reservation in the same transaction.
+5. Confirming opens a full-screen wheel while the server locks the venue, recomputes free slots, and assigns the **earliest free** ceremony time. The wheel only illustrates that server decision. It does not pick at random.
 6. The wheel lands on the **server-returned** date. The client never picks the winner.
 7. Family arrangements are **PENDING** until a manager confirms. Manager and admin spins are **CONFIRMED**.
 

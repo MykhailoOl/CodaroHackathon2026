@@ -1716,6 +1716,172 @@ a.occ-cell:hover {
     color: var(--muted);
 }
 
+.warsaw-map {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.9fr) minmax(18rem, 1.2fr);
+    gap: 1.4rem;
+    align-items: start;
+    margin: 0.4rem 0 1.6rem;
+    padding: 1.2rem 1.3rem;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.warsaw-copy h2 {
+    margin-bottom: 0.35rem;
+}
+
+.warsaw-people {
+    list-style: none;
+    margin: 0.8rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.7rem;
+}
+
+.warsaw-people li {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.warsaw-people strong {
+    font-family: var(--display);
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.warsaw-people span {
+    color: var(--muted);
+    font-size: 0.84rem;
+}
+
+.warsaw-empty {
+    color: var(--muted);
+}
+
+.warsaw-svg {
+    width: 100%;
+    max-height: 34rem;
+    background: #e7e0d2;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+}
+
+.warsaw-paper {
+    fill: #e7e0d2;
+}
+
+.warsaw-city {
+    fill: #efe6d4;
+}
+
+.warsaw-city-stroke {
+    fill: none;
+    stroke: #c3b7a4;
+    stroke-width: 1.2;
+}
+
+.warsaw-built {
+    fill: #e2d3bc;
+    opacity: 0.9;
+}
+
+.warsaw-park {
+    fill: #b7c4a4;
+}
+
+.warsaw-park-label,
+.warsaw-water-label,
+.warsaw-district {
+    fill: #6b6458;
+    font-size: 8px;
+    font-family: var(--font);
+    letter-spacing: 0.04em;
+    text-anchor: middle;
+}
+
+.warsaw-water {
+    fill: #8fa9b3;
+}
+
+.warsaw-road {
+    fill: none;
+    stroke: #d7cbb8;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+}
+
+.warsaw-bridge {
+    fill: none;
+    stroke: #8d8578;
+    stroke-width: 1.4;
+}
+
+.warsaw-radius {
+    fill: none;
+    stroke: rgba(31, 31, 35, 0.22);
+    stroke-dasharray: 3.2 2.4;
+    stroke-width: 0.8;
+}
+
+.warsaw-home {
+    fill: #3d3a34;
+}
+
+.warsaw-home-roof {
+    fill: #1f1d1a;
+}
+
+.warsaw-person {
+    fill: var(--accent);
+    stroke: #ffffff;
+    stroke-width: 0.9;
+}
+
+.warsaw-person.is-pending {
+    fill: #6b5a3a;
+}
+
+.warsaw-person.is-confirmed {
+    fill: var(--grass-deep);
+}
+
+.warsaw-person-hole {
+    fill: #f7f3ea;
+}
+
+.warsaw-person-label {
+    fill: var(--grass-deep);
+    font-size: 8.5px;
+    font-family: var(--display);
+    font-weight: 600;
+    text-anchor: middle;
+}
+
+.warsaw-compass line,
+.warsaw-scale line {
+    stroke: #5c574e;
+    stroke-width: 1.1;
+}
+
+.warsaw-compass polygon {
+    fill: #5c574e;
+}
+
+.warsaw-compass text,
+.warsaw-scale text {
+    fill: #5c574e;
+    font-size: 8px;
+    font-family: var(--font);
+    text-anchor: middle;
+}
+
 .cancel-dialog {
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -1814,7 +1980,8 @@ a.occ-cell:hover {
     .home-steps,
     .sport-gallery,
     .home-occupancy,
-    .home-cta {
+    .home-cta,
+    .warsaw-map {
         grid-template-columns: 1fr;
     }
 

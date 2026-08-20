@@ -245,6 +245,22 @@ class FuneralArrangementTests {
     }
 
     @Test
+    void spinAssignsInsideTheBurialWindowNotTwentyOneDays() {
+        User user = family("window_user");
+        ServiceVenue venue = chapel();
+        ArrangementRequest request = validRequest(venue, user);
+        LocalDate death = LocalDate.now(java.time.ZoneId.of("Europe/Warsaw")).minusDays(1);
+        request.setDateOfDeath(death);
+        Reservation saved = reservationService.create(user, request);
+        LocalDate startDay = saved.getStartAt().toLocalDate();
+        assertThat(startDay).isAfterOrEqualTo(death);
+        assertThat(startDay).isBeforeOrEqualTo(death.plusDays(4));
+        ArrangementPreview preview = reservationService.preview(user, request);
+        assertThat(preview.dates()).isNotEmpty();
+        assertThat(preview.dates()).allMatch(date -> !date.isAfter(death.plusDays(4)));
+    }
+
+    @Test
     void previewDatesAreCurrentlyAvailable() {
         User user = family("preview_user");
         ServiceVenue venue = chapel();
@@ -266,6 +282,10 @@ class FuneralArrangementTests {
         assertThat(occupancyService.gridFor(saved.getStartAt().toLocalDate(), venue.getFuneralHome().getId()).getRows())
                 .anyMatch(row -> row.getVenueId().equals(venue.getId())
                         && row.getCells().stream().anyMatch(cell -> "pending".equals(cell.getLevel())));
+        assertThat(occupancyService.gridFor(saved.getStartAt().toLocalDate(), venue.getFuneralHome().getId()).getPeople())
+                .anyMatch(pin -> pin.getName().contains("Remembered") && pin.getX() > 0);
+        assertThat(occupancyService.gridFor(saved.getStartAt().toLocalDate(), null).getHomes())
+                .anyMatch(home -> "Mokotów".equals(home.getDistrict()));
         assertThat(reservationService.findManagerQueue(saved.getStartAt().toLocalDate()))
                 .extracting(Reservation::getId)
                 .contains(saved.getId());
@@ -427,6 +447,8 @@ class FuneralArrangementTests {
         mockMvc.perform(get("/availability")).andExpect(status().isOk())
                 .andExpect(content().string(containsString("Availability")))
                 .andExpect(content().string(containsString("Start arrangements")))
+                .andExpect(content().string(containsString("warsaw-map")))
+                .andExpect(content().string(containsString("Who is being remembered today")))
                 .andExpect(content().string(containsString("occ-arrange")))
                 .andExpect(content().string(containsString("href=\"/venues/")))
                 .andExpect(content().string(not(containsString("occ-arrange\" href=\"/venues/1?date"))));
@@ -594,6 +616,8 @@ class FuneralArrangementTests {
         assertThat(history.indexOf("history-card-image")).isLessThan(history.indexOf("history-card-body"));
         assertThat(css).contains("flex-direction: column");
         assertThat(occupancy).contains("Start arrangements");
+        assertThat(occupancy).contains("warsaw-map");
+        assertThat(occupancy).contains("Who is being remembered today");
         assertThat(occupancy).contains("@{/venues/{id}(id=${row.venueId})}");
         assertThat(occupancy).doesNotContain("name=\"startTime\"");
         assertThat(yml).contains("name: everrest-funeral-arrangements");
@@ -610,7 +634,8 @@ class FuneralArrangementTests {
         assertThat(seed.toLowerCase()).doesNotContain("coach");
         assertThat(seed).doesNotContain("sportsbooking");
         assertThat(mark).contains("M22 18 H46");
-        assertThat(css).contains("wheel-overlay-copy");
+        assertThat(css).contains("warsaw-map");
+        assertThat(css).contains("warsaw-person");
         assertThat(css).contains("wheel-peg-ring");
         assertThat(css).contains("wheel-hub");
         assertThat(css).contains("text-align: center");

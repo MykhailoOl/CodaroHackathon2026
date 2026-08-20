@@ -8,7 +8,7 @@
     <div class="section-head">
         <p class="eyebrow">Read-only board</p>
         <h1>Availability</h1>
-        <p>One ceremony occupies a venue at a time. Cells are for inspection only — dates are assigned by the arrangement wheel. Use <strong>Start arrangements</strong> on a venue to begin booking without choosing a time.</p>
+        <p>One ceremony occupies a venue at a time. The map is the people. The hour grid is inspection only — dates are assigned by the arrangement wheel. Use <strong>Start arrangements</strong> on a venue to begin booking without choosing a time.</p>
     </div>
     <form id="occupancy-filter" class="occ-filters" method="get" th:action="@{/availability}">
         <div class="field">
@@ -32,6 +32,82 @@
         <li><span class="occ-swatch occ-pending"></span> Pending</li>
         <li><span class="occ-swatch occ-confirmed"></span> Confirmed</li>
     </ul>
+    <section class="warsaw-map" aria-label="Warsaw ceremonies" th:if="${grid != null}">
+        <div class="warsaw-copy">
+            <p class="eyebrow">Warsaw</p>
+            <h2>Who is being remembered today</h2>
+            <p>Pins are people in ceremony across the city. Homes sit in their districts along the Vistula.</p>
+            <ul class="warsaw-people">
+                <li th:if="${#lists.isEmpty(grid.people)}" class="warsaw-empty">No ceremonies occupy this day yet.</li>
+                <li th:each="pin : ${grid.people}">
+                    <strong th:text="${pin.name}">Jan Kowalski</strong>
+                    <span th:text="${pin.detail}">Willow Chapel · 10:00 · Mokotów</span>
+                    <span th:text="${pin.channel + ' · ' + pin.status}">Phone · pending</span>
+                </li>
+            </ul>
+        </div>
+        <svg class="warsaw-svg" viewBox="0 0 320 400" role="img" aria-labelledby="warsaw-map-title">
+            <title id="warsaw-map-title">Warsaw ceremonies today</title>
+            <defs>
+                <clipPath id="warsaw-city-clip">
+                    <path d="M96 42 C132 16 168 20 188 50 C208 74 220 112 230 148 C246 176 252 214 240 252 C232 294 210 334 196 362 C170 388 138 386 116 356 C94 324 78 278 70 238 C60 196 56 156 70 118 C80 82 84 56 96 42 Z"/>
+                </clipPath>
+            </defs>
+            <rect class="warsaw-paper" x="0" y="0" width="320" height="400"></rect>
+            <g clip-path="url(#warsaw-city-clip)">
+                <path class="warsaw-city" d="M96 42 C132 16 168 20 188 50 C208 74 220 112 230 148 C246 176 252 214 240 252 C232 294 210 334 196 362 C170 388 138 386 116 356 C94 324 78 278 70 238 C60 196 56 156 70 118 C80 82 84 56 96 42 Z"/>
+                <ellipse class="warsaw-built" cx="148" cy="176" rx="42" ry="36"/>
+                <ellipse class="warsaw-built" cx="214" cy="168" rx="28" ry="24"/>
+                <ellipse class="warsaw-park" cx="156" cy="246" rx="18" ry="14"/>
+                <ellipse class="warsaw-park" cx="118" cy="226" rx="16" ry="10"/>
+                <ellipse class="warsaw-park" cx="226" cy="208" rx="14" ry="11"/>
+                <ellipse class="warsaw-park" cx="158" cy="164" rx="8" ry="6"/>
+                <path class="warsaw-road" d="M148 70 L150 318"/>
+                <path class="warsaw-road" d="M72 188 L246 188"/>
+                <path class="warsaw-road" d="M150 248 L142 358"/>
+                <path class="warsaw-road" d="M172 48 C180 140 186 230 176 360"/>
+                <path class="warsaw-road" d="M96 176 L70 176"/>
+                <path class="warsaw-road" d="M210 168 L268 176"/>
+                <path class="warsaw-water" d="M176 18 C190 78 200 132 206 176 C214 224 208 276 194 332 C188 362 182 386 178 400 L196 400 C204 372 218 338 226 292 C234 244 236 196 228 150 C220 102 208 58 194 18 Z"/>
+                <path class="warsaw-bridge" d="M168 96 L214 96"/>
+                <path class="warsaw-bridge" d="M170 156 L218 156"/>
+                <path class="warsaw-bridge" d="M174 196 L222 196"/>
+                <path class="warsaw-bridge" d="M168 236 L216 236"/>
+                <path class="warsaw-bridge" d="M162 292 L206 292"/>
+            </g>
+            <path class="warsaw-city-stroke" d="M96 42 C132 16 168 20 188 50 C208 74 220 112 230 148 C246 176 252 214 240 252 C232 294 210 334 196 362 C170 388 138 386 116 356 C94 324 78 278 70 238 C60 196 56 156 70 118 C80 82 84 56 96 42 Z"/>
+            <circle class="warsaw-radius" cx="148" cy="178" r="112"></circle>
+            <text class="warsaw-water-label" x="232" y="128">Vistula</text>
+            <text class="warsaw-park-label" x="156" y="248">Łazienki</text>
+            <g class="warsaw-compass" transform="translate(28,36)">
+                <line x1="0" y1="14" x2="0" y2="-12"/>
+                <polygon points="0,-16 -3.2,-8 3.2,-8"/>
+                <text x="0" y="-20">N</text>
+            </g>
+            <g class="warsaw-scale" transform="translate(24,372)">
+                <line x1="0" y1="0" x2="28" y2="0"/>
+                <line x1="0" y1="-3" x2="0" y2="3"/>
+                <line x1="28" y1="-3" x2="28" y2="3"/>
+                <text x="14" y="12">2 km</text>
+            </g>
+            <g th:each="home : ${grid.homes}" th:attr="transform=${'translate(' + home.x + ',' + home.y + ')'}">
+                <rect class="warsaw-home" x="-5" y="-3.5" width="10" height="7.5" rx="0.5">
+                    <title th:text="${home.name}">Home</title>
+                </rect>
+                <path class="warsaw-home-roof" d="M-6.2,-3.5 L0,-9.5 L6.2,-3.5 Z"></path>
+                <text class="warsaw-district" x="0" y="12" th:text="${home.district}">Mokotów</text>
+            </g>
+            <g class="warsaw-pin" th:each="pin : ${grid.people}" th:attr="transform=${'translate(' + pin.x + ',' + pin.y + ')'}">
+                <path class="warsaw-person"
+                      th:classappend="' is-' + ${pin.status}"
+                      d="M0,-13 C4.8,-13 8.2,-8.6 8.2,-4.2 C8.2,1.4 0,13 0,13 C0,13 -8.2,1.4 -8.2,-4.2 C-8.2,-8.6 -4.8,-13 0,-13 Z">
+                    <title th:text="${pin.name + ' · ' + pin.detail}">Person</title>
+                </path>
+                <circle class="warsaw-person-hole" cx="0" cy="-5.4" r="2.2"></circle>
+                <text class="warsaw-person-label" x="0" y="-17" th:text="${pin.givenName}">Jan</text>
+            </g>
+        </svg>
+    </section>
     <p class="lede" th:if="${grid == null or #lists.isEmpty(grid.rows)}">No venues for this filter.</p>
     <div class="occ-wrap" th:if="${grid != null and !#lists.isEmpty(grid.rows)}">
         <table class="occ-table">

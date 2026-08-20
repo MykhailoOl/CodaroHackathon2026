@@ -138,6 +138,10 @@ public class Reservation {
     @Column(name = "invite_token", unique = true, length = 32)
     private String inviteToken;
 
+    @Size(max = 32)
+    @Column(name = "booking_source", length = 32)
+    private String bookingSource;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -340,6 +344,24 @@ public class Reservation {
 
     public void setInviteToken(String inviteToken) {
         this.inviteToken = inviteToken;
+    }
+
+    public String getBookingSource() {
+        return bookingSource;
+    }
+
+    public void setBookingSource(String bookingSource) {
+        this.bookingSource = bookingSource;
+    }
+
+    public String getChannelLabel() {
+        if ("PHONE".equals(bookingSource)) {
+            return "Phone";
+        }
+        if ("CHAT_ASSISTANT".equals(bookingSource)) {
+            return "Chat";
+        }
+        return "Website";
     }
 
     public Instant getCreatedAt() {
