@@ -1,0 +1,194 @@
+package com.example.hackathoncodaro2026;
+
+import com.example.hackathoncodaro2026.model.Reservation;
+import com.example.hackathoncodaro2026.model.enums.ReservationStatus;
+import com.example.hackathoncodaro2026.repository.ReservationRepository;
+import com.example.hackathoncodaro2026.voice.sms.LoggingSmsClient;
+import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class VoiceBookingWebTests {
+
+    private static final String SECRET = "change-me-tool-webhook-secret";
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ReservationRepository reservationRepository;
+
+    @Autowired
+    private LoggingSmsClient loggingSmsClient;
+
+    @BeforeEach
+    void clearSmsLog() {
+        loggingSmsClient.clear();
+    }
+
+    @Test
+    void checkAvailabilityRequiresBearerSecret() throws Exception {
+        mockMvc.perform(post("/api/voice/tools/check-availability")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"sport":"tennis","preferredDay":"tomorrow","partOfDay":"evening"}
+                                """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void checkAvailabilityRejectsWrongSecret() throws Exception {
+        mockMvc.perform(post("/api/voice/tools/check-availability")
+                        .header("Authorization", "Bearer wrong-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"sport":"tennis","preferredDay":"tomorrow","partOfDay":"evening"}
+                                """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void checkAvailabilityReturnsDatabaseSlotsWithoutCalendar() throws Exception {
+        mockMvc.perform(post("/api/voice/tools/check-availability")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sport":"tennis",
+                                  "preferredDay":"tomorrow",
+                                  "partOfDay":"evening",
+                                  "language":"en"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slots").isArray())
+                .andExpect(jsonPath("$.slots[0].slotId").isString())
+                .andExpect(jsonPath("$.slots[0].displayLabel").isString());
+    }
+
+    @Test
+    void createBookingPersistsToDatabaseAndLogsSms() throws Exception {
+        String slotId = firstSlotId("tennis", "tomorrow", "evening", null);
+
+        mockMvc.perform(post("/api/voice/tools/create-booking")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "slotId":"%s",
+                                  "playerName":"Anna Kowalska",
+                                  "playerPhone":"+48 600 111 222",
+                                  "language":"en"
+                                }
+                                """.formatted(slotId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").isString())
+                .andExpect(jsonPath("$.confirmationLine").isString())
+                .andExpect(jsonPath("$.smsStatus").value("logged"));
+
+        assertThat(reservationRepository.findAll())
+                .anyMatch(this::occupyingTennisForAnna);
+        assertThat(loggingSmsClient.sent()).isNotEmpty();
+        assertThat(loggingSmsClient.sent().getFirst().to()).contains("600");
+        assertThat(loggingSmsClient.sent().getFirst().body()).contains("Courtly");
+    }
+
+    @Test
+    void createBookingRejectsTakenSlot() throws Exception {
+        String slotId = firstSlotId("tennis", "tomorrow", "evening", null);
+        String body = """
+                {
+                  "slotId":"%s",
+                  "playerName":"First Caller",
+                  "playerPhone":"+48 600 111 001",
+                  "language":"en"
+                }
+                """.formatted(slotId);
+
+        mockMvc.perform(post("/api/voice/tools/create-booking")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/voice/tools/create-booking")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("First Caller", "Second Caller").replace("111 001", "111 002")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("slot_no_longer_available"));
+    }
+
+    @Test
+    void preferredTimeNarrowsReturnedSlots() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/voice/tools/check-availability")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sport":"tennis",
+                                  "preferredDay":"tomorrow",
+                                  "preferredTime":"18:00",
+                                  "language":"en"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<String> labels = JsonPath.read(result.getResponse().getContentAsString(), "$.slots[*].displayLabel");
+        assertThat(labels).isNotEmpty();
+        assertThat(labels.getFirst()).contains("18:00");
+    }
+
+    @Test
+    void toolCatalogIsPublicPlaceholderForElevenLabs() throws Exception {
+        mockMvc.perform(get("/api/voice/tools"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tools[0].name").value("check_availability"))
+                .andExpect(jsonPath("$.tools[1].name").value("create_booking"))
+                .andExpect(jsonPath("$.phoneNumberWiring.status").value("placeholder"));
+    }
+
+    private String firstSlotId(String sport, String day, String partOfDay, String time) throws Exception {
+        String payload = time == null
+                ? """
+                {"sport":"%s","preferredDay":"%s","partOfDay":"%s","language":"en"}
+                """.formatted(sport, day, partOfDay)
+                : """
+                {"sport":"%s","preferredDay":"%s","preferredTime":"%s","language":"en"}
+                """.formatted(sport, day, time);
+        MvcResult result = mockMvc.perform(post("/api/voice/tools/check-availability")
+                        .header("Authorization", "Bearer " + SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andReturn();
+        List<String> slotIds = JsonPath.read(result.getResponse().getContentAsString(), "$.slots[*].slotId");
+        assertThat(slotIds).isNotEmpty();
+        return slotIds.getFirst();
+    }
+
+    private boolean occupyingTennisForAnna(Reservation reservation) {
+        return reservation.getStatus() == ReservationStatus.PENDING
+                && reservation.getUser().getFullName().contains("Anna")
+                && reservation.getResource().getType().name().equals("TENNIS");
+    }
+}

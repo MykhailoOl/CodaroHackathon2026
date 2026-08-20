@@ -28,6 +28,7 @@ Key capabilities:
 - Optional coach extra on a court or individual gym/swim booking (not on group lessons)
 - Pessimistic locking so the last free slot cannot be double-booked
 - Nightly cleanup of reservations that ended more than a month ago
+- Voice receptionist tools (ElevenLabs placeholders) that check availability and book into the **same H2 database**, not Google Calendar
 
 ---
 
@@ -254,6 +255,41 @@ in `src/main/resources/application.yml`, or pass `--app.browser.auto-open=false`
 | `/coach/sessions` | Coach: assigned reservations |
 | `/avatars/{userId}` | Avatar or initials placeholder |
 | `/h2-console` | H2 web console |
+| `GET /api/voice/tools` | Public ElevenLabs tool catalog (placeholders) |
+| `POST /api/voice/tools/check-availability` | Voice tool: list open slots from the database |
+| `POST /api/voice/tools/create-booking` | Voice tool: persist a booking and log SMS |
+
+---
+
+## Voice receptionist (ElevenLabs)
+
+The web UI already books against the H2 database. The voice layer reuses that path: **no Google Calendar, Cal.com, or live SMS provider**. Availability is the same opening-hours grid `ResourceService` already uses. Preferred day / part of day / `HH:MM` narrow the offer. `create_booking` writes a normal `PENDING` reservation (cash at the facility) and logs an SMS body.
+
+Copy `.env.example` to `.env` and leave secrets empty until you have them. Default tool auth:
+
+```
+Authorization: Bearer change-me-tool-webhook-secret
+```
+
+Check slots:
+
+```bash
+curl -s -X POST http://localhost:8080/api/voice/tools/check-availability \
+  -H "Authorization: Bearer change-me-tool-webhook-secret" \
+  -H "Content-Type: application/json" \
+  -d '{"sport":"tennis","preferredDay":"tomorrow","partOfDay":"evening","preferredTime":"18:00","language":"en"}'
+```
+
+Book the returned `slotId`. The agent should only book a slot it just offered.
+
+### Temporary phone number (later)
+
+1. Fill `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_VOICE_ID` in `.env`.
+2. Point the agent's server tools at `GET /api/voice/tools` URLs (public base URL must be reachable, e.g. ngrok).
+3. Set `ELEVENLABS_PHONE_NUMBER_ID` or Twilio placeholders and assign a temporary number to the agent.
+4. Inbound PSTN then calls the agent; the agent calls these two tools. Until those env vars are set, `phoneNumberWiring.status` stays `placeholder` and SMS stays a log line (`app.voice.sms.provider: log`).
+
+Suggested agent flow: ask sport → ask day → `check_availability` → read two or three labels → on confirm `create_booking` with the caller's name and `system__caller_id`.
 
 ---
 
