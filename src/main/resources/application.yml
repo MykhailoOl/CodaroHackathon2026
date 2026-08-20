@@ -95,3 +95,54 @@ logging:
     com.example.hackathoncodaro2026: INFO
     org.hibernate.SQL: debug
     org.springframework.security: info
+
+intent:
+  granularity-min: 15
+  buffer-min: 15
+  max-suggestions: 3
+  max-candidates-per-interval: 12
+  shrink-duration-max-pct: 0.25
+  weights:
+    time-of-day: 20
+    day-proximity: 15
+    buffer: 15
+    fragmentation: 20
+    resource-load: 15
+    workload: 15
+  resource-attributes:
+    TENNIS:      { indoor: "false", floodlit: "true",  team: "false" }
+    FOOTBALL:    { indoor: "false", floodlit: "true",  team: "true"  }
+    BASKETBALL:  { indoor: "true",  floodlit: "true",  team: "true"  }
+    VOLLEYBALL:  { indoor: "true",  floodlit: "true",  team: "true"  }
+    SWIMMING:    { indoor: "true",  floodlit: "false", team: "false" }
+    GYM:         { indoor: "true",  floodlit: "false", team: "false" }
+    SQUASH:      { indoor: "true",  floodlit: "false", team: "false" }
+  constraints:
+    - key: indoor
+      kind: HARD
+      relaxable: true
+      label: indoor
+      attribute: indoor
+      equals-value: "true"
+      phrases: [indoor, inside, covered, "under a roof"]
+    - key: outdoor
+      kind: HARD
+      relaxable: true
+      label: outdoor
+      attribute: indoor
+      equals-value: "false"
+      phrases: [outdoor, outside, "open air"]
+    - key: floodlit
+      kind: HARD
+      relaxable: true
+      label: floodlit
+      attribute: floodlit
+      equals-value: "true"
+      phrases: [floodlit, lit, "after dark", "with lights"]
+    - key: team_sport
+      kind: SOFT
+      weight: 10
+      label: team sport
+      attribute: team
+      equals-value: "true"
+      phrases: [team, "with friends", group]
