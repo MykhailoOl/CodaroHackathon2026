@@ -17,7 +17,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.random.RandomGenerator;
 
 @Service
 @Transactional(readOnly = true)
@@ -27,16 +26,13 @@ public class DateAssignmentServiceImpl implements DateAssignmentService {
 
     private final ReservationRepository reservationRepository;
     private final SchedulingProperties schedulingProperties;
-    private final RandomGenerator randomGenerator;
 
     public DateAssignmentServiceImpl(
             ReservationRepository reservationRepository,
-            SchedulingProperties schedulingProperties,
-            RandomGenerator randomGenerator
+            SchedulingProperties schedulingProperties
     ) {
         this.reservationRepository = reservationRepository;
         this.schedulingProperties = schedulingProperties;
-        this.randomGenerator = randomGenerator;
     }
 
     @Override
@@ -92,23 +88,22 @@ public class DateAssignmentServiceImpl implements DateAssignmentService {
 
     @Override
     public LocalDateTime chooseStart(ServiceVenue venue, FuneralPackage funeralPackage) {
-        List<LocalDateTime> starts = availableStarts(venue, funeralPackage);
-        if (starts.isEmpty()) {
-            return null;
-        }
-        LinkedHashSet<LocalDate> dates = new LinkedHashSet<>();
-        for (LocalDateTime start : starts) {
-            dates.add(start.toLocalDate());
-        }
-        List<LocalDate> dateList = List.copyOf(dates);
-        LocalDate chosenDate = dateList.get(randomGenerator.nextInt(dateList.size()));
-        List<LocalDateTime> onDate = new ArrayList<>();
-        for (LocalDateTime start : starts) {
-            if (start.toLocalDate().equals(chosenDate)) {
-                onDate.add(start);
+        return chooseStart(venue, funeralPackage, null, null);
+    }
+
+    @Override
+    public LocalDateTime chooseStart(ServiceVenue venue, FuneralPackage funeralPackage, LocalDate earliest, LocalDate latest) {
+        for (LocalDateTime start : availableStarts(venue, funeralPackage)) {
+            LocalDate day = start.toLocalDate();
+            if (earliest != null && day.isBefore(earliest)) {
+                continue;
             }
+            if (latest != null && day.isAfter(latest)) {
+                continue;
+            }
+            return start;
         }
-        return onDate.get(randomGenerator.nextInt(onDate.size()));
+        return null;
     }
 
     private boolean isOpenDay(LocalDate date) {

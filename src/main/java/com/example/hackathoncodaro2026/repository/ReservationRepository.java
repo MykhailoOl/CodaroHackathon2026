@@ -93,6 +93,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Query("""
             SELECT r FROM Reservation r
             JOIN FETCH r.venue v
+            JOIN FETCH v.funeralHome
+            JOIN FETCH r.user
+            WHERE r.inviteToken = :token
+            """)
+    Optional<Reservation> findByInviteToken(@Param("token") String token);
+
+    @Query("""
+            SELECT r FROM Reservation r
+            JOIN FETCH r.venue v
             WHERE r.status IN :statuses
               AND r.startAt < :endAt
               AND r.endAt > :startAt
