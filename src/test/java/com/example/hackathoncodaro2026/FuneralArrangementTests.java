@@ -114,6 +114,16 @@ class FuneralArrangementTests {
     }
 
     @Test
+    void chooseStartIsTheEarliestFreeStartAndIsStable() {
+        ServiceVenue venue = chapel();
+        List<LocalDateTime> starts = dateAssignmentService.availableStarts(venue, FuneralPackage.CLASSIC);
+        assertThat(starts).isNotEmpty();
+        LocalDateTime first = dateAssignmentService.chooseStart(venue, FuneralPackage.CLASSIC);
+        assertThat(first).isEqualTo(starts.getFirst());
+        assertThat(dateAssignmentService.chooseStart(venue, FuneralPackage.CLASSIC)).isEqualTo(first);
+    }
+
+    @Test
     void deceasedDeathBeforeBirthIsRejected() {
         User user = family("val_dates");
         ArrangementRequest request = validRequest(chapel(), user);

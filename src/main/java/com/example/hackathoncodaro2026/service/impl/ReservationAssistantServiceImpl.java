@@ -60,7 +60,7 @@ public class ReservationAssistantServiceImpl implements ReservationAssistantServ
     }
 
     @Override
-    public AssistantSessionDto session(User user) {
+    public AssistantSessionDto session(User user, String csrfToken) {
         boolean staff = user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER;
         boolean phone = user.getPhone() == null || user.getPhone().isBlank();
         return new AssistantSessionDto(
@@ -69,7 +69,8 @@ public class ReservationAssistantServiceImpl implements ReservationAssistantServ
                 user.getUsername(),
                 user.getRole().name(),
                 phone,
-                staff ? ReservationStatus.CONFIRMED.name() : ReservationStatus.PENDING.name()
+                staff ? ReservationStatus.CONFIRMED.name() : ReservationStatus.PENDING.name(),
+                csrfToken
         );
     }
 

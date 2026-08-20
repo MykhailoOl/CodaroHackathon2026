@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,6 +63,8 @@ public class ArrangementRequest {
     @Pattern(regexp = "^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
     @Size(max = 36)
     private String submissionToken;
+
+    private LocalDateTime ceremonyStart;
 
     public Long getVenueId() {
         return venueId;
@@ -165,5 +168,13 @@ public class ArrangementRequest {
 
     public void setSubmissionToken(String submissionToken) {
         this.submissionToken = submissionToken;
+    }
+
+    public LocalDateTime getCeremonyStart() {
+        return ceremonyStart;
+    }
+
+    public void setCeremonyStart(LocalDateTime ceremonyStart) {
+        this.ceremonyStart = ceremonyStart;
     }
 }

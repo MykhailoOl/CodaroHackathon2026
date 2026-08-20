@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('Calendar reminder')}"></head>
+<body class="auth-body">
+<div class="court-grid" aria-hidden="true"></div>
+<header th:replace="~{fragments/nav :: header}"></header>
+<main class="auth-main">
+    <section class="auth-panel">
+        <p class="eyebrow">Phone arrangement</p>
+        <h1>Add this ceremony to your calendar</h1>
+        <p class="lede" th:if="${reservation != null}">
+            <span th:text="${reservation.venue.name}">Chapel</span>
+            at
+            <span th:text="${reservation.venue.funeralHome.name}">EverRest Warsaw</span>
+            on
+            <span th:text="${#temporals.format(reservation.startAt, 'EEE d MMM HH:mm')}">time</span>.
+        </p>
+        <p class="lede">This is a reminder only. A director still confirms the arrangement.</p>
+        <p th:if="${googleCalendarUrl}">
+            <a class="btn btn-accent btn-block" th:href="${googleCalendarUrl}" target="_blank" rel="noopener">
+                Add to calendar
+            </a>
+        </p>
+    </section>
+</main>
+<footer th:replace="~{fragments/nav :: footer}"></footer>
+</body>
+</html>

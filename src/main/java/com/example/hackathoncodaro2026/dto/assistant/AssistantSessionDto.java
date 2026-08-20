@@ -6,6 +6,7 @@ public record AssistantSessionDto(
         String username,
         String role,
         boolean phoneRequired,
-        String expectedStatus
+        String expectedStatus,
+        String csrfToken
 ) {
 }
